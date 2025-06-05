@@ -1,0 +1,20 @@
+FROM node:18-alpine AS base
+
+FROM base AS shared
+WORKDIR /app/shared
+COPY ./shared/package*.json .
+RUN npm install
+
+FROM base AS client
+WORKDIR /app/client
+COPY ./client/package*.json .
+RUN npm install
+
+FROM base AS main
+WORKDIR /app/client
+# Install curl for health checks
+RUN apk update && apk add curl
+COPY --from=shared /app/shared /app/shared
+COPY --from=client /app/client /app/client
+
+CMD npm run dev

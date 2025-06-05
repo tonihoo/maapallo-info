@@ -1,0 +1,115 @@
+name: Build, Test and Deploy to Azure
+
+on:
+  push:
+    branches:
+      - master
+
+env:
+  ACR_REGISTRY: maapalloregistry.azurecr.io
+  APP_NAME: maapallo-info
+  RESOURCE_GROUP: maapallo-info
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js for server
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'server/package-lock.json'
+
+      - name: Run backend tests
+        run: |
+          cd server
+          npm ci
+          npm test
+
+      - name: Setup Node.js for client
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'client/package-lock.json'
+
+      - name: Install client dependencies
+        run: |
+          cd client
+          npm ci
+
+      - name: Cache Cypress binary
+        uses: actions/cache@v3
+        id: cypress-cache
+        with:
+          path: ~/.cache/Cypress
+          key: cypress-${{ runner.os }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            cypress-${{ runner.os }}-
+
+      - name: Start application services
+        run: |
+          docker compose up -d
+          docker compose ps
+
+      - name: Cypress run
+        uses: cypress-io/github-action@v5
+        with:
+          working-directory: client
+          spec: cypress/e2e/hedgehog-form.cy.js
+          wait-on: 'http://localhost:8080'
+          wait-on-timeout: 60
+          install: true
+
+  build-and-deploy:
+    name: Build and Deploy
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+      with:
+        driver: docker-container
+        buildkitd-flags: --debug
+        install: true
+
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Log in to ACR
+      uses: azure/docker-login@v1
+      with:
+        login-server: ${{ env.ACR_REGISTRY }}
+        username: ${{ secrets.ACR_USERNAME }}
+        password: ${{ secrets.ACR_PASSWORD }}
+
+    - name: Set up Docker layer caching
+      uses: actions/cache@v3
+      with:
+        path: /tmp/.buildx-cache
+        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-buildx-
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        tags: ${{ env.ACR_REGISTRY }}/${{ env.APP_NAME }}:${{ github.sha }}, ${{ env.ACR_REGISTRY }}/${{ env.APP_NAME }}:latest
+
+    - name: Deploy to Azure Web App
+      uses: azure/webapps-deploy@v2
+      with:
+        app-name: ${{ env.APP_NAME }}
+        images: ${{ env.ACR_REGISTRY }}/${{ env.APP_NAME }}:${{ github.sha }}
