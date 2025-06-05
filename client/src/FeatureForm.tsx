@@ -20,7 +20,7 @@ interface FormErrors {
   location?: string;
 }
 
-export function HedgehogForm({ coordinates, onHedgehogAdded }: Props) {
+export function FeatureForm({ coordinates, onHedgehogAdded }: Props) {
   const [formData, setFormData] = useState<FormData>({
     name: "",
     age: "",

@@ -22,7 +22,7 @@ const genderTranslations: Record<string, string> = {
   unknown: 'Tuntematon'
 };
 
-export function HedgehogInfo({ hedgehogId }: Props) {
+export function FeatureInfo({ hedgehogId }: Props) {
   const [hedgehog, setHedgehog] = useState<Hedgehog | null>(null);
   const [loading, setLoading] = useState(false);
 

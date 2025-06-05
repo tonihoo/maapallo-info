@@ -1,9 +1,9 @@
 import { useState, useCallback, useEffect } from "react";
 import { Grid, Container, Box, Paper, Typography } from "@mui/material";
 import { Map } from "./Map";
-import { HedgehogForm } from "./HedgehogForm";
-import HedgehogList from "./HedgehogList";  // Default import
-import { HedgehogInfo } from "./HedgehogInfo";
+import { FeatureForm } from "./FeatureForm";
+import FeatureList from "./FeatureList";  // Default import
+import { FeatureInfo } from "./FeatureInfo";
 import { Hedgehog } from "@shared/hedgehog";
 import { Feature, Geometry, GeoJsonProperties } from 'geojson';
 
@@ -126,7 +126,7 @@ export function App() {
       <Container maxWidth={false} sx={{ height: "calc(100vh - 120px)", p: 1 }}>
         <Grid container spacing={1} sx={{ height: "100%" }}>
           <Grid item xs={12} md={3}>
-            <HedgehogList
+            <FeatureList
               onSelectHedgehog={handleHedgehogSelect}
               selectedHedgehogId={selectedHedgehogId}
               refreshTrigger={refreshTrigger}
@@ -140,13 +140,13 @@ export function App() {
           <Grid item xs={12} md={3}>
             <Grid container direction="column" spacing={1} sx={{ height: "100%" }}>
               <Grid item>
-                <HedgehogForm
+                <FeatureForm
                   coordinates={coordinates}
                   onHedgehogAdded={handleHedgehogAdded}
                 />
               </Grid>
               <Grid item xs>
-                <HedgehogInfo hedgehogId={selectedHedgehogId} />
+                <FeatureInfo hedgehogId={selectedHedgehogId} />
               </Grid>
             </Grid>
           </Grid>
