@@ -40,7 +40,7 @@ export default function HedgeHogList({
     <Paper elevation={3} sx={{ margin: "1em", overflow: "hidden" }}>
       <Box
         sx={{
-          backgroundColor: "#a1e6df",
+          backgroundColor: "#ffe7c5",
           height: "3em",
           display: "flex",
           zIndex: 2,

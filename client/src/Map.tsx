@@ -45,7 +45,7 @@ export function Map({ children, onMapClick, features }: Props) {
       return new Style({
         image: new Circle({
           radius: 7,
-          fill: new Fill({ color: "#00B2A0" }),
+          fill: new Fill({ color: "#ffb34c" }),
           stroke: new Stroke({ color: "darkblue", width: 3 }),
         }),
       });

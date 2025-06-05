@@ -110,7 +110,7 @@ export function App() {
       {/* Header */}
       <Box
         sx={{
-          backgroundColor: "#00B2A0",
+          backgroundColor: "#ffb34c",
           color: "white",
           paddingY: "0.25rem", // Only vertical padding
           paddingX: "1rem",    // Keep horizontal padding for text spacing
@@ -160,7 +160,8 @@ export function App() {
           bottom: 0,
           left: 0,
           right: 0,
-          backgroundColor: "#00B2A0",
+          backgroundColor: "#ffb34c",
+        //   backgroundColor: "#ffb34c",
           height: "40px",
           display: "flex",
           justifyContent: "center",

@@ -257,7 +257,7 @@ export function HedgehogForm({ coordinates, onHedgehogAdded }: Props) {
               p: 2,
               borderRadius: 1,
               bgcolor: 'rgba(0, 178, 160, 0.1)',
-              border: '1px solid #00B2A0'
+              border: '1px solid #ffb34c'
             }}>
               <Typography variant="body2" gutterBottom>
                 Sijaintin koordinaatit (ETRS-TM35FIN):
@@ -283,7 +283,7 @@ export function HedgehogForm({ coordinates, onHedgehogAdded }: Props) {
           type="submit"
           fullWidth
           variant="contained"
-          sx={{ mt: 3, mb: 2, bgcolor: "#00B2A0", "&:hover": { bgcolor: "#008C80" } }}
+          sx={{ mt: 3, mb: 2, bgcolor: "#ffb34c", "&:hover": { bgcolor: "#008C80" } }}
           disabled={isSubmitting}
         >
           {isSubmitting ? "Tallennetaan..." : "Tallenna sijainti"}
