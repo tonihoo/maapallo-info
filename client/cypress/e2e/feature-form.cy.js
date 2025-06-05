@@ -1,5 +1,5 @@
-describe("Hedgehog Form", () => {
-  it("fill in the hedgehog form and display", () => {
+describe("Feature Form", () => {
+  it("fill in the feature form and display", () => {
     cy.visit("/");
 
     cy.get("#name").should("exist");
@@ -7,12 +7,12 @@ describe("Hedgehog Form", () => {
     cy.get('input[name="gender"]').should("exist");
 
     // Fill in the form
-    const hedgehogName = "Testi Sijainti";
-    const hedgehogGender = "male";
-    const hedgehogAge = "3";
-    cy.get("#name").type(hedgehogName);
-    cy.get("#age").type(hedgehogAge);
-    cy.get(`input[name="gender"][value="${hedgehogGender}"]`).click();
+    const featureName = "Testi Sijainti";
+    const featureGender = "male";
+    const featureAge = "3";
+    cy.get("#name").type(featureName);
+    cy.get("#age").type(featureAge);
+    cy.get(`input[name="gender"][value="${featureGender}"]`).click();
 
     // Make sure the map is loaded
     cy.get(".ol-layer canvas")
