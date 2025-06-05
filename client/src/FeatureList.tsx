@@ -1,23 +1,23 @@
 import { Box, MenuItem, Paper, Typography } from "@mui/material";
-import { Hedgehog } from "@shared/hedgehog";
+import { FeatureTypes } from "@shared/featureTypes";
 import { useEffect, useState } from "react";
 
 export default function HedgeHogList({
-  onSelectHedgehog,
-  selectedHedgehogId = null,
+  onSelectFeature,
+  selectedFeatureId = null,
   refreshTrigger = 0,
 }: {
-  onSelectHedgehog: (id: number) => void;
-  selectedHedgehogId?: number | null;
+  onSelectFeature: (id: number) => void;
+  selectedFeatureId?: number | null;
   refreshTrigger?: number;
 }) {
-  const [hedgehogs, setHedgehogs] = useState<Hedgehog[]>([]);
+  const [features, setFeatures] = useState<FeatureTypes[]>([]);
 
-  // Fetch all hedgehog's during startup or when refreshTrigger changes
+  // Fetch all feature's during startup or when refreshTrigger changes
   useEffect(() => {
-    const getAllHedgehogs = async () => {
+    const getAllFeatures = async () => {
       try {
-        const res = await fetch("/api/v1/hedgehog");
+        const res = await fetch("/api/v1/feature");
 
         if (!res.ok) {
           console.error(`API responded with status: ${res.status}`);
@@ -27,13 +27,13 @@ export default function HedgeHogList({
         }
 
         const json = await res.json();
-        setHedgehogs(json?.hedgehogs || []);
+        setFeatures(json?.features || []);
       } catch (err) {
-        console.error(`Error while fetching hedgehogs: ${err}`);
+        console.error(`Error while fetching features: ${err}`);
       }
     };
 
-    getAllHedgehogs();
+    getAllFeatures();
   }, [refreshTrigger]);
 
   return (
@@ -52,18 +52,18 @@ export default function HedgeHogList({
           Rekisteröidyt sijaintit
         </Typography>
       </Box>
-      {hedgehogs.length ? (
+      {features.length ? (
         <Box sx={{ overflowY: "scroll", height: "100%" }}>
-          {hedgehogs.map((hedgehog) => (
+          {features.map((feature) => (
             <MenuItem
-              key={hedgehog.id}
+              key={feature.id}
               onClick={() => {
-                if (hedgehog.id !== undefined) {
-                  onSelectHedgehog(hedgehog.id);
+                if (feature.id !== undefined) {
+                  onSelectFeature(feature.id);
                 }
               }}
-              selected={selectedHedgehogId === hedgehog.id}            >
-              {hedgehog.name}
+              selected={selectedFeatureId === feature.id}            >
+              {feature.name}
             </MenuItem>
           ))}
         </Box>

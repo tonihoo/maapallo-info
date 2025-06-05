@@ -61,7 +61,7 @@ jobs:
         uses: cypress-io/github-action@v5
         with:
           working-directory: client
-          spec: cypress/e2e/hedgehog-form.cy.js
+          spec: cypress/e2e/feature-form.cy.js
           wait-on: 'http://localhost:8080'
           wait-on-timeout: 60
           install: true

@@ -1,5 +1,5 @@
 import { healthRouter } from "./health";
-import { hedgehogRouter } from "./hedgehog";
+import { featureRouter } from "./feature";
 import { FastifyInstance, FastifyPluginOptions } from "fastify";
 
 export function routes(
@@ -8,6 +8,6 @@ export function routes(
   done: () => void
 ) {
   fastify.register(healthRouter, { prefix: "/health" });
-  fastify.register(hedgehogRouter, { prefix: "/hedgehog" });
+  fastify.register(featureRouter, { prefix: "/feature" });
   done();
 }

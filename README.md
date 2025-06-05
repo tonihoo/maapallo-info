@@ -65,5 +65,5 @@ npm run test
 
 # Frontend-testit (Cypress)
 cd client
-npx cypress open # -> E2E testing -> Start E2E testing in Chrome -> hedgehog-form
+npx cypress open # -> E2E testing -> Start E2E testing in Chrome -> feature-form
 ```

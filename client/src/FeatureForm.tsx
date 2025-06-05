@@ -1,10 +1,10 @@
 import { Paper, Typography, TextField, Button, Box, FormControl, FormLabel, RadioGroup, FormControlLabel, Radio, FormHelperText, Alert } from "@mui/material";
 import { useState, useEffect } from "react";
-import { Hedgehog } from "@shared/hedgehog";
+import { FeatureTypes } from "@shared/featureTypes";
 
 interface Props {
   coordinates: number[];
-  onHedgehogAdded?: (hedgehog: Hedgehog) => void;
+  onFeatureAdded?: (feature: FeatureTypes) => void;
 }
 
 interface FormData {
@@ -20,7 +20,7 @@ interface FormErrors {
   location?: string;
 }
 
-export function FeatureForm({ coordinates, onHedgehogAdded }: Props) {
+export function FeatureForm({ coordinates, onFeatureAdded }: Props) {
   const [formData, setFormData] = useState<FormData>({
     name: "",
     age: "",
@@ -116,7 +116,7 @@ export function FeatureForm({ coordinates, onHedgehogAdded }: Props) {
     setSubmitSuccess(false);
 
     try {
-      const hedgehogData = {
+      const featureData = {
         name: formData.name,
         age: parseInt(formData.age),
         gender: formData.gender,
@@ -126,12 +126,12 @@ export function FeatureForm({ coordinates, onHedgehogAdded }: Props) {
         }
       };
 
-      const response = await fetch("/api/v1/hedgehog", {
+      const response = await fetch("/api/v1/feature", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(hedgehogData),
+        body: JSON.stringify(featureData),
       });
 
       if (response.ok) {
@@ -143,9 +143,9 @@ export function FeatureForm({ coordinates, onHedgehogAdded }: Props) {
         setFormData({ name: "", age: "", gender: "" });
         setErrors({});
 
-        // Pass the created hedgehog data to parent
-        if (onHedgehogAdded && result.hedgehog) {
-          onHedgehogAdded(result.hedgehog);
+        // Pass the created feature data to parent
+        if (onFeatureAdded && result.feature) {
+          onFeatureAdded(result.feature);
         }
       } else {
         const errorData = await response.json();

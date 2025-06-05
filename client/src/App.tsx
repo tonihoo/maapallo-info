@@ -4,94 +4,94 @@ import { Map } from "./Map";
 import { FeatureForm } from "./FeatureForm";
 import FeatureList from "./FeatureList";  // Default import
 import { FeatureInfo } from "./FeatureInfo";
-import { Hedgehog } from "@shared/hedgehog";
+import { FeatureTypes } from "@shared/featureTypes";
 import { Feature, Geometry, GeoJsonProperties } from 'geojson';
 
 export function App() {
-  // ID of the currently selected hedgehog
-  const [selectedHedgehogId, setSelectedHedgehogId] = useState<number | null>(
+  // ID of the currently selected feature
+  const [selectedFeatureId, setSelectedFeatureId] = useState<number | null>(
     null
   );
   // Latest coordinates from the Map click event
   const [coordinates, setCoordinates] = useState<number[]>([]);
-  // Selected hedgehog for map display
-  const [selectedHedgehog, setSelectedHedgehog] = useState<Hedgehog | null>(null);
+  // Selected feature for map display
+  const [selectedFeature, setSelectedFeature] = useState<FeatureTypes | null>(null);
   // A state to track when the list should refresh
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   // To store click location on the map
   const [clickLocation, setClickLocation] = useState<number[] | null>(null);
 
-  const handleHedgehogAdded = useCallback(async (newHedgehog: Hedgehog) => {
+  const handleFeatureAdded = useCallback(async (newFeature: FeatureTypes) => {
     // Increment to trigger list refresh
     setRefreshTrigger(prev => prev + 1);
     setClickLocation(null); // Clear click location after adding
 
-    // Directly use the returned hedgehog data
-    setSelectedHedgehog(newHedgehog);
-    setSelectedHedgehogId(newHedgehog.id!);
+    // Directly use the returned feature data
+    setSelectedFeature(newFeature);
+    setSelectedFeatureId(newFeature.id!);
   }, []);
 
-  // Fetch the selected hedgehog data when ID changes
+  // Fetch the selected feature data when ID changes
   useEffect(() => {
-    if (!selectedHedgehogId) {
-      setSelectedHedgehog(null);
+    if (!selectedFeatureId) {
+      setSelectedFeature(null);
       return;
     }
 
-    const fetchHedgehog = async () => {
+    const fetchFeature = async () => {
       try {
-        const response = await fetch(`/api/v1/hedgehog/${selectedHedgehogId}`);
+        const response = await fetch(`/api/v1/feature/${selectedFeatureId}`);
         if (!response.ok) return;
 
         const data = await response.json();
-        setSelectedHedgehog(data.hedgehog);
+        setSelectedFeature(data.feature);
       } catch (error) {
-        console.error("Error fetching hedgehog:", error);
+        console.error("Error fetching feature:", error);
       }
     };
 
-    fetchHedgehog();
-  }, [selectedHedgehogId]);
+    fetchFeature();
+  }, [selectedFeatureId]);
 
   const handleMapClick = useCallback((coords: number[]) => {
     setCoordinates(coords);
     setClickLocation(coords);
   }, []);
 
-  const handleHedgehogSelect = useCallback(async (id: number) => {
-    setSelectedHedgehogId(id);
-    setClickLocation(null); // Clear click location when selecting existing hedgehog
+  const handleFeatureSelect = useCallback(async (id: number) => {
+    setSelectedFeatureId(id);
+    setClickLocation(null); // Clear click location when selecting existing feature
 
     try {
-      const response = await fetch(`/api/v1/hedgehog/${id}`);
+      const response = await fetch(`/api/v1/feature/${id}`);
       if (response.ok) {
         const data = await response.json();
-        setSelectedHedgehog(data.hedgehog);
+        setSelectedFeature(data.feature);
       }
     } catch (error) {
-      console.error('Error fetching hedgehog:', error);
+      console.error('Error fetching feature:', error);
     }
   }, []);
 
-  // Create map features for existing hedgehogs and click location
+  // Create map features for existing features and click location
   const mapFeatures: Feature<Geometry, GeoJsonProperties>[] = [];
 
-  // Add selected hedgehog feature
-  if (selectedHedgehog) {
+  // Add selected feature feature
+  if (selectedFeature) {
     mapFeatures.push({
       type: "Feature",
-      geometry: selectedHedgehog.location,
+      geometry: selectedFeature.location,
       properties: {
-        id: selectedHedgehog.id,
-        name: selectedHedgehog.name,
-        age: selectedHedgehog.age,
-        gender: selectedHedgehog.gender,
-        featureType: 'hedgehog'
+        id: selectedFeature.id,
+        name: selectedFeature.name,
+        age: selectedFeature.age,
+        gender: selectedFeature.gender,
+        featureType: 'feature'
       },
     });
   }
 
-  // Add click location feature (different from hedgehog locations)
+  // Add click location feature (different from feature locations)
   if (clickLocation && clickLocation.length === 2) {
     mapFeatures.push({
       type: "Feature",
@@ -127,8 +127,8 @@ export function App() {
         <Grid container spacing={1} sx={{ height: "100%" }}>
           <Grid item xs={12} md={3}>
             <FeatureList
-              onSelectHedgehog={handleHedgehogSelect}
-              selectedHedgehogId={selectedHedgehogId}
+              onSelectFeature={handleFeatureSelect}
+              selectedFeatureId={selectedFeatureId}
               refreshTrigger={refreshTrigger}
             />
           </Grid>
@@ -142,11 +142,11 @@ export function App() {
               <Grid item>
                 <FeatureForm
                   coordinates={coordinates}
-                  onHedgehogAdded={handleHedgehogAdded}
+                  onFeatureAdded={handleFeatureAdded}
                 />
               </Grid>
               <Grid item xs>
-                <FeatureInfo hedgehogId={selectedHedgehogId} />
+                <FeatureInfo featureId={selectedFeatureId} />
               </Grid>
             </Grid>
           </Grid>

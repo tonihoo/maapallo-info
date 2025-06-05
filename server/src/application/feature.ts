@@ -1,45 +1,45 @@
 import { getPool } from "@server/db";
 import { logger } from "@server/logging";
-import { hedgehogSchema } from "@shared/hedgehog";
+import { featureSchema } from "@shared/featureTypes";
 import { sql } from "slonik";
 
-export async function getAllHedgehogs() {
+export async function getAllFeatures() {
   try {
-    const hedgehogs = await getPool().query(
-      sql.type(hedgehogSchema)`
-        SELECT id, name FROM hedgehog
+    const features = await getPool().query(
+      sql.type(featureSchema)`
+        SELECT id, name FROM feature
       `
     );
 
-    return hedgehogs.rows;
+    return features.rows;
   } catch (error: unknown) {
-    logger.error("Failed to retrieve hedgehogs list:", error);
+    logger.error("Failed to retrieve features list:", error);
     let errorMessage =
       error instanceof Error ? error.message : "Unknown database error";
     throw new Error(`Database error: ${errorMessage}`);
   }
 }
 
-export async function getHedgehogById(id: number) {
+export async function getFeatureById(id: number) {
   try {
-    const hedgehog = await getPool().maybeOne(
-      sql.type(hedgehogSchema)`
+    const feature = await getPool().maybeOne(
+      sql.type(featureSchema)`
         SELECT id, name, age, gender, ST_AsGeoJSON(location)::json AS location
-        FROM hedgehog
+        FROM feature
         WHERE id = ${id}
       `
     );
 
-    return hedgehog;
+    return feature;
   } catch (error: unknown) {
-    logger.error(`Failed to retrieve hedgehog with ID ${id}:`, error);
+    logger.error(`Failed to retrieve feature with ID ${id}:`, error);
     let errorMessage =
       error instanceof Error ? error.message : "Unknown database error";
     throw new Error(`Database error: ${errorMessage}`);
   }
 }
 
-export async function createHedgehog(hedgehogData: {
+export async function createFeature(featureData: {
   name: string;
   age: number;
   gender: string;
@@ -49,24 +49,24 @@ export async function createHedgehog(hedgehogData: {
   };
 }) {
   try {
-    const locationJson = JSON.stringify(hedgehogData.location);
+    const locationJson = JSON.stringify(featureData.location);
 
-    const newHedgehog = await getPool().one(
-      sql.type(hedgehogSchema)`
-        INSERT INTO hedgehog (name, age, gender, location)
+    const newFeature = await getPool().one(
+      sql.type(featureSchema)`
+        INSERT INTO feature (name, age, gender, location)
         VALUES (
-          ${hedgehogData.name},
-          ${hedgehogData.age},
-          ${hedgehogData.gender},
+          ${featureData.name},
+          ${featureData.age},
+          ${featureData.gender},
           ST_SetSRID(ST_GeomFromGeoJSON(${locationJson}), 3067)
         )
         RETURNING id, name, age, gender, ST_AsGeoJSON(location)::json as location
       `
     );
 
-    return newHedgehog;
+    return newFeature;
   } catch (error: unknown) {
-    logger.error("Failed to create hedgehog:", error);
+    logger.error("Failed to create feature:", error);
     let errorMessage =
       error instanceof Error ? error.message : "Unknown database error";
     throw new Error(`Database error: ${errorMessage}`);

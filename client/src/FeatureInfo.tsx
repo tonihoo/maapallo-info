@@ -2,10 +2,10 @@ import { Paper, Typography } from "@mui/material";
 import { useState, useEffect } from "react";
 
 interface Props {
-  hedgehogId: number | null;
+  featureId: number | null;
 }
 
-interface Hedgehog {
+interface Feature {
   id: number;
   name: string;
   age: number;
@@ -22,38 +22,38 @@ const genderTranslations: Record<string, string> = {
   unknown: 'Tuntematon'
 };
 
-export function FeatureInfo({ hedgehogId }: Props) {
-  const [hedgehog, setHedgehog] = useState<Hedgehog | null>(null);
+export function FeatureInfo({ featureId }: Props) {
+  const [feature, setFeature] = useState<Feature | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!hedgehogId) {
-      setHedgehog(null);
+    if (!featureId) {
+      setFeature(null);
       return;
     }
 
-    const fetchHedgehog = async () => {
+    const fetchFeature = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/v1/hedgehog/${hedgehogId}`);
+        const res = await fetch(`/api/v1/feature/${featureId}`);
 
         if (!res.ok) {
           console.error(`API returned status: ${res.status}`);
           const errorText = await res.text();
-          throw new Error(`Failed to fetch hedgehog: ${errorText}`);
+          throw new Error(`Failed to fetch feature: ${errorText}`);
         }
 
         const data = await res.json();
-        setHedgehog(data.hedgehog);
+        setFeature(data.feature);
       } catch (err) {
-        console.error("Error fetching hedgehog:", err);
+        console.error("Error fetching feature:", err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchHedgehog();
-  }, [hedgehogId]);
+    fetchFeature();
+  }, [featureId]);
 
   return (
     <Paper
@@ -62,19 +62,19 @@ export function FeatureInfo({ hedgehogId }: Props) {
         margin: "1em 0em 1em 0em",
         padding: "1em",
       }}
-      data-cy="hedgehog-detail"
+      data-cy="feature-detail"
     >
       {loading ? (
         <Typography>Ladataan...</Typography>
-      ) : hedgehog ? (
+      ) : feature ? (
         <>
-          <Typography variant="h6">{hedgehog.name}</Typography>
-          <Typography data-cy="hedgehog-age-display">Ikä: {hedgehog.age}</Typography>
-          <Typography data-cy="hedgehog-gender-display">
-            Sukupuoli: {genderTranslations[hedgehog.gender]}
+          <Typography variant="h6">{feature.name}</Typography>
+          <Typography data-cy="feature-age-display">Ikä: {feature.age}</Typography>
+          <Typography data-cy="feature-gender-display">
+            Sukupuoli: {genderTranslations[feature.gender]}
           </Typography>
           <Typography>
-            Sijainti: E {hedgehog.location.coordinates[0].toFixed(0)}, N {hedgehog.location.coordinates[1].toFixed(0)}
+            Sijainti: E {feature.location.coordinates[0].toFixed(0)}, N {feature.location.coordinates[1].toFixed(0)}
           </Typography>
         </>
       ) : (

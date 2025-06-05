@@ -41,7 +41,7 @@ export function Map({ children, onMapClick, features }: Props) {
         }),
       });
     } else {
-      // Default style for hedgehogs
+      // Default style for features
       return new Style({
         image: new Circle({
           radius: 7,
