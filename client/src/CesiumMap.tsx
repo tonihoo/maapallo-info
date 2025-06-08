@@ -214,11 +214,11 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
     }
   }, [features]);
 
-  // Add useEffect to handle selected feature centering
+  // Add useEffect to handle selected feature centering with smooth animation
   useEffect(() => {
     if (!viewerRef.current || !selectedFeatureId) return;
 
-    // Find the selected feature in the features array
+    // Find the selected feature in the mapFeatures array
     const selectedFeature = features.find(feature =>
       feature.properties?.id === selectedFeatureId
     );
@@ -230,14 +230,16 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
     // Get current camera height to maintain zoom level
     const currentHeight = viewerRef.current.scene.camera.positionCartographic.height;
 
-    // Center camera on selected feature without changing zoom
-    viewerRef.current.camera.setView({
+    // Smooth camera animation to selected feature
+    viewerRef.current.camera.flyTo({
       destination: Cesium.Cartesian3.fromDegrees(longitude, latitude, currentHeight),
       orientation: {
         heading: viewerRef.current.scene.camera.heading,
         pitch: viewerRef.current.scene.camera.pitch,
         roll: viewerRef.current.scene.camera.roll
-      }
+      },
+      duration: 2.0, // 2 seconds animation duration
+      easingFunction: Cesium.EasingFunction.CUBIC_IN_OUT, // Smooth easing
     });
 
   }, [selectedFeatureId, features]);
