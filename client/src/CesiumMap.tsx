@@ -164,8 +164,8 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
             }
 
             // Add country name labels
-            if (entity.properties && entity.properties.name) {
-              const name = entity.properties.name.getValue();
+            if (entity.properties && entity.properties.name_fi) {
+              const name = entity.properties.name_fi.getValue();
 
               // Calculate the center of the polygon for label placement
               if (entity.polygon) {
