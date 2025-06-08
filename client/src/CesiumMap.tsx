@@ -363,6 +363,7 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
           ".cesium-widget canvas": {
             width: "100% !important",
             height: "100% !important",
+            // Remove the maxWidth and maxHeight restrictions
           },
           ".cesium-widget-credits": {
             display: "none !important",
@@ -381,8 +382,9 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
       <div
         ref={containerCallbackRef}
         style={{
-          width: "100%",
-          height: "100%",
+          width: "100%",   // Full width instead of 600px
+          height: "100%",  // Full height instead of 400px
+          // Remove margin: "auto"
         }}
       >
         {loading && (
@@ -432,7 +434,7 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
                   pitch: camera.pitch,
                   roll: camera.roll
                 },
-                duration: 0.8, // 0.8 seconds for smooth animation
+                duration: 0.8,
                 easingFunction: Cesium.EasingFunction.CUBIC_IN_OUT
               });
             }
@@ -474,7 +476,7 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
                   pitch: camera.pitch,
                   roll: camera.roll
                 },
-                duration: 0.8, // 0.8 seconds for smooth animation
+                duration: 0.8,
                 easingFunction: Cesium.EasingFunction.CUBIC_IN_OUT
               });
             }
