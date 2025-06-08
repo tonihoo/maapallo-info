@@ -116,7 +116,9 @@ export function App() {
           paddingY: "0.25rem",
           paddingX: "1rem",
           textAlign: "center",
-          boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
+          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+          position: "relative",
+          zIndex: 1000
         }}
       >
         <Typography variant="overline" component="h1">
@@ -124,53 +126,95 @@ export function App() {
         </Typography>
       </Box>
 
-      <Container maxWidth={false} sx={{ height: "calc(100vh - 120px)", p: 1 }}>
-        <Grid container spacing={1} sx={{ height: "100%" }}>
-          <Grid item xs={12} md={3}> {/* Changed back from md={2} to md={3} */}
-            <FeatureList
-              onSelectFeature={handleFeatureSelect}
-              selectedFeatureId={selectedFeatureId}
-              refreshTrigger={refreshTrigger}
-            />
-          </Grid>
-          <Grid item xs={12} md={6}> {/* Changed back from md={8} to md={6} */}
-            <Paper elevation={3} sx={{ height: "100%" }}>
-              <CesiumMap features={mapFeatures} onMapClick={handleMapClick} />
-            </Paper>
-          </Grid>
-          <Grid item xs={12} md={3}> {/* Changed back from md={2} to md={3} */}
-            <Grid container direction="column" spacing={1} sx={{ height: "100%" }}>
-              <Grid item>
-                <FeatureForm
-                  coordinates={coordinates}
-                  onFeatureAdded={handleFeatureAdded}
-                />
-              </Grid>
-              <Grid item xs>
-                <FeatureInfo featureId={selectedFeatureId} />
-              </Grid>
-            </Grid>
-          </Grid>
-        </Grid>
-      </Container>
+      {/* Fullscreen map with floating panels */}
+      <Box sx={{
+        position: "relative",
+        height: "calc(100vh - 120px)",
+        overflow: "hidden"
+      }}>
+        {/* Fullscreen map */}
+        <Box sx={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0
+        }}>
+          <CesiumMap features={mapFeatures} onMapClick={handleMapClick} />
+        </Box>
+
+        {/* Floating Feature List - Left Panel */}
+        <Paper
+          elevation={8}
+          sx={{
+            position: "absolute",
+            top: 16,
+            left: 16,
+            width: 280,
+            maxHeight: "calc(100vh - 200px)",
+            backgroundColor: "rgba(255, 255, 255, 0.95)",
+            backdropFilter: "blur(8px)",
+            zIndex: 100
+          }}
+        >
+          <FeatureList
+            onSelectFeature={handleFeatureSelect}
+            selectedFeatureId={selectedFeatureId}
+            refreshTrigger={refreshTrigger}
+          />
+        </Paper>
+
+        {/* Floating Feature Form - Top Right Panel */}
+        <Paper
+          elevation={8}
+          sx={{
+            position: "absolute",
+            top: 16,
+            right: 16,
+            width: 300,
+            backgroundColor: "rgba(255, 255, 255, 0.95)",
+            backdropFilter: "blur(8px)",
+            zIndex: 100
+          }}
+        >
+          <FeatureForm
+            coordinates={coordinates}
+            onFeatureAdded={handleFeatureAdded}
+          />
+        </Paper>
+
+        {/* Floating Feature Info - Bottom Right Panel */}
+        {selectedFeatureId && (
+          <Paper
+            elevation={8}
+            sx={{
+              position: "absolute",
+              bottom: 16,
+              right: 16,
+              width: 300,
+              maxHeight: 300,
+              backgroundColor: "rgba(255, 255, 255, 0.95)",
+              backdropFilter: "blur(8px)",
+              zIndex: 100
+            }}
+          >
+            <FeatureInfo featureId={selectedFeatureId} />
+          </Paper>
+        )}
+      </Box>
 
       {/* Footer */}
       <Box
         sx={{
-          position: "fixed",
-          bottom: 0,
-          left: 0,
-          right: 0,
           backgroundColor: "#ffb34c",
-          height: "40px",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          zIndex: 1000,
-          boxShadow: "0 -2px 4px rgba(0,0,0,0.1)"
+          color: "white",
+          padding: "0.5rem",
+          textAlign: "center",
+          position: "relative",
+          zIndex: 1000
         }}
       >
-        <Typography sx={{ color: "white" }} variant="overline">
+        <Typography variant="caption">
           Kehitysmaantieteen yhdistys 2025
         </Typography>
       </Box>

@@ -232,8 +232,7 @@ export function CesiumMap({ features = [], onMapClick }: Props) {
     );
   }
 
-  // Always render the container, let loading state show inside it
-  console.log('CesiumMap: Rendering container');
+  // Remove the forced small container size and make it fullscreen
   return (
     <div style={{ width: "100%", height: "100%", position: "relative" }}>
       <GlobalStyles
@@ -253,8 +252,7 @@ export function CesiumMap({ features = [], onMapClick }: Props) {
           ".cesium-widget canvas": {
             width: "100% !important",
             height: "100% !important",
-            maxWidth: "600px !important", // Force smaller canvas width
-            maxHeight: "400px !important", // Force smaller canvas height
+            // Remove the maxWidth and maxHeight restrictions
           },
           ".cesium-widget-credits": {
             display: "none !important",
@@ -273,9 +271,9 @@ export function CesiumMap({ features = [], onMapClick }: Props) {
       <div
         ref={containerCallbackRef}
         style={{
-          width: "600px",  // Force smaller container
-          height: "400px", // Force smaller container
-          margin: "auto"   // Center it
+          width: "100%",   // Full width instead of 600px
+          height: "100%",  // Full height instead of 400px
+          // Remove margin: "auto"
         }}
       >
         {loading && (
