@@ -137,35 +137,87 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
 
         // Add country boundaries and labels as vector overlay
         try {
-          // Add a transparent political boundaries layer
-          const politicalLayer = viewer.imageryLayers.addImageryProvider(
-            new Cesium.UrlTemplateImageryProvider({
-              url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
-              credit: 'Esri, HERE, Garmin, NGA, USGS',
-              maximumLevel: 12
-            })
+          // Load Natural Earth country boundaries directly from their CDN
+          const countriesDataSource = await Cesium.GeoJsonDataSource.load(
+            'https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson',
+            {
+              stroke: Cesium.Color.WHITE,
+              fill: Cesium.Color.TRANSPARENT,
+              strokeWidth: 2
+            }
           );
 
-          // Make it much more transparent like Google Earth
-          politicalLayer.alpha = 0.3;
-          politicalLayer.brightness = 1.0; // Reset brightness to normal
+          viewer.dataSources.add(countriesDataSource);
+
+          // Style the country boundaries
+          const entities = countriesDataSource.entities.values;
+          for (let i = 0; i < entities.length; i++) {
+            const entity = entities[i];
+
+            if (entity.polygon) {
+              entity.polygon.material = Cesium.Color.TRANSPARENT;
+              entity.polygon.outline = true;
+              entity.polygon.outlineColor = Cesium.Color.WHITE.withAlpha(0.8);
+              entity.polygon.outlineWidth = 3;
+              entity.polygon.height = 0;
+              entity.polygon.extrudedHeight = 0;
+            }
+
+            // Add country name labels
+            if (entity.properties && entity.properties.NAME) {
+              const name = entity.properties.NAME.getValue();
+
+              // Get the polygon center for label placement
+              if (entity.polygon) {
+                const hierarchy = entity.polygon.hierarchy.getValue(Cesium.JulianDate.now());
+                if (hierarchy && hierarchy.length > 0) {
+                  const boundingSphere = Cesium.BoundingSphere.fromPoints(hierarchy);
+                  const center = boundingSphere.center;
+                  const cartographic = Cesium.Cartographic.fromCartesian(center);
+
+                  viewer.entities.add({
+                    position: Cesium.Cartesian3.fromRadians(
+                      cartographic.longitude,
+                      cartographic.latitude,
+                      5000 // 5km above ground
+                    ),
+                    label: {
+                      text: name,
+                      font: '14pt sans-serif',
+                      fillColor: Cesium.Color.WHITE,
+                      outlineColor: Cesium.Color.BLACK,
+                      outlineWidth: 2,
+                      style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                      horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
+                      verticalOrigin: Cesium.VerticalOrigin.CENTER,
+                      scaleByDistance: new Cesium.NearFarScalar(1.0e6, 1.2, 1.0e8, 0.0),
+                      pixelOffsetScaleByDistance: new Cesium.NearFarScalar(1.0e6, 1.0, 1.0e8, 0.0),
+                    }
+                  });
+                }
+              }
+            }
+          }
+
+          console.log('Successfully loaded country boundaries and labels');
 
         } catch (error) {
-          console.warn('Could not add political boundaries layer:', error);
-        }
+          console.warn('Could not add country outlines:', error);
 
-        // Remove the OSM overlay since it's making it too blurry
-        // try {
-        //   const osmLayer = viewer.imageryLayers.addImageryProvider(
-        //     new Cesium.OpenStreetMapImageryProvider({
-        //       url: 'https://tile.openstreetmap.org/',
-        //       credit: 'OpenStreetMap contributors'
-        //     })
-        //   );
-        //   osmLayer.alpha = 0.3;
-        // } catch (error) {
-        //   console.warn('Could not add OSM overlay:', error);
-        // }
+          // Fallback to a simple tile overlay
+          try {
+            const osmLayer = viewer.imageryLayers.addImageryProvider(
+              new Cesium.OpenStreetMapImageryProvider({
+                url: 'https://tile.openstreetmap.org/',
+                credit: 'OpenStreetMap contributors'
+              })
+            );
+            osmLayer.alpha = 0.15;
+            console.log('Using OSM fallback overlay');
+          } catch (fallbackError) {
+            console.warn('Fallback overlay also failed:', fallbackError);
+          }
+        }
 
         // Handle click events
         viewer.cesiumWidget.screenSpaceEventHandler.setInputAction(
