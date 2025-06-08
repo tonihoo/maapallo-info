@@ -137,9 +137,9 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
 
         // Add country boundaries and labels as vector overlay
         try {
-          // Load Natural Earth country boundaries directly from their CDN
+          // Load country boundaries from local file
           const countriesDataSource = await Cesium.GeoJsonDataSource.load(
-            'https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson',
+            '/data/world.geojson',
             {
               stroke: Cesium.Color.WHITE,
               fill: Cesium.Color.TRANSPARENT,
@@ -202,20 +202,36 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
           console.log('Successfully loaded country boundaries and labels');
 
         } catch (error) {
-          console.warn('Could not add country outlines:', error);
+          console.warn('Could not load local file, trying fallback:', error);
 
-          // Fallback to a simple tile overlay
+          // Fallback to the remote file if local fails
           try {
-            const osmLayer = viewer.imageryLayers.addImageryProvider(
-              new Cesium.OpenStreetMapImageryProvider({
-                url: 'https://tile.openstreetmap.org/',
-                credit: 'OpenStreetMap contributors'
-              })
+            const fallbackDataSource = await Cesium.GeoJsonDataSource.load(
+              'https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson',
+              {
+                stroke: Cesium.Color.WHITE,
+                fill: Cesium.Color.TRANSPARENT,
+                strokeWidth: 2
+              }
             );
-            osmLayer.alpha = 0.15;
-            console.log('Using OSM fallback overlay');
+            viewer.dataSources.add(fallbackDataSource);
+            console.log('Loaded from fallback URL');
           } catch (fallbackError) {
-            console.warn('Fallback overlay also failed:', fallbackError);
+            console.warn('Fallback also failed:', fallbackError);
+
+            // Final fallback to OSM overlay
+            try {
+              const osmLayer = viewer.imageryLayers.addImageryProvider(
+                new Cesium.OpenStreetMapImageryProvider({
+                  url: 'https://tile.openstreetmap.org/',
+                  credit: 'OpenStreetMap contributors'
+                })
+              );
+              osmLayer.alpha = 0.15;
+              console.log('Using OSM fallback overlay');
+            } catch (osmError) {
+              console.warn('All fallbacks failed:', osmError);
+            }
           }
         }
 
