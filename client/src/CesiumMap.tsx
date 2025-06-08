@@ -97,36 +97,36 @@ export function CesiumMap({ features = [], onMapClick }: Props) {
         viewer.scene.screenSpaceCameraController.minimumZoomDistance = 100000; // 100k meters minimum (street level)
         viewer.scene.screenSpaceCameraController.maximumZoomDistance = 15000000; // 15 million meters maximum (prevents space view)
 
-        // Add a camera change listener to enforce zoom limits
-        viewer.scene.camera.changed.addEventListener(() => {
+        // Re-enable Cesium's built-in zoom
+        viewer.scene.screenSpaceCameraController.enableZoom = true;
+
+        // Remove the custom wheel event handler that wasn't working
+        // viewer.cesiumWidget.canvas.addEventListener('wheel', (event) => {
+        //   // Remove this entire block
+        // }, { passive: false });
+
+        // Add a post-render listener to enforce zoom limits after any camera movement
+        viewer.scene.postRender.addEventListener(() => {
           const cameraHeight = viewer.scene.camera.positionCartographic.height;
 
-          // If camera is too high (in space), bring it back down
+          // If camera is too high (in space), smoothly bring it back down
           if (cameraHeight > 15000000) {
-            viewer.scene.camera.setView({
-              destination: Cesium.Cartesian3.fromDegrees(0.0, 0.0, 15000000),
-              orientation: {
-                heading: viewer.scene.camera.heading,
-                pitch: viewer.scene.camera.pitch,
-                roll: viewer.scene.camera.roll
-              }
-            });
+            const currentPosition = viewer.scene.camera.positionCartographic;
+            viewer.scene.camera.position = Cesium.Cartesian3.fromRadians(
+              currentPosition.longitude,
+              currentPosition.latitude,
+              15000000
+            );
           }
 
           // If camera is too low, bring it back up
           if (cameraHeight < 100000) {
-            viewer.scene.camera.setView({
-              destination: Cesium.Cartesian3.fromDegrees(
-                Cesium.Math.toDegrees(viewer.scene.camera.positionCartographic.longitude),
-                Cesium.Math.toDegrees(viewer.scene.camera.positionCartographic.latitude),
-                100000
-              ),
-              orientation: {
-                heading: viewer.scene.camera.heading,
-                pitch: viewer.scene.camera.pitch,
-                roll: viewer.scene.camera.roll
-              }
-            });
+            const currentPosition = viewer.scene.camera.positionCartographic;
+            viewer.scene.camera.position = Cesium.Cartesian3.fromRadians(
+              currentPosition.longitude,
+              currentPosition.latitude,
+              100000
+            );
           }
         });
 
