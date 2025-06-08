@@ -1,20 +1,16 @@
-FROM node:18-alpine AS base
+FROM node:20-alpine
 
-FROM base AS shared
-WORKDIR /app/shared
-COPY ./shared/package*.json .
+# Copy everything from the build context
+COPY . /app/
+
+# Set working directory to the client subfolder
+WORKDIR /app/client
+
+# Install dependencies
 RUN npm install
 
-FROM base AS client
-WORKDIR /app/client
-COPY ./client/package*.json .
-RUN npm install
+# Expose port
+EXPOSE 5173
 
-FROM base AS main
-WORKDIR /app/client
-# Install curl for health checks
-RUN apk update && apk add curl
-COPY --from=shared /app/shared /app/shared
-COPY --from=client /app/client /app/client
-
-CMD npm run dev
+# Start development server
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]

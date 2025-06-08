@@ -1,39 +1,32 @@
-import react from '@vitejs/plugin-react';
-import { CommonServerOptions, defineConfig } from 'vite';
-import checker from 'vite-plugin-checker';
-import tsconfigPaths from 'vite-tsconfig-paths';
-
-const serverOptions: CommonServerOptions = {
-  host: '0.0.0.0',
-  port: 8080,
-  proxy: {
-    '/api': 'http://server:3003',
-  },
-};
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 
 export default defineConfig({
-  plugins: [
-    react({
-      jsxImportSource: '@emotion/react',
-      babel: { plugins: ['@emotion/babel-plugin'] },
-    }),
-    tsconfigPaths(),
-    process.env.NODE_ENV === 'development' &&
-      checker({
-        typescript: {
-          buildMode: true,
-        },
-        overlay: {
-          initialIsOpen: false,
-        },
-      }),
-  ],
-  build: {
-    outDir: 'dist',
-    commonjsOptions: {
-      include: [/shared/, /node_modules/],
-    },
+  plugins: [react()],
+  server: {
+    host: '0.0.0.0',
+    port: 8080,
+    proxy: {
+      '/api': {
+        target: 'http://server:3003',
+        changeOrigin: true,
+        secure: false
+      }
+    }
   },
-  server: serverOptions,
-  preview: serverOptions,
-});
+  define: {
+    CESIUM_BASE_URL: JSON.stringify('/node_modules/cesium/Build/Cesium/')
+  },
+  optimizeDeps: {
+    include: ['cesium']
+  },
+  build: {
+    minify: false,
+    sourcemap: true
+  },
+  esbuild: {
+    minify: false
+  },
+  // Force cache invalidation
+  clearScreen: false
+})

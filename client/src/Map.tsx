@@ -60,13 +60,13 @@ export function Map({ children, onMapClick, features }: Props) {
   const [olView] = useState(() => {
     return new View({
       center: [460000, 7130000],
-      zoom: 7,
-      projection: 'EPSG:3067',
-      multiWorld: false,
-      enableRotation: false,
-      // Restrict view to Finland's boundaries in EPSG:3067 coordinates
-      extent: [20000, 6550000, 900000, 7850000],
-      maxZoom: 18,
+      zoom: 2,
+    //   projection: 'EPSG:3067',
+    //   multiWorld: false,
+    //   enableRotation: false,
+    //   // Restrict view to Finland's boundaries in EPSG:3067 coordinates
+    //   extent: [20000, 6550000, 900000, 7850000],
+    //   maxZoom: 18,
     });
   });
 

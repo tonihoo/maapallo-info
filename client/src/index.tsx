@@ -1,4 +1,4 @@
-import { App } from '@client/App';
+import { App } from './App';
 import { createRoot } from 'react-dom/client';
 
 document.addEventListener('DOMContentLoaded', async () => {

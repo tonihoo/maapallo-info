@@ -1,8 +1,9 @@
 import { useState, useCallback, useEffect } from "react";
 import { Grid, Container, Box, Paper, Typography } from "@mui/material";
-import { Map } from "./Map";
+import { CesiumMap } from "./CesiumMap"; // Switch to CesiumMap
+// import { Map } from "./Map"; // Comment out Map
 import { FeatureForm } from "./FeatureForm";
-import FeatureList from "./FeatureList";  // Default import
+import FeatureList from "./FeatureList";
 import { FeatureInfo } from "./FeatureInfo";
 import { FeatureTypes } from "@shared/featureTypes";
 import { Feature, Geometry, GeoJsonProperties } from 'geojson';
@@ -112,8 +113,8 @@ export function App() {
         sx={{
           backgroundColor: "#ffb34c",
           color: "white",
-          paddingY: "0.25rem", // Only vertical padding
-          paddingX: "1rem",    // Keep horizontal padding for text spacing
+          paddingY: "0.25rem",
+          paddingX: "1rem",
           textAlign: "center",
           boxShadow: "0 2px 4px rgba(0,0,0,0.1)"
         }}
@@ -125,19 +126,19 @@ export function App() {
 
       <Container maxWidth={false} sx={{ height: "calc(100vh - 120px)", p: 1 }}>
         <Grid container spacing={1} sx={{ height: "100%" }}>
-          <Grid item xs={12} md={3}>
+          <Grid item xs={12} md={3}> {/* Changed back from md={2} to md={3} */}
             <FeatureList
               onSelectFeature={handleFeatureSelect}
               selectedFeatureId={selectedFeatureId}
               refreshTrigger={refreshTrigger}
             />
           </Grid>
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12} md={6}> {/* Changed back from md={8} to md={6} */}
             <Paper elevation={3} sx={{ height: "100%" }}>
-              <Map features={mapFeatures} onMapClick={handleMapClick} />
+              <CesiumMap features={mapFeatures} onMapClick={handleMapClick} />
             </Paper>
           </Grid>
-          <Grid item xs={12} md={3}>
+          <Grid item xs={12} md={3}> {/* Changed back from md={2} to md={3} */}
             <Grid container direction="column" spacing={1} sx={{ height: "100%" }}>
               <Grid item>
                 <FeatureForm
@@ -161,7 +162,6 @@ export function App() {
           left: 0,
           right: 0,
           backgroundColor: "#ffb34c",
-        //   backgroundColor: "#ffb34c",
           height: "40px",
           display: "flex",
           justifyContent: "center",
