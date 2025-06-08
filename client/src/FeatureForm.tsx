@@ -263,7 +263,9 @@ export function FeatureForm({ coordinates, onFeatureAdded }: Props) {
                 Sijainnin koordinaatit (WGS84):
               </Typography>
               <Typography variant="body1" fontFamily="monospace" fontWeight="medium">
-                Pituus: {coordinates[0].toFixed(6)}°, Leveys: {coordinates[1].toFixed(6)}°
+                Pituus: {coordinates[0].toFixed(6)}°
+                <br />
+                Leveys: {coordinates[1].toFixed(6)}°
               </Typography>
             </Box>
           ) : (
