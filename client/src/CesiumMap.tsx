@@ -192,6 +192,7 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
                       horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
                       verticalOrigin: Cesium.VerticalOrigin.CENTER,
                       disableDepthTestDistance: Number.POSITIVE_INFINITY, // Ensure labels are always visible
+                      distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 10000000), // Show labels only within 10,000km
                     },
                   });
                 }
