@@ -75,9 +75,9 @@ export function CesiumMap({ features = [], onMapClick }: Props) {
           viewer.resize();
         }, 100);
 
-        // Set a safe, stable camera position that works
+        // Set camera to show whole Earth at safe distance
         viewer.camera.setView({
-          destination: Cesium.Cartesian3.fromDegrees(25.0, 60.0, 3000000), // 3 million meters over Finland
+          destination: Cesium.Cartesian3.fromDegrees(0.0, 0.0, 12000000), // 12 million meters to see whole Earth
           orientation: {
             heading: 0.0,
             pitch: -Cesium.Math.PI_OVER_TWO,
@@ -93,9 +93,42 @@ export function CesiumMap({ features = [], onMapClick }: Props) {
         viewer.scene.screenSpaceCameraController.enableZoom = true;
         viewer.scene.screenSpaceCameraController.enableTilt = true;
 
-        // Set very conservative zoom limits
-        viewer.scene.screenSpaceCameraController.minimumZoomDistance = 1000000; // 1 million meters minimum
-        viewer.scene.screenSpaceCameraController.maximumZoomDistance = 10000000; // 10 million meters maximum
+        // Set zoom limits to prevent going to space but allow good Earth view
+        viewer.scene.screenSpaceCameraController.minimumZoomDistance = 100000; // 100k meters minimum (street level)
+        viewer.scene.screenSpaceCameraController.maximumZoomDistance = 15000000; // 15 million meters maximum (prevents space view)
+
+        // Add a camera change listener to enforce zoom limits
+        viewer.scene.camera.changed.addEventListener(() => {
+          const cameraHeight = viewer.scene.camera.positionCartographic.height;
+
+          // If camera is too high (in space), bring it back down
+          if (cameraHeight > 15000000) {
+            viewer.scene.camera.setView({
+              destination: Cesium.Cartesian3.fromDegrees(0.0, 0.0, 15000000),
+              orientation: {
+                heading: viewer.scene.camera.heading,
+                pitch: viewer.scene.camera.pitch,
+                roll: viewer.scene.camera.roll
+              }
+            });
+          }
+
+          // If camera is too low, bring it back up
+          if (cameraHeight < 100000) {
+            viewer.scene.camera.setView({
+              destination: Cesium.Cartesian3.fromDegrees(
+                Cesium.Math.toDegrees(viewer.scene.camera.positionCartographic.longitude),
+                Cesium.Math.toDegrees(viewer.scene.camera.positionCartographic.latitude),
+                100000
+              ),
+              orientation: {
+                heading: viewer.scene.camera.heading,
+                pitch: viewer.scene.camera.pitch,
+                roll: viewer.scene.camera.roll
+              }
+            });
+          }
+        });
 
         // Disable automatic entity tracking completely
         viewer.trackedEntity = undefined;
