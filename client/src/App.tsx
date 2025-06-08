@@ -145,7 +145,11 @@ export function App() {
           right: 0,
           bottom: 0
         }}>
-          <CesiumMap features={mapFeatures} onMapClick={handleMapClick} />
+          <CesiumMap
+            features={mapFeatures}
+            onMapClick={handleMapClick}
+            selectedFeatureId={selectedFeatureId} // Add this prop
+          />
         </Box>
 
         {/* Floating Feature List - Left Panel */}

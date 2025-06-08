@@ -12,11 +12,12 @@ if (typeof window !== 'undefined') {
 Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJlYWE1OWUxNy1mMWZiLTQzYjYtYTQ0OS1kMWFjYmFkNjc5YzciLCJpZCI6NTc3MzMsImlhdCI6MTYyNzg0NTE4Mn0.XcKpgANiY19MC4bdFUXMVEBToBmqS8kuYpUlxJHYZxk';
 
 interface Props {
-  features: FeatureTypes[]; // Change this to match what App.tsx sends
+  features: FeatureTypes[];
   onMapClick: (coordinates: number[]) => void;
+  selectedFeatureId?: number | null; // Add this prop
 }
 
-export function CesiumMap({ features = [], onMapClick }: Props) {
+export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Props) {
   console.log('CesiumMap component rendered');
 
   const viewerRef = useRef<Cesium.Viewer | null>(null);
@@ -212,6 +213,34 @@ export function CesiumMap({ features = [], onMapClick }: Props) {
       console.error('Error updating features:', error);
     }
   }, [features]);
+
+  // Add useEffect to handle selected feature centering
+  useEffect(() => {
+    if (!viewerRef.current || !selectedFeatureId) return;
+
+    // Find the selected feature in the features array
+    const selectedFeature = features.find(feature =>
+      feature.properties?.id === selectedFeatureId
+    );
+
+    if (!selectedFeature || selectedFeature.geometry?.type !== 'Point') return;
+
+    const [longitude, latitude] = selectedFeature.geometry.coordinates;
+
+    // Get current camera height to maintain zoom level
+    const currentHeight = viewerRef.current.scene.camera.positionCartographic.height;
+
+    // Center camera on selected feature without changing zoom
+    viewerRef.current.camera.setView({
+      destination: Cesium.Cartesian3.fromDegrees(longitude, latitude, currentHeight),
+      orientation: {
+        heading: viewerRef.current.scene.camera.heading,
+        pitch: viewerRef.current.scene.camera.pitch,
+        roll: viewerRef.current.scene.camera.roll
+      }
+    });
+
+  }, [selectedFeatureId, features]);
 
   console.log('CesiumMap: Rendering with loading =', loading, 'error =', error);
 
