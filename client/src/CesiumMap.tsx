@@ -94,8 +94,8 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
         viewer.scene.screenSpaceCameraController.enableZoom = true;
         viewer.scene.screenSpaceCameraController.enableTilt = true;
 
-        // Set zoom limits to prevent going to space but allow good Earth view
-        viewer.scene.screenSpaceCameraController.minimumZoomDistance = 100000; // 100k meters minimum (street level)
+        // Set zoom limits to allow much closer zoom but prevent going to space
+        viewer.scene.screenSpaceCameraController.minimumZoomDistance = 1; // 1 meter minimum (very close street level)
         viewer.scene.screenSpaceCameraController.maximumZoomDistance = 15000000; // 15 million meters maximum (prevents space view)
 
         // Re-enable Cesium's built-in zoom
@@ -120,13 +120,13 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
             );
           }
 
-          // If camera is too low, bring it back up
-          if (cameraHeight < 100000) {
+          // If camera is too low, bring it back up (now much closer)
+          if (cameraHeight < 1) {
             const currentPosition = viewer.scene.camera.positionCartographic;
             viewer.scene.camera.position = Cesium.Cartesian3.fromRadians(
               currentPosition.longitude,
               currentPosition.latitude,
-              100000
+              1
             );
           }
         });
@@ -134,6 +134,38 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
         // Disable automatic entity tracking completely
         viewer.trackedEntity = undefined;
         viewer.selectedEntity = undefined;
+
+        // Add country boundaries and labels as vector overlay
+        try {
+          // Add a transparent political boundaries layer
+          const politicalLayer = viewer.imageryLayers.addImageryProvider(
+            new Cesium.UrlTemplateImageryProvider({
+              url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+              credit: 'Esri, HERE, Garmin, NGA, USGS',
+              maximumLevel: 12
+            })
+          );
+
+          // Make it much more transparent like Google Earth
+          politicalLayer.alpha = 0.3;
+          politicalLayer.brightness = 1.0; // Reset brightness to normal
+
+        } catch (error) {
+          console.warn('Could not add political boundaries layer:', error);
+        }
+
+        // Remove the OSM overlay since it's making it too blurry
+        // try {
+        //   const osmLayer = viewer.imageryLayers.addImageryProvider(
+        //     new Cesium.OpenStreetMapImageryProvider({
+        //       url: 'https://tile.openstreetmap.org/',
+        //       credit: 'OpenStreetMap contributors'
+        //     })
+        //   );
+        //   osmLayer.alpha = 0.3;
+        // } catch (error) {
+        //   console.warn('Could not add OSM overlay:', error);
+        // }
 
         // Handle click events
         viewer.cesiumWidget.screenSpaceEventHandler.setInputAction(
