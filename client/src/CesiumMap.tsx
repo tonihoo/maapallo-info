@@ -363,7 +363,6 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
           ".cesium-widget canvas": {
             width: "100% !important",
             height: "100% !important",
-            // Remove the maxWidth and maxHeight restrictions
           },
           ".cesium-widget-credits": {
             display: "none !important",
@@ -382,9 +381,8 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
       <div
         ref={containerCallbackRef}
         style={{
-          width: "100%",   // Full width instead of 600px
-          height: "100%",  // Full height instead of 400px
-          // Remove margin: "auto"
+          width: "100%",
+          height: "100%",
         }}
       >
         {loading && (
@@ -404,6 +402,97 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
             Loading 3D Map...
           </div>
         )}
+      </div>
+
+      {/* Zoom buttons */}
+      <div style={{
+        position: "absolute",
+        bottom: "20px",
+        right: "20px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "8px",
+        zIndex: 1000
+      }}>
+        <button
+          onClick={() => {
+            if (viewerRef.current) {
+              const camera = viewerRef.current.scene.camera;
+              const currentHeight = camera.positionCartographic.height;
+              const newHeight = Math.max(currentHeight * 0.5, 1);
+
+              camera.setView({
+                destination: Cesium.Cartesian3.fromRadians(
+                  camera.positionCartographic.longitude,
+                  camera.positionCartographic.latitude,
+                  newHeight
+                ),
+                orientation: {
+                  heading: camera.heading,
+                  pitch: camera.pitch,
+                  roll: camera.roll
+                }
+              });
+            }
+          }}
+          style={{
+            width: "40px",
+            height: "40px",
+            backgroundColor: "rgba(42, 42, 42, 0.8)",
+            color: "white",
+            border: "1px solid rgba(255, 255, 255, 0.3)",
+            borderRadius: "4px",
+            cursor: "pointer",
+            fontSize: "20px",
+            fontWeight: "bold",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
+          }}
+          title="Zoom In"
+        >
+          +
+        </button>
+
+        <button
+          onClick={() => {
+            if (viewerRef.current) {
+              const camera = viewerRef.current.scene.camera;
+              const currentHeight = camera.positionCartographic.height;
+              const newHeight = Math.min(currentHeight * 2, 15000000);
+
+              camera.setView({
+                destination: Cesium.Cartesian3.fromRadians(
+                  camera.positionCartographic.longitude,
+                  camera.positionCartographic.latitude,
+                  newHeight
+                ),
+                orientation: {
+                  heading: camera.heading,
+                  pitch: camera.pitch,
+                  roll: camera.roll
+                }
+              });
+            }
+          }}
+          style={{
+            width: "40px",
+            height: "40px",
+            backgroundColor: "rgba(42, 42, 42, 0.8)",
+            color: "white",
+            border: "1px solid rgba(255, 255, 255, 0.3)",
+            borderRadius: "4px",
+            cursor: "pointer",
+            fontSize: "20px",
+            fontWeight: "bold",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
+          }}
+          title="Zoom Out"
+        >
+          −
+        </button>
       </div>
     </div>
   );
