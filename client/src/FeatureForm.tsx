@@ -260,10 +260,10 @@ export function FeatureForm({ coordinates, onFeatureAdded }: Props) {
               border: '1px solid #ffb34c'
             }}>
               <Typography variant="body2" gutterBottom>
-                Sijaintin koordinaatit (ETRS-TM35FIN):
+                Sijainnin koordinaatit (WGS84):
               </Typography>
               <Typography variant="body1" fontFamily="monospace" fontWeight="medium">
-                E {coordinates[0].toFixed(0)}, N {coordinates[1].toFixed(0)}
+                Pituus: {coordinates[0].toFixed(6)}°, Leveys: {coordinates[1].toFixed(6)}°
               </Typography>
             </Box>
           ) : (
