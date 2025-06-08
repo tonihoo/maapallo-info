@@ -421,7 +421,7 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
               const currentHeight = camera.positionCartographic.height;
               const newHeight = Math.max(currentHeight * 0.5, 1);
 
-              camera.setView({
+              camera.flyTo({
                 destination: Cesium.Cartesian3.fromRadians(
                   camera.positionCartographic.longitude,
                   camera.positionCartographic.latitude,
@@ -431,7 +431,9 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
                   heading: camera.heading,
                   pitch: camera.pitch,
                   roll: camera.roll
-                }
+                },
+                duration: 0.8, // 0.8 seconds for smooth animation
+                easingFunction: Cesium.EasingFunction.CUBIC_IN_OUT
               });
             }
           }}
@@ -461,7 +463,7 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
               const currentHeight = camera.positionCartographic.height;
               const newHeight = Math.min(currentHeight * 2, 15000000);
 
-              camera.setView({
+              camera.flyTo({
                 destination: Cesium.Cartesian3.fromRadians(
                   camera.positionCartographic.longitude,
                   camera.positionCartographic.latitude,
@@ -471,7 +473,9 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
                   heading: camera.heading,
                   pitch: camera.pitch,
                   roll: camera.roll
-                }
+                },
+                duration: 0.8, // 0.8 seconds for smooth animation
+                easingFunction: Cesium.EasingFunction.CUBIC_IN_OUT
               });
             }
           }}
