@@ -113,12 +113,16 @@ export function App() {
         sx={{
           backgroundColor: "#ffb34c",
           color: "white",
-          paddingY: "0.25rem",
+          paddingY: "0.125rem",
           paddingX: "1rem",
           textAlign: "center",
           boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
           position: "relative",
-          zIndex: 1000
+          zIndex: 1000,
+          height: "40px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center"
         }}
       >
         <Typography variant="overline" component="h1">
@@ -129,7 +133,8 @@ export function App() {
       {/* Fullscreen map with floating panels */}
       <Box sx={{
         position: "relative",
-        height: "calc(100vh - 120px)",
+        height: "calc(100vh - 80px)",
+        minHeight: "calc(100vh - 80px)",
         overflow: "hidden"
       }}>
         {/* Fullscreen map */}
@@ -151,7 +156,7 @@ export function App() {
             top: 16,
             left: 16,
             width: 280,
-            maxHeight: "calc(100vh - 200px)",
+            maxHeight: "calc(100vh - 160px)",
             backgroundColor: "rgba(255, 255, 255, 0.95)",
             backdropFilter: "blur(8px)",
             zIndex: 100
@@ -208,10 +213,14 @@ export function App() {
         sx={{
           backgroundColor: "#ffb34c",
           color: "white",
-          padding: "0.5rem",
+          padding: "0.25rem",
           textAlign: "center",
           position: "relative",
-          zIndex: 1000
+          zIndex: 1000,
+          height: "30px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center"
         }}
       >
         <Typography variant="caption">
