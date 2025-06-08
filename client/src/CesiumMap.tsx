@@ -141,9 +141,9 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
           const countriesDataSource = await Cesium.GeoJsonDataSource.load(
             '/data/world.geojson',
             {
-              stroke: Cesium.Color.WHITE,
-              fill: Cesium.Color.TRANSPARENT,
-              strokeWidth: 2
+              stroke: Cesium.Color.WHITE, // Ensure stroke color is set
+              fill: Cesium.Color.TRANSPARENT, // Ensure fill is transparent
+              strokeWidth: 2 // Set stroke width for visibility
             }
           );
 
@@ -155,84 +155,53 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
             const entity = entities[i];
 
             if (entity.polygon) {
-              entity.polygon.material = Cesium.Color.TRANSPARENT;
-              entity.polygon.outline = true;
-              entity.polygon.outlineColor = Cesium.Color.WHITE.withAlpha(0.8);
-              entity.polygon.outlineWidth = 3;
-              entity.polygon.height = 0;
-              entity.polygon.extrudedHeight = 0;
+              entity.polygon.material = Cesium.Color.TRANSPARENT; // Transparent fill
+              entity.polygon.outline = true; // Enable outline
+              entity.polygon.outlineColor = Cesium.Color.WHITE.withAlpha(0.8); // Set outline color
+              entity.polygon.outlineWidth = 2; // Set outline width
+              entity.polygon.height = 0; // Ensure height is set to 0
+              entity.polygon.extrudedHeight = 0; // Ensure extruded height is set to 0
             }
 
             // Add country name labels
-            if (entity.properties && entity.properties.NAME) {
-              const name = entity.properties.NAME.getValue();
+            if (entity.properties && entity.properties.name) {
+              const name = entity.properties.name.getValue();
 
-              // Get the polygon center for label placement
+              // Calculate the center of the polygon for label placement
               if (entity.polygon) {
                 const hierarchy = entity.polygon.hierarchy.getValue(Cesium.JulianDate.now());
-                if (hierarchy && hierarchy.length > 0) {
-                  const boundingSphere = Cesium.BoundingSphere.fromPoints(hierarchy);
+                if (hierarchy && hierarchy.positions.length > 0) {
+                  const boundingSphere = Cesium.BoundingSphere.fromPoints(hierarchy.positions);
                   const center = boundingSphere.center;
                   const cartographic = Cesium.Cartographic.fromCartesian(center);
 
                   viewer.entities.add({
+                    id: `country-label-${i}`,
                     position: Cesium.Cartesian3.fromRadians(
                       cartographic.longitude,
                       cartographic.latitude,
-                      5000 // 5km above ground
+                      0
                     ),
                     label: {
                       text: name,
-                      font: '14pt sans-serif',
+                      font: '16pt Arial, sans-serif',
                       fillColor: Cesium.Color.WHITE,
                       outlineColor: Cesium.Color.BLACK,
                       outlineWidth: 2,
                       style: Cesium.LabelStyle.FILL_AND_OUTLINE,
                       horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
                       verticalOrigin: Cesium.VerticalOrigin.CENTER,
-                      scaleByDistance: new Cesium.NearFarScalar(1.0e6, 1.2, 1.0e8, 0.0),
-                      pixelOffsetScaleByDistance: new Cesium.NearFarScalar(1.0e6, 1.0, 1.0e8, 0.0),
-                    }
+                      disableDepthTestDistance: Number.POSITIVE_INFINITY, // Ensure labels are always visible
+                    },
                   });
                 }
               }
             }
           }
 
-          console.log('Successfully loaded country boundaries and labels');
-
+          console.log('Successfully loaded and styled country boundaries');
         } catch (error) {
-          console.warn('Could not load local file, trying fallback:', error);
-
-          // Fallback to the remote file if local fails
-          try {
-            const fallbackDataSource = await Cesium.GeoJsonDataSource.load(
-              'https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson',
-              {
-                stroke: Cesium.Color.WHITE,
-                fill: Cesium.Color.TRANSPARENT,
-                strokeWidth: 2
-              }
-            );
-            viewer.dataSources.add(fallbackDataSource);
-            console.log('Loaded from fallback URL');
-          } catch (fallbackError) {
-            console.warn('Fallback also failed:', fallbackError);
-
-            // Final fallback to OSM overlay
-            try {
-              const osmLayer = viewer.imageryLayers.addImageryProvider(
-                new Cesium.OpenStreetMapImageryProvider({
-                  url: 'https://tile.openstreetmap.org/',
-                  credit: 'OpenStreetMap contributors'
-                })
-              );
-              osmLayer.alpha = 0.15;
-              console.log('Using OSM fallback overlay');
-            } catch (osmError) {
-              console.warn('All fallbacks failed:', osmError);
-            }
-          }
+          console.error('Failed to load country boundaries:', error);
         }
 
         // Handle click events
@@ -270,8 +239,18 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
     if (!viewerRef.current || !viewerRef.current.entities) return;
 
     try {
-      // Clear existing entities
-      viewerRef.current.entities.removeAll();
+      // Remove only feature entities, not country borders/labels
+      const entitiesToRemove = [];
+      for (let i = 0; i < viewerRef.current.entities.values.length; i++) {
+        const entity = viewerRef.current.entities.values[i];
+        if (entity.id && typeof entity.id === 'string' && entity.id.startsWith('feature-')) {
+          entitiesToRemove.push(entity);
+        }
+      }
+
+      entitiesToRemove.forEach(entity => {
+        viewerRef.current!.entities.remove(entity);
+      });
 
       // Add new features
       features.forEach((feature, index) => {
@@ -301,7 +280,7 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
         }
       });
 
-      // Force prevent any automatic zooming after adding entities
+      // Prevent automatic zooming after adding entities
       setTimeout(() => {
         if (viewerRef.current) {
           viewerRef.current.trackedEntity = undefined;
