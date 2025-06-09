@@ -98,7 +98,7 @@ export function App() {
   };
 
   const headerStyle = {
-    backgroundColor: "rgba(255, 179, 76, 0.75)",
+    backgroundColor: is3DMode ? "rgba(126, 199, 129, 0.75)" : "rgba(255, 179, 76, 0.75)", // Green for 3D, orange for 2D
     color: "black",
     textAlign: "center" as const,
     boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
@@ -114,7 +114,7 @@ export function App() {
   };
 
   const footerStyle = {
-    backgroundColor: "rgba(255, 179, 76, 0.75)",
+    backgroundColor: is3DMode ? "rgba(126, 199, 129, 0.75)" : "rgba(255, 179, 76, 0.75)", // Green for 3D, orange for 2D
     color: "black",
     textAlign: "center" as const,
     boxShadow: "0 -2px 4px rgba(0,0,0,0.1)", // Negative shadow for bottom
@@ -183,21 +183,22 @@ export function App() {
           right: selectedFeatureId ? 340 : 16,
           zIndex: 200
         }}>
-          <Tooltip title={is3DMode ? "Switch to 2D Map" : "Switch to 3D Globe"}>
+          <Tooltip title={is3DMode ? "2D kartta" : "3D maapallo"}>
             <IconButton
               onClick={toggleMapMode}
               sx={{
                 backgroundColor: "rgba(255, 255, 255, 0.9)",
-                color: "#ffb34c",
-                fontSize: "24px",
+                color: is3DMode ? "#ffb34c" : "#4caf50", // Orange for 3D mode, green for 2D mode
+                fontSize: "16px",
+                fontWeight: "bold",
                 "&:hover": {
                   backgroundColor: "rgba(255, 255, 255, 1)",
-                  color: "#e89d2b"
+                  color: is3DMode ? "#e89d2b" : "#388e3c" // Darker orange/green on hover
                 },
                 boxShadow: "0 2px 8px rgba(0,0,0,0.2)"
               }}
             >
-              {is3DMode ? "🗺️" : "🌍"}
+              {is3DMode ? "2D" : "3D"}
             </IconButton>
           </Tooltip>
         </Box>
