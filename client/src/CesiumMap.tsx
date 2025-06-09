@@ -149,6 +149,16 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
         orientation: INITIAL_CAMERA_ORIENTATION
       });
 
+      // Add these settings for better text rendering:
+      viewer.scene.postProcessStages.fxaa.enabled = false; // Try disabling FXAA
+      viewer.resolutionScale = 2.0; // Try higher resolution scale
+      viewer.scene.highDynamicRange = false; // Disable HDR for better text
+
+      // Additional settings to try:
+      viewer.scene.globe.enableLighting = false;
+      viewer.scene.fog.enabled = false;
+      viewer.scene.skyAtmosphere.show = false;
+
       setupCameraControls(viewer);
       await loadCountryBoundaries(viewer);
 
