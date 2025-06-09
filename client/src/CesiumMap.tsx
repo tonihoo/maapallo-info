@@ -138,6 +138,7 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId, onFeat
         sceneModePicker: false,
         timeline: false,
         animation: false,
+        requestRenderMode : true
       });
 
       // Add click handler for feature selection and zoom
