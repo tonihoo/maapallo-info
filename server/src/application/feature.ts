@@ -7,7 +7,8 @@ export async function getAllFeatures() {
   try {
     const features = await getPool().query(
       sql.type(featureSchema)`
-        SELECT id, name FROM feature
+        SELECT id, name, age, gender, ST_AsGeoJSON(location)::json AS location
+        FROM feature
       `
     );
 

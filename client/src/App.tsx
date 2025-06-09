@@ -10,6 +10,7 @@ export function App() {
   const [selectedFeatureId, setSelectedFeatureId] = useState<number | null>(null);
   const [selectedFeature, setSelectedFeature] = useState<FeatureTypes | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [allFeatures, setAllFeatures] = useState<FeatureTypes[]>([]); // Add this line
 
   const handleFeatureAdded = useCallback(async (newFeature: FeatureTypes) => {
     setRefreshTrigger(prev => prev + 1);
@@ -17,60 +18,67 @@ export function App() {
     setSelectedFeatureId(newFeature.id!);
   }, []);
 
+  // Fetch all features
+  useEffect(() => {
+    const fetchAllFeatures = async () => {
+      try {
+        const response = await fetch('/api/v1/feature');
+        if (!response.ok) return;
+
+        const data = await response.json();
+        setAllFeatures(data.features || []);
+      } catch (error) {
+        console.error("Error fetching all features:", error);
+      }
+    };
+
+    fetchAllFeatures();
+  }, [refreshTrigger]); // Refetch when refreshTrigger changes
+
   const handleFeatureSelect = useCallback(async (id: number) => {
     setSelectedFeatureId(id);
 
-    try {
-      const response = await fetch(`/api/v1/feature/${id}`);
-      if (response.ok) {
-        const data = await response.json();
-        setSelectedFeature(data.feature);
-      }
-    } catch (error) {
-      console.error('Error fetching feature:', error);
+    // Find the feature in allFeatures (which now includes location)
+    const feature = allFeatures.find(f => f.id === id);
+    if (feature) {
+      setSelectedFeature(feature);
     }
-  }, []);
+  }, [allFeatures]);
 
-  // Fetch selected feature data when ID changes
+  // Simplified effect
   useEffect(() => {
     if (!selectedFeatureId) {
       setSelectedFeature(null);
       return;
     }
 
-    const fetchFeature = async () => {
-      try {
-        const response = await fetch(`/api/v1/feature/${selectedFeatureId}`);
-        if (!response.ok) return;
-
-        const data = await response.json();
-        setSelectedFeature(data.feature);
-      } catch (error) {
-        console.error("Error fetching feature:", error);
-      }
-    };
-
-    fetchFeature();
-  }, [selectedFeatureId]);
+    const feature = allFeatures.find(f => f.id === selectedFeatureId);
+    if (feature) {
+      setSelectedFeature(feature);
+    }
+  }, [selectedFeatureId, allFeatures]);
 
   // Create map features for rendering
   const createMapFeatures = (): Feature<Geometry, GeoJsonProperties>[] => {
     const features: Feature<Geometry, GeoJsonProperties>[] = [];
 
-    // Add selected feature
-    if (selectedFeature) {
-      features.push({
-        type: "Feature",
-        geometry: selectedFeature.location,
-        properties: {
-          id: selectedFeature.id,
-          name: selectedFeature.name,
-          age: selectedFeature.age,
-          gender: selectedFeature.gender,
-          featureType: 'feature'
-        },
-      });
-    }
+    // Use allFeatures which now includes coordinates
+    allFeatures.forEach(feature => {
+      if (feature.location) {
+        features.push({
+          type: "Feature",
+          geometry: feature.location,
+          properties: {
+            id: feature.id,
+            name: feature.name,
+            age: feature.age,
+            gender: feature.gender,
+            featureType: 'feature',
+            isSelected: feature.id === selectedFeatureId
+          },
+        });
+      }
+    });
 
     return features;
   };

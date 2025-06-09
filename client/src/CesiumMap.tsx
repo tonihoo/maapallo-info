@@ -62,8 +62,8 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
         if (entity.polygon) {
           entity.polygon.material = Cesium.Color.TRANSPARENT;
           entity.polygon.outline = true;
-          entity.polygon.outlineColor = Cesium.Color.WHITE.withAlpha(0.8);
-          entity.polygon.outlineWidth = 2;
+          entity.polygon.outlineColor = Cesium.Color.WHITE.withAlpha(0.5); // More transparent
+          entity.polygon.outlineWidth = 1; // Thinner lines
           entity.polygon.height = 0;
           entity.polygon.extrudedHeight = 0;
         }
@@ -292,25 +292,28 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
       features.forEach((feature, index) => {
         if (feature?.geometry?.type === 'Point' && feature.geometry.coordinates) {
           const [longitude, latitude] = feature.geometry.coordinates;
+          const isSelected = feature.properties?.isSelected;
 
           viewerRef.current!.entities.add({
             id: `feature-${index}`,
-            position: Cesium.Cartesian3.fromDegrees(longitude, latitude),
+            position: Cesium.Cartesian3.fromDegrees(longitude, latitude, 100000), // Add height: 100km above ground
             point: {
-              pixelSize: 20,
-              color: Cesium.Color.ORANGE,
-              outlineColor: Cesium.Color.DARKBLUE,
-              outlineWidth: 2,
-              heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+              pixelSize: isSelected ? 25 : 15,
+              color: isSelected ? Cesium.Color.RED : Cesium.Color.ORANGE,
+              outlineColor: isSelected ? Cesium.Color.WHITE : Cesium.Color.DARKBLUE,
+              outlineWidth: isSelected ? 3 : 2,
+              heightReference: Cesium.HeightReference.NONE, // Changed from CLAMP_TO_GROUND
+              disableDepthTestDistance: Number.POSITIVE_INFINITY, // Always visible
             },
-            label: feature.name ? {
-              text: feature.name,
-              font: '12pt sans-serif',
-              pixelOffset: new Cesium.Cartesian2(0, -40),
+            label: feature.properties?.name ? {
+              text: feature.properties.name,
+              font: isSelected ? '14pt sans-serif' : '12pt sans-serif',
+              pixelOffset: new Cesium.Cartesian2(0, isSelected ? -50 : -40),
               fillColor: Cesium.Color.WHITE,
               outlineColor: Cesium.Color.BLACK,
               outlineWidth: 2,
               style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+              disableDepthTestDistance: Number.POSITIVE_INFINITY, // Always visible
             } : undefined,
           });
         }
