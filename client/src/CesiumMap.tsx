@@ -12,8 +12,9 @@ Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOi
 
 interface Props {
   features: FeatureTypes[];
-  onMapClick: (coordinates: number[]) => void;
+  onMapClick?: (coordinates: number[]) => void;
   selectedFeatureId?: number | null;
+  onFeatureClick?: (featureId: number) => void;
 }
 
 // Constants
@@ -41,7 +42,7 @@ const ANIMATION_DURATIONS = {
   home: 2.0
 };
 
-export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Props) {
+export function CesiumMap({ features = [], onMapClick, selectedFeatureId, onFeatureClick }: Props) {
   const viewerRef = useRef<Cesium.Viewer | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -139,6 +140,53 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
         animation: false,
       });
 
+      // Add click handler for feature selection and zoom
+      viewer.cesiumWidget.screenSpaceEventHandler.setInputAction((click: any) => {
+        const pickedObject = viewer.scene.pick(click.position);
+
+        if (pickedObject && pickedObject.id) {
+          const entity = pickedObject.id;
+
+          // Check if it's a feature entity (starts with 'feature-')
+          if (typeof entity.id === 'string' && entity.id.startsWith('feature-')) {
+            // Extract the feature index from the entity ID
+            const featureIndex = parseInt(entity.id.replace('feature-', ''));
+            const feature = features[featureIndex];
+
+            if (feature && feature.properties?.id) {
+              // Call the onFeatureClick callback if provided
+              onFeatureClick?.(feature.properties.id);
+
+              // Zoom to the feature immediately on single click
+              if (feature.geometry?.type === 'Point') {
+                const [longitude, latitude] = feature.geometry.coordinates;
+                const zoomHeight = 50000; // Closer zoom level for clicked features
+
+                viewer.camera.flyTo({
+                  destination: Cesium.Cartesian3.fromDegrees(longitude, latitude, zoomHeight),
+                  orientation: {
+                    heading: viewer.scene.camera.heading,
+                    pitch: viewer.scene.camera.pitch,
+                    roll: viewer.scene.camera.roll
+                  },
+                  duration: 1.5,
+                  easingFunction: Cesium.EasingFunction.CUBIC_IN_OUT,
+                });
+              }
+            }
+          }
+        } else if (onMapClick) {
+          // Clicked on empty space - handle map click for adding new features
+          const cartesian = viewer.camera.pickEllipsoid(click.position, viewer.scene.globe.ellipsoid);
+          if (cartesian) {
+            const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+            const longitude = Cesium.Math.toDegrees(cartographic.longitude);
+            const latitude = Cesium.Math.toDegrees(cartographic.latitude);
+            onMapClick([longitude, latitude]);
+          }
+        }
+      }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
       // Set initial camera position
       viewer.camera.setView({
         destination: Cesium.Cartesian3.fromDegrees(
@@ -172,7 +220,7 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
       setError('Failed to initialize 3D map: ' + (error as Error).message);
       setLoading(false);
     }
-  }, [setupCameraControls, loadCountryBoundaries]);
+  }, [setupCameraControls, loadCountryBoundaries, features, onMapClick, onFeatureClick]);
 
   const containerCallbackRef = useCallback((containerElement: HTMLDivElement | null) => {
     if (containerElement) {
@@ -414,12 +462,6 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
             display: "none !important",
           },
           ".cesium-viewer-toolbar": {
-            position: "absolute !important",
-            top: "5px !important",
-            right: "5px !important",
-            background: "rgba(42, 42, 42, 0.8) !important",
-          },
-          ".cesium-viewer-toolbar": {
             display: "none !important",
           },
         }}
@@ -448,7 +490,7 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
       {/* Control Panel */}
       <div style={{
         position: "absolute",
-        bottom: "20px",
+        bottom: "50px", // Change from "20px" to "50px" to account for footer
         right: "20px",
         display: "flex",
         flexDirection: "column",
