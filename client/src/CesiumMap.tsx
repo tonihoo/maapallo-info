@@ -18,9 +18,9 @@ interface Props {
 
 // Constants
 const INITIAL_CAMERA_POSITION = {
-  longitude: 0.0,
-  latitude: 0.0,
-  height: 12000000
+  longitude: 44.0,
+  latitude: 10.0,
+  height: 16000000
 };
 
 const INITIAL_CAMERA_ORIENTATION = {
@@ -30,7 +30,7 @@ const INITIAL_CAMERA_ORIENTATION = {
 };
 
 const ZOOM_LIMITS = {
-  min: 1,
+  min: 0,
   max: 15000000
 };
 
@@ -45,22 +45,6 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
   const viewerRef = useRef<Cesium.Viewer | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const handleMapClick = useCallback((event: any) => {
-    if (!viewerRef.current) return;
-
-    const pickedPosition = viewerRef.current.camera.pickEllipsoid(
-      event.position,
-      viewerRef.current.scene.globe.ellipsoid
-    );
-
-    if (pickedPosition) {
-      const cartographic = Cesium.Cartographic.fromCartesian(pickedPosition);
-      const longitude = Cesium.Math.toDegrees(cartographic.longitude);
-      const latitude = Cesium.Math.toDegrees(cartographic.latitude);
-      onMapClick([longitude, latitude]);
-    }
-  }, [onMapClick]);
 
   const loadCountryBoundaries = useCallback(async (viewer: Cesium.Viewer) => {
     try {
@@ -145,7 +129,7 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
   const initializeViewer = useCallback(async (containerElement: HTMLDivElement) => {
     try {
       const viewer = new Cesium.Viewer(containerElement, {
-        baseLayerPicker: false,
+        baseLayerPicker: true,
         geocoder: false,
         homeButton: false,
         infoBox: false,
@@ -154,6 +138,21 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
         timeline: false,
         animation: false,
       });
+
+      setTimeout(() => {
+        const imageryViewModels = viewer.baseLayerPicker.viewModel.imageryProviderViewModels;
+        const arcgisWorldImagery = imageryViewModels.find(model =>
+          model.name.includes('ArcGIS World Imagery') ||
+          model.tooltip?.includes('ArcGIS World Imagery')
+        );
+
+        if (arcgisWorldImagery) {
+          viewer.baseLayerPicker.viewModel.selectedImagery = arcgisWorldImagery;
+          console.log('Set ArcGIS World Imagery as default');
+        } else {
+          console.log('Available imagery options:', imageryViewModels.map(m => m.name));
+        }
+      }, 100);
 
       // Set initial camera position
       viewer.camera.setView({
@@ -168,12 +167,6 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
       setupCameraControls(viewer);
       await loadCountryBoundaries(viewer);
 
-      // Set up click handler
-      viewer.cesiumWidget.screenSpaceEventHandler.setInputAction(
-        handleMapClick,
-        Cesium.ScreenSpaceEventType.LEFT_CLICK
-      );
-
       viewerRef.current = viewer;
       setLoading(false);
 
@@ -184,7 +177,7 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
       setError('Failed to initialize 3D map: ' + (error as Error).message);
       setLoading(false);
     }
-  }, [handleMapClick, setupCameraControls, loadCountryBoundaries]);
+  }, [setupCameraControls, loadCountryBoundaries]);
 
   const containerCallbackRef = useCallback((containerElement: HTMLDivElement | null) => {
     if (containerElement) {
@@ -344,10 +337,10 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
 
     if (selectedFeature?.geometry?.type === 'Point') {
       const [longitude, latitude] = selectedFeature.geometry.coordinates;
-      const currentHeight = viewerRef.current.scene.camera.positionCartographic.height;
+      const zoomHeight = 150000;
 
       viewerRef.current.camera.flyTo({
-        destination: Cesium.Cartesian3.fromDegrees(longitude, latitude, currentHeight),
+        destination: Cesium.Cartesian3.fromDegrees(longitude, latitude, zoomHeight),
         orientation: {
           heading: viewerRef.current.scene.camera.heading,
           pitch: viewerRef.current.scene.camera.pitch,
@@ -427,6 +420,9 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
             top: "5px !important",
             right: "5px !important",
             background: "rgba(42, 42, 42, 0.8) !important",
+          },
+          ".cesium-viewer-toolbar": {
+            display: "none !important",
           },
         }}
       />

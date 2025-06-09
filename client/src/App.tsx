@@ -10,22 +10,15 @@ export function App() {
   const [selectedFeatureId, setSelectedFeatureId] = useState<number | null>(null);
   const [selectedFeature, setSelectedFeature] = useState<FeatureTypes | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [clickLocation, setClickLocation] = useState<number[] | null>(null);
 
   const handleFeatureAdded = useCallback(async (newFeature: FeatureTypes) => {
     setRefreshTrigger(prev => prev + 1);
-    setClickLocation(null);
     setSelectedFeature(newFeature);
     setSelectedFeatureId(newFeature.id!);
   }, []);
 
-  const handleMapClick = useCallback((coords: number[]) => {
-    setClickLocation(coords);
-  }, []);
-
   const handleFeatureSelect = useCallback(async (id: number) => {
     setSelectedFeatureId(id);
-    setClickLocation(null);
 
     try {
       const response = await fetch(`/api/v1/feature/${id}`);
@@ -79,26 +72,12 @@ export function App() {
       });
     }
 
-    // Add click location
-    if (clickLocation && clickLocation.length === 2) {
-      features.push({
-        type: "Feature",
-        geometry: {
-          type: "Point",
-          coordinates: clickLocation
-        },
-        properties: {
-          featureType: 'clickLocation'
-        },
-      });
-    }
-
     return features;
   };
 
   const headerStyle = {
     backgroundColor: "#ffb34c",
-    color: "white",
+    color: "black",
     textAlign: "center" as const,
     boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
     position: "relative" as const,
@@ -140,7 +119,6 @@ export function App() {
         }}>
           <CesiumMap
             features={createMapFeatures()}
-            onMapClick={handleMapClick}
             selectedFeatureId={selectedFeatureId}
           />
         </Box>
