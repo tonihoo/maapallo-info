@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { Box, Paper, Typography } from "@mui/material";
 import { CesiumMap } from "./CesiumMap";
-import { FeatureForm } from "./FeatureForm";
 import FeatureList from "./FeatureList";
 import { FeatureInfo } from "./FeatureInfo";
 import { FeatureTypes } from "@shared/featureTypes";
@@ -9,7 +8,6 @@ import { Feature, Geometry, GeoJsonProperties } from 'geojson';
 
 export function App() {
   const [selectedFeatureId, setSelectedFeatureId] = useState<number | null>(null);
-  const [coordinates, setCoordinates] = useState<number[]>([]);
   const [selectedFeature, setSelectedFeature] = useState<FeatureTypes | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [clickLocation, setClickLocation] = useState<number[] | null>(null);
@@ -22,7 +20,6 @@ export function App() {
   }, []);
 
   const handleMapClick = useCallback((coords: number[]) => {
-    setCoordinates(coords);
     setClickLocation(coords);
   }, []);
 
@@ -168,7 +165,7 @@ export function App() {
         </Paper>
 
         {/* Feature Form Panel */}
-        <Paper
+        {/* <Paper
           elevation={8}
           sx={{
             position: "absolute",
@@ -182,7 +179,7 @@ export function App() {
             coordinates={coordinates}
             onFeatureAdded={handleFeatureAdded}
           />
-        </Paper>
+        </Paper> */}
 
         {/* Feature Info Panel */}
         {selectedFeatureId && (
@@ -190,7 +187,7 @@ export function App() {
             elevation={8}
             sx={{
               position: "absolute",
-              bottom: 16,
+              top: 16,
               right: 16,
               width: 300,
               maxHeight: 300,
