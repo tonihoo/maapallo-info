@@ -3,28 +3,24 @@ import * as Cesium from "cesium";
 import { GlobalStyles } from "@mui/material";
 import { FeatureTypes } from "@shared/featureTypes";
 
-// Set Cesium base URL for assets
+// Set Cesium configuration
 if (typeof window !== 'undefined') {
   (window as any).CESIUM_BASE_URL = '/node_modules/cesium/Build/Cesium/';
 }
 
-// Set Cesium Ion access token
 Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJlYWE1OWUxNy1mMWZiLTQzYjYtYTQ0OS1kMWFjYmFkNjc5YzciLCJpZCI6NTc3MzMsImlhdCI6MTYyNzg0NTE4Mn0.XcKpgANiY19MC4bdFUXMVEBToBmqS8kuYpUlxJHYZxk';
 
 interface Props {
   features: FeatureTypes[];
   onMapClick: (coordinates: number[]) => void;
-  selectedFeatureId?: number | null; // Add this prop
+  selectedFeatureId?: number | null;
 }
 
 export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Props) {
-  console.log('CesiumMap component rendered');
-
   const viewerRef = useRef<Cesium.Viewer | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Memoize the click handler to prevent unnecessary re-renders
   const handleMapClick = useCallback((event: any) => {
     if (!viewerRef.current) return;
 
@@ -37,221 +33,186 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
       const cartographic = Cesium.Cartographic.fromCartesian(pickedPosition);
       const longitude = Cesium.Math.toDegrees(cartographic.longitude);
       const latitude = Cesium.Math.toDegrees(cartographic.latitude);
-
       onMapClick([longitude, latitude]);
     }
   }, [onMapClick]);
 
-  // Use callback ref to initialize Cesium when container is available
-  const containerCallbackRef = useCallback((containerElement: HTMLDivElement | null) => {
-    console.log('CesiumMap: Callback ref called with:', containerElement);
+  const initializeViewer = useCallback(async (containerElement: HTMLDivElement) => {
+    try {
+      const viewer = new Cesium.Viewer(containerElement, {
+        baseLayerPicker: false,
+        geocoder: false,
+        homeButton: false,
+        infoBox: false,
+        navigationHelpButton: false,
+        sceneModePicker: false,
+        timeline: false,
+        animation: false,
+      });
 
-    if (!containerElement) {
-      console.log('CesiumMap: Container removed');
-      return;
-    }
+      // Configure camera
+      viewer.camera.setView({
+        destination: Cesium.Cartesian3.fromDegrees(0.0, 0.0, 12000000),
+        orientation: {
+          heading: 0.0,
+          pitch: -Cesium.Math.PI_OVER_TWO,
+          roll: 0.0
+        }
+      });
 
-    console.log('CesiumMap: Container is ready, initializing...');
+      // Configure camera controls
+      const controller = viewer.scene.screenSpaceCameraController;
+      controller.minimumZoomDistance = 1;
+      controller.maximumZoomDistance = 15000000;
 
-    const initializeViewer = async () => {
-      try {
-        console.log('CesiumMap: About to create Cesium.Viewer');
-
-        // Initialize Cesium viewer
-        const viewer = new Cesium.Viewer(containerElement, {
-          baseLayerPicker: false,
-          geocoder: false,
-          homeButton: false,
-          infoBox: false,
-          navigationHelpButton: false,
-          sceneModePicker: false,
-          timeline: false,
-          animation: false,
-        });
-
-        console.log('CesiumMap: Viewer created successfully');
-
-        // Force resize to ensure it fills the container
-        setTimeout(() => {
-          viewer.resize();
-        }, 100);
-
-        // Set camera to show whole Earth at safe distance
-        viewer.camera.setView({
-          destination: Cesium.Cartesian3.fromDegrees(0.0, 0.0, 12000000), // 12 million meters to see whole Earth
-          orientation: {
-            heading: 0.0,
-            pitch: -Cesium.Math.PI_OVER_TWO,
-            roll: 0.0
-          }
-        });
-
-        // COMPLETELY disable all automatic camera movements
-        viewer.scene.screenSpaceCameraController.enableCollisionDetection = false;
-        viewer.scene.screenSpaceCameraController.enableLook = true;
-        viewer.scene.screenSpaceCameraController.enableRotate = true;
-        viewer.scene.screenSpaceCameraController.enableTranslate = true;
-        viewer.scene.screenSpaceCameraController.enableZoom = true;
-        viewer.scene.screenSpaceCameraController.enableTilt = true;
-
-        // Set zoom limits to allow much closer zoom but prevent going to space
-        viewer.scene.screenSpaceCameraController.minimumZoomDistance = 1; // 1 meter minimum (very close street level)
-        viewer.scene.screenSpaceCameraController.maximumZoomDistance = 15000000; // 15 million meters maximum (prevents space view)
-
-        // Re-enable Cesium's built-in zoom
-        viewer.scene.screenSpaceCameraController.enableZoom = true;
-
-        // Remove the custom wheel event handler that wasn't working
-        // viewer.cesiumWidget.canvas.addEventListener('wheel', (event) => {
-        //   // Remove this entire block
-        // }, { passive: false });
-
-        // Add a post-render listener to enforce zoom limits after any camera movement
-        viewer.scene.postRender.addEventListener(() => {
-          const cameraHeight = viewer.scene.camera.positionCartographic.height;
-
-          // If camera is too high (in space), smoothly bring it back down
-          if (cameraHeight > 15000000) {
-            const currentPosition = viewer.scene.camera.positionCartographic;
-            viewer.scene.camera.position = Cesium.Cartesian3.fromRadians(
-              currentPosition.longitude,
-              currentPosition.latitude,
-              15000000
-            );
-          }
-
-          // If camera is too low, bring it back up (now much closer)
-          if (cameraHeight < 1) {
-            const currentPosition = viewer.scene.camera.positionCartographic;
-            viewer.scene.camera.position = Cesium.Cartesian3.fromRadians(
-              currentPosition.longitude,
-              currentPosition.latitude,
-              1
-            );
-          }
-        });
-
-        // Disable automatic entity tracking completely
-        viewer.trackedEntity = undefined;
-        viewer.selectedEntity = undefined;
-
-        // Add country boundaries and labels as vector overlay
-        try {
-          // Load country boundaries from local file
-          const countriesDataSource = await Cesium.GeoJsonDataSource.load(
-            '/data/world.geojson',
-            {
-              stroke: Cesium.Color.WHITE, // Ensure stroke color is set
-              fill: Cesium.Color.TRANSPARENT, // Ensure fill is transparent
-              strokeWidth: 2 // Set stroke width for visibility
-            }
+      // Enforce zoom limits
+      viewer.scene.postRender.addEventListener(() => {
+        const height = viewer.scene.camera.positionCartographic.height;
+        if (height > 15000000 || height < 1) {
+          const position = viewer.scene.camera.positionCartographic;
+          viewer.scene.camera.position = Cesium.Cartesian3.fromRadians(
+            position.longitude,
+            position.latitude,
+            Math.max(1, Math.min(height, 15000000))
           );
+        }
+      });
 
-          viewer.dataSources.add(countriesDataSource);
+      // Load country boundaries
+      await loadCountryBoundaries(viewer);
 
-          // Style the country boundaries
-          const entities = countriesDataSource.entities.values;
-          for (let i = 0; i < entities.length; i++) {
-            const entity = entities[i];
+      // Set up click handler
+      viewer.cesiumWidget.screenSpaceEventHandler.setInputAction(
+        handleMapClick,
+        Cesium.ScreenSpaceEventType.LEFT_CLICK
+      );
 
-            if (entity.polygon) {
-              entity.polygon.material = Cesium.Color.TRANSPARENT; // Transparent fill
-              entity.polygon.outline = true; // Enable outline
-              entity.polygon.outlineColor = Cesium.Color.WHITE.withAlpha(0.8); // Set outline color
-              entity.polygon.outlineWidth = 2; // Set outline width
-              entity.polygon.height = 0; // Ensure height is set to 0
-              entity.polygon.extrudedHeight = 0; // Ensure extruded height is set to 0
-            }
+      viewerRef.current = viewer;
+      setLoading(false);
 
-            // Add country name labels
-            if (entity.properties && entity.properties.name_fi) {
-              const name = entity.properties.name_fi.getValue();
+      // Force resize after initialization
+      setTimeout(() => viewer.resize(), 100);
 
-              // Calculate the center of the polygon for label placement
-              if (entity.polygon) {
-                const hierarchy = entity.polygon.hierarchy.getValue(Cesium.JulianDate.now());
-                if (hierarchy && hierarchy.positions.length > 0) {
-                  const boundingSphere = Cesium.BoundingSphere.fromPoints(hierarchy.positions);
-                  const center = boundingSphere.center;
-                  const cartographic = Cesium.Cartographic.fromCartesian(center);
+    } catch (error) {
+      console.error('Failed to initialize Cesium viewer:', error);
+      setError('Failed to initialize 3D map: ' + (error as Error).message);
+      setLoading(false);
+    }
+  }, [handleMapClick]);
 
-                  viewer.entities.add({
-                    id: `country-label-${i}`,
-                    position: Cesium.Cartesian3.fromRadians(
-                      cartographic.longitude,
-                      cartographic.latitude,
-                      0
-                    ),
-                    label: {
-                      text: name,
-                      font: '16pt Arial, sans-serif',
-                      fillColor: Cesium.Color.WHITE,
-                      outlineColor: Cesium.Color.BLACK,
-                      outlineWidth: 2,
-                      style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-                      horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
-                      verticalOrigin: Cesium.VerticalOrigin.CENTER,
-                      disableDepthTestDistance: Number.POSITIVE_INFINITY, // Ensure labels are always visible
-                      distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 10000000), // Show labels only within 10,000km
-                    },
-                  });
-                }
-              }
-            }
-          }
+  const loadCountryBoundaries = async (viewer: Cesium.Viewer) => {
+    try {
+      const countriesDataSource = await Cesium.GeoJsonDataSource.load('/data/world.geojson', {
+        stroke: Cesium.Color.WHITE,
+        fill: Cesium.Color.TRANSPARENT,
+        strokeWidth: 2
+      });
 
-          console.log('Successfully loaded and styled country boundaries');
-        } catch (error) {
-          console.error('Failed to load country boundaries:', error);
+      viewer.dataSources.add(countriesDataSource);
+
+      // Style boundaries and add labels
+      const entities = countriesDataSource.entities.values;
+      for (let i = 0; i < entities.length; i++) {
+        const entity = entities[i];
+
+        // Style country boundaries
+        if (entity.polygon) {
+          entity.polygon.material = Cesium.Color.TRANSPARENT;
+          entity.polygon.outline = true;
+          entity.polygon.outlineColor = Cesium.Color.WHITE.withAlpha(0.8);
+          entity.polygon.outlineWidth = 2;
+          entity.polygon.height = 0;
+          entity.polygon.extrudedHeight = 0;
         }
 
-        // Handle click events
-        viewer.cesiumWidget.screenSpaceEventHandler.setInputAction(
-          handleMapClick,
-          Cesium.ScreenSpaceEventType.LEFT_CLICK
-        );
+        // Add country labels
+        if (entity.properties?.name_fi && entity.polygon) {
+          const name = entity.properties.name_fi.getValue();
+          const hierarchy = entity.polygon.hierarchy.getValue(Cesium.JulianDate.now());
 
-        viewerRef.current = viewer;
-        setLoading(false);
+          if (hierarchy?.positions?.length > 0) {
+            const boundingSphere = Cesium.BoundingSphere.fromPoints(hierarchy.positions);
+            const cartographic = Cesium.Cartographic.fromCartesian(boundingSphere.center);
 
-      } catch (error) {
-        console.error('Failed to initialize Cesium viewer:', error);
-        setError('Failed to initialize 3D map: ' + (error as Error).message);
-        setLoading(false);
+            viewer.entities.add({
+              id: `country-label-${i}`,
+              position: Cesium.Cartesian3.fromRadians(
+                cartographic.longitude,
+                cartographic.latitude,
+                0
+              ),
+              label: {
+                text: name,
+                font: '16pt Arial, sans-serif',
+                fillColor: Cesium.Color.WHITE,
+                outlineColor: Cesium.Color.BLACK,
+                outlineWidth: 2,
+                style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                horizontalOrigin: Cesium.HorizontalOrigin.CENTER,
+                verticalOrigin: Cesium.VerticalOrigin.CENTER,
+                disableDepthTestDistance: Number.POSITIVE_INFINITY,
+                distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 10000000),
+              },
+            });
+          }
+        }
       }
-    };
+    } catch (error) {
+      console.error('Failed to load country boundaries:', error);
+    }
+  };
 
-    initializeViewer();
-  }, [handleMapClick]);
+  const containerCallbackRef = useCallback((containerElement: HTMLDivElement | null) => {
+    if (containerElement) {
+      initializeViewer(containerElement);
+    }
+  }, [initializeViewer]);
+
+  const handleZoom = useCallback((zoomIn: boolean) => {
+    if (!viewerRef.current) return;
+
+    const camera = viewerRef.current.scene.camera;
+    const currentHeight = camera.positionCartographic.height;
+    const newHeight = zoomIn
+      ? Math.max(currentHeight * 0.5, 1)
+      : Math.min(currentHeight * 2, 15000000);
+
+    camera.flyTo({
+      destination: Cesium.Cartesian3.fromRadians(
+        camera.positionCartographic.longitude,
+        camera.positionCartographic.latitude,
+        newHeight
+      ),
+      orientation: {
+        heading: camera.heading,
+        pitch: camera.pitch,
+        roll: camera.roll
+      },
+      duration: 0.8,
+      easingFunction: Cesium.EasingFunction.CUBIC_IN_OUT
+    });
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (viewerRef.current) {
-        console.log('CesiumMap: Cleaning up viewer');
         viewerRef.current.destroy();
         viewerRef.current = null;
       }
     };
   }, []);
 
-  // Handle features updates without camera movement
+  // Handle features updates
   useEffect(() => {
-    if (!viewerRef.current || !viewerRef.current.entities) return;
+    if (!viewerRef.current?.entities) return;
 
     try {
-      // Remove only feature entities, not country borders/labels
-      const entitiesToRemove = [];
-      for (let i = 0; i < viewerRef.current.entities.values.length; i++) {
-        const entity = viewerRef.current.entities.values[i];
-        if (entity.id && typeof entity.id === 'string' && entity.id.startsWith('feature-')) {
-          entitiesToRemove.push(entity);
-        }
-      }
-
-      entitiesToRemove.forEach(entity => {
-        viewerRef.current!.entities.remove(entity);
-      });
+      // Remove existing feature entities
+      const entitiesToRemove = viewerRef.current.entities.values.filter(
+        entity => entity.id && typeof entity.id === 'string' && entity.id.startsWith('feature-')
+      );
+      entitiesToRemove.forEach(entity => viewerRef.current!.entities.remove(entity));
 
       // Add new features
       features.forEach((feature, index) => {
@@ -281,7 +242,7 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
         }
       });
 
-      // Prevent automatic zooming after adding entities
+      // Prevent automatic tracking
       setTimeout(() => {
         if (viewerRef.current) {
           viewerRef.current.trackedEntity = undefined;
@@ -294,40 +255,32 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
     }
   }, [features]);
 
-  // Add useEffect to handle selected feature centering with smooth animation
+  // Handle selected feature centering
   useEffect(() => {
     if (!viewerRef.current || !selectedFeatureId) return;
 
-    // Find the selected feature in the mapFeatures array
     const selectedFeature = features.find(feature =>
       feature.properties?.id === selectedFeatureId
     );
 
-    if (!selectedFeature || selectedFeature.geometry?.type !== 'Point') return;
+    if (selectedFeature?.geometry?.type === 'Point') {
+      const [longitude, latitude] = selectedFeature.geometry.coordinates;
+      const currentHeight = viewerRef.current.scene.camera.positionCartographic.height;
 
-    const [longitude, latitude] = selectedFeature.geometry.coordinates;
-
-    // Get current camera height to maintain zoom level
-    const currentHeight = viewerRef.current.scene.camera.positionCartographic.height;
-
-    // Smooth camera animation to selected feature
-    viewerRef.current.camera.flyTo({
-      destination: Cesium.Cartesian3.fromDegrees(longitude, latitude, currentHeight),
-      orientation: {
-        heading: viewerRef.current.scene.camera.heading,
-        pitch: viewerRef.current.scene.camera.pitch,
-        roll: viewerRef.current.scene.camera.roll
-      },
-      duration: 2.0, // 2 seconds animation duration
-      easingFunction: Cesium.EasingFunction.CUBIC_IN_OUT, // Smooth easing
-    });
-
+      viewerRef.current.camera.flyTo({
+        destination: Cesium.Cartesian3.fromDegrees(longitude, latitude, currentHeight),
+        orientation: {
+          heading: viewerRef.current.scene.camera.heading,
+          pitch: viewerRef.current.scene.camera.pitch,
+          roll: viewerRef.current.scene.camera.roll
+        },
+        duration: 2.0,
+        easingFunction: Cesium.EasingFunction.CUBIC_IN_OUT,
+      });
+    }
   }, [selectedFeatureId, features]);
 
-  console.log('CesiumMap: Rendering with loading =', loading, 'error =', error);
-
   if (error) {
-    console.log('CesiumMap: Rendering error state');
     return (
       <div style={{
         width: "100%",
@@ -343,7 +296,21 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
     );
   }
 
-  // Remove the forced small container size and make it fullscreen
+  const zoomButtonStyle = {
+    width: "40px",
+    height: "40px",
+    backgroundColor: "rgba(42, 42, 42, 0.8)",
+    color: "white",
+    border: "1px solid rgba(255, 255, 255, 0.3)",
+    borderRadius: "4px",
+    cursor: "pointer",
+    fontSize: "20px",
+    fontWeight: "bold",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center"
+  } as const;
+
   return (
     <div style={{ width: "100%", height: "100%", position: "relative" }}>
       <GlobalStyles
@@ -363,7 +330,6 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
           ".cesium-widget canvas": {
             width: "100% !important",
             height: "100% !important",
-            // Remove the maxWidth and maxHeight restrictions
           },
           ".cesium-widget-credits": {
             display: "none !important",
@@ -379,14 +345,8 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
           },
         }}
       />
-      <div
-        ref={containerCallbackRef}
-        style={{
-          width: "100%",   // Full width instead of 600px
-          height: "100%",  // Full height instead of 400px
-          // Remove margin: "auto"
-        }}
-      >
+
+      <div ref={containerCallbackRef} style={{ width: "100%", height: "100%" }}>
         {loading && (
           <div style={{
             position: "absolute",
@@ -417,84 +377,15 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
         zIndex: 1000
       }}>
         <button
-          onClick={() => {
-            if (viewerRef.current) {
-              const camera = viewerRef.current.scene.camera;
-              const currentHeight = camera.positionCartographic.height;
-              const newHeight = Math.max(currentHeight * 0.5, 1);
-
-              camera.flyTo({
-                destination: Cesium.Cartesian3.fromRadians(
-                  camera.positionCartographic.longitude,
-                  camera.positionCartographic.latitude,
-                  newHeight
-                ),
-                orientation: {
-                  heading: camera.heading,
-                  pitch: camera.pitch,
-                  roll: camera.roll
-                },
-                duration: 0.8,
-                easingFunction: Cesium.EasingFunction.CUBIC_IN_OUT
-              });
-            }
-          }}
-          style={{
-            width: "40px",
-            height: "40px",
-            backgroundColor: "rgba(42, 42, 42, 0.8)",
-            color: "white",
-            border: "1px solid rgba(255, 255, 255, 0.3)",
-            borderRadius: "4px",
-            cursor: "pointer",
-            fontSize: "20px",
-            fontWeight: "bold",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center"
-          }}
+          onClick={() => handleZoom(true)}
+          style={zoomButtonStyle}
           title="Zoom In"
         >
           +
         </button>
-
         <button
-          onClick={() => {
-            if (viewerRef.current) {
-              const camera = viewerRef.current.scene.camera;
-              const currentHeight = camera.positionCartographic.height;
-              const newHeight = Math.min(currentHeight * 2, 15000000);
-
-              camera.flyTo({
-                destination: Cesium.Cartesian3.fromRadians(
-                  camera.positionCartographic.longitude,
-                  camera.positionCartographic.latitude,
-                  newHeight
-                ),
-                orientation: {
-                  heading: camera.heading,
-                  pitch: camera.pitch,
-                  roll: camera.roll
-                },
-                duration: 0.8,
-                easingFunction: Cesium.EasingFunction.CUBIC_IN_OUT
-              });
-            }
-          }}
-          style={{
-            width: "40px",
-            height: "40px",
-            backgroundColor: "rgba(42, 42, 42, 0.8)",
-            color: "white",
-            border: "1px solid rgba(255, 255, 255, 0.3)",
-            borderRadius: "4px",
-            cursor: "pointer",
-            fontSize: "20px",
-            fontWeight: "bold",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center"
-          }}
+          onClick={() => handleZoom(false)}
+          style={zoomButtonStyle}
           title="Zoom Out"
         >
           −
