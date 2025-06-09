@@ -139,21 +139,6 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId }: Prop
         animation: false,
       });
 
-      setTimeout(() => {
-        const imageryViewModels = viewer.baseLayerPicker.viewModel.imageryProviderViewModels;
-        const arcgisWorldImagery = imageryViewModels.find(model =>
-          model.name.includes('ArcGIS World Imagery') ||
-          model.tooltip?.includes('ArcGIS World Imagery')
-        );
-
-        if (arcgisWorldImagery) {
-          viewer.baseLayerPicker.viewModel.selectedImagery = arcgisWorldImagery;
-          console.log('Set ArcGIS World Imagery as default');
-        } else {
-          console.log('Available imagery options:', imageryViewModels.map(m => m.name));
-        }
-      }, 100);
-
       // Set initial camera position
       viewer.camera.setView({
         destination: Cesium.Cartesian3.fromDegrees(
