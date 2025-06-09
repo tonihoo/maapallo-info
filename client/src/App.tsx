@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
-import { Grid, Container, Box, Paper, Typography } from "@mui/material";
-import { CesiumMap } from "./CesiumMap"; // Switch to CesiumMap
-// import { Map } from "./Map"; // Comment out Map
+import { Box, Paper, Typography } from "@mui/material";
+import { CesiumMap } from "./CesiumMap";
 import { FeatureForm } from "./FeatureForm";
 import FeatureList from "./FeatureList";
 import { FeatureInfo } from "./FeatureInfo";
@@ -9,30 +8,40 @@ import { FeatureTypes } from "@shared/featureTypes";
 import { Feature, Geometry, GeoJsonProperties } from 'geojson';
 
 export function App() {
-  // ID of the currently selected feature
-  const [selectedFeatureId, setSelectedFeatureId] = useState<number | null>(
-    null
-  );
-  // Latest coordinates from the Map click event
+  const [selectedFeatureId, setSelectedFeatureId] = useState<number | null>(null);
   const [coordinates, setCoordinates] = useState<number[]>([]);
-  // Selected feature for map display
   const [selectedFeature, setSelectedFeature] = useState<FeatureTypes | null>(null);
-  // A state to track when the list should refresh
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  // To store click location on the map
   const [clickLocation, setClickLocation] = useState<number[] | null>(null);
 
   const handleFeatureAdded = useCallback(async (newFeature: FeatureTypes) => {
-    // Increment to trigger list refresh
     setRefreshTrigger(prev => prev + 1);
-    setClickLocation(null); // Clear click location after adding
-
-    // Directly use the returned feature data
+    setClickLocation(null);
     setSelectedFeature(newFeature);
     setSelectedFeatureId(newFeature.id!);
   }, []);
 
-  // Fetch the selected feature data when ID changes
+  const handleMapClick = useCallback((coords: number[]) => {
+    setCoordinates(coords);
+    setClickLocation(coords);
+  }, []);
+
+  const handleFeatureSelect = useCallback(async (id: number) => {
+    setSelectedFeatureId(id);
+    setClickLocation(null);
+
+    try {
+      const response = await fetch(`/api/v1/feature/${id}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSelectedFeature(data.feature);
+      }
+    } catch (error) {
+      console.error('Error fetching feature:', error);
+    }
+  }, []);
+
+  // Fetch selected feature data when ID changes
   useEffect(() => {
     if (!selectedFeatureId) {
       setSelectedFeature(null);
@@ -54,87 +63,74 @@ export function App() {
     fetchFeature();
   }, [selectedFeatureId]);
 
-  const handleMapClick = useCallback((coords: number[]) => {
-    setCoordinates(coords);
-    setClickLocation(coords);
-  }, []);
+  // Create map features for rendering
+  const createMapFeatures = (): Feature<Geometry, GeoJsonProperties>[] => {
+    const features: Feature<Geometry, GeoJsonProperties>[] = [];
 
-  const handleFeatureSelect = useCallback(async (id: number) => {
-    setSelectedFeatureId(id);
-    setClickLocation(null); // Clear click location when selecting existing feature
-
-    try {
-      const response = await fetch(`/api/v1/feature/${id}`);
-      if (response.ok) {
-        const data = await response.json();
-        setSelectedFeature(data.feature);
-      }
-    } catch (error) {
-      console.error('Error fetching feature:', error);
+    // Add selected feature
+    if (selectedFeature) {
+      features.push({
+        type: "Feature",
+        geometry: selectedFeature.location,
+        properties: {
+          id: selectedFeature.id,
+          name: selectedFeature.name,
+          age: selectedFeature.age,
+          gender: selectedFeature.gender,
+          featureType: 'feature'
+        },
+      });
     }
-  }, []);
 
-  // Create map features for existing features and click location
-  const mapFeatures: Feature<Geometry, GeoJsonProperties>[] = [];
+    // Add click location
+    if (clickLocation && clickLocation.length === 2) {
+      features.push({
+        type: "Feature",
+        geometry: {
+          type: "Point",
+          coordinates: clickLocation
+        },
+        properties: {
+          featureType: 'clickLocation'
+        },
+      });
+    }
 
-  // Add selected feature feature
-  if (selectedFeature) {
-    mapFeatures.push({
-      type: "Feature",
-      geometry: selectedFeature.location,
-      properties: {
-        id: selectedFeature.id,
-        name: selectedFeature.name,
-        age: selectedFeature.age,
-        gender: selectedFeature.gender,
-        featureType: 'feature'
-      },
-    });
-  }
+    return features;
+  };
 
-  // Add click location feature (different from feature locations)
-  if (clickLocation && clickLocation.length === 2) {
-    mapFeatures.push({
-      type: "Feature",
-      geometry: {
-        type: "Point",
-        coordinates: clickLocation
-      },
-      properties: {
-        featureType: 'clickLocation'
-      },
-    });
-  }
+  const headerStyle = {
+    backgroundColor: "#ffb34c",
+    color: "white",
+    textAlign: "center" as const,
+    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+    position: "relative" as const,
+    zIndex: 1000,
+    height: "40px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center"
+  };
+
+  const panelStyle = {
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    backdropFilter: "blur(8px)",
+    zIndex: 100
+  };
 
   return (
     <>
       {/* Header */}
-      <Box
-        sx={{
-          backgroundColor: "#ffb34c",
-          color: "white",
-          paddingY: "0.125rem",
-          paddingX: "1rem",
-          textAlign: "center",
-          boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-          position: "relative",
-          zIndex: 1000,
-          height: "40px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center"
-        }}
-      >
+      <Box sx={headerStyle}>
         <Typography variant="overline" component="h1">
           Maapallo.info
         </Typography>
       </Box>
 
-      {/* Fullscreen map with floating panels */}
+      {/* Main content area */}
       <Box sx={{
         position: "relative",
-        height: "calc(100vh - 80px)",
-        minHeight: "calc(100vh - 80px)",
+        height: "calc(100vh - 70px)",
         overflow: "hidden"
       }}>
         {/* Fullscreen map */}
@@ -146,13 +142,13 @@ export function App() {
           bottom: 0
         }}>
           <CesiumMap
-            features={mapFeatures}
+            features={createMapFeatures()}
             onMapClick={handleMapClick}
-            selectedFeatureId={selectedFeatureId} // Add this prop
+            selectedFeatureId={selectedFeatureId}
           />
         </Box>
 
-        {/* Floating Feature List - Left Panel */}
+        {/* Feature List Panel */}
         <Paper
           elevation={8}
           sx={{
@@ -161,9 +157,7 @@ export function App() {
             left: 16,
             width: 280,
             maxHeight: "calc(100vh - 160px)",
-            backgroundColor: "rgba(255, 255, 255, 0.95)",
-            backdropFilter: "blur(8px)",
-            zIndex: 100
+            ...panelStyle
           }}
         >
           <FeatureList
@@ -173,7 +167,7 @@ export function App() {
           />
         </Paper>
 
-        {/* Floating Feature Form - Top Right Panel */}
+        {/* Feature Form Panel */}
         <Paper
           elevation={8}
           sx={{
@@ -181,9 +175,7 @@ export function App() {
             top: 16,
             right: 16,
             width: 300,
-            backgroundColor: "rgba(255, 255, 255, 0.95)",
-            backdropFilter: "blur(8px)",
-            zIndex: 100
+            ...panelStyle
           }}
         >
           <FeatureForm
@@ -192,7 +184,7 @@ export function App() {
           />
         </Paper>
 
-        {/* Floating Feature Info - Bottom Right Panel */}
+        {/* Feature Info Panel */}
         {selectedFeatureId && (
           <Paper
             elevation={8}
@@ -202,9 +194,7 @@ export function App() {
               right: 16,
               width: 300,
               maxHeight: 300,
-              backgroundColor: "rgba(255, 255, 255, 0.95)",
-              backdropFilter: "blur(8px)",
-              zIndex: 100
+              ...panelStyle
             }}
           >
             <FeatureInfo featureId={selectedFeatureId} />
@@ -213,20 +203,10 @@ export function App() {
       </Box>
 
       {/* Footer */}
-      <Box
-        sx={{
-          backgroundColor: "#ffb34c",
-          color: "white",
-          padding: "0.25rem",
-          textAlign: "center",
-          position: "relative",
-          zIndex: 1000,
-          height: "30px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center"
-        }}
-      >
+      <Box sx={{
+        ...headerStyle,
+        height: "30px"
+      }}>
         <Typography variant="caption">
           Kehitysmaantieteen yhdistys 2025
         </Typography>
