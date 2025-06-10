@@ -84,9 +84,9 @@ export function App() {
           geometry: feature.location,
           properties: {
             id: feature.id,
-            name: feature.name,
-            age: feature.age,
-            gender: feature.gender,
+            title: feature.title, // Changed from 'name'
+            author: feature.author, // Changed from 'age'
+            publication: feature.publication, // Changed from 'gender'
             featureType: 'feature',
             isSelected: feature.id === selectedFeatureId
           },

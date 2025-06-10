@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import * as Cesium from "cesium";
 import { GlobalStyles } from "@mui/material";
-import { FeatureTypes } from "@shared/featureTypes";
+import { Feature, Geometry, GeoJsonProperties } from 'geojson';
 
 // Set Cesium configuration
 if (typeof window !== 'undefined') {
@@ -11,7 +11,7 @@ if (typeof window !== 'undefined') {
 Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJlYWE1OWUxNy1mMWZiLTQzYjYtYTQ0OS1kMWFjYmFkNjc5YzciLCJpZCI6NTc3MzMsImlhdCI6MTYyNzg0NTE4Mn0.XcKpgANiY19MC4bdFUXMVEBToBmqS8kuYpUlxJHYZxk';
 
 interface Props {
-  features: FeatureTypes[];
+  features: Feature<Geometry, GeoJsonProperties>[]; // Fixed!
   onMapClick?: (coordinates: number[]) => void;
   selectedFeatureId?: number | null;
   onFeatureClick?: (featureId: number) => void;
@@ -46,6 +46,7 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId, onFeat
   const viewerRef = useRef<Cesium.Viewer | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [viewerReady, setViewerReady] = useState(false);
 
   const loadCountryBoundaries = useCallback(async (viewer: Cesium.Viewer) => {
     try {
@@ -127,6 +128,7 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId, onFeat
     });
   }, []);
 
+  // Move the initializeViewer function to only depend on stable callbacks
   const initializeViewer = useCallback(async (containerElement: HTMLDivElement) => {
     try {
       const viewer = new Cesium.Viewer(containerElement, {
@@ -138,7 +140,7 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId, onFeat
         sceneModePicker: false,
         timeline: false,
         animation: false,
-        requestRenderMode : true
+        requestRenderMode: true
       });
 
       // Add click handler for feature selection and zoom
@@ -152,7 +154,10 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId, onFeat
           if (typeof entity.id === 'string' && entity.id.startsWith('feature-')) {
             // Extract the feature index from the entity ID
             const featureIndex = parseInt(entity.id.replace('feature-', ''));
-            const feature = features[featureIndex];
+
+            // Use the current features from the ref instead of closure
+            const currentFeatures = featuresRef.current;
+            const feature = currentFeatures[featureIndex];
 
             if (feature && feature.properties?.id) {
               // Call the onFeatureClick callback if provided
@@ -161,7 +166,7 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId, onFeat
               // Zoom to the feature immediately on single click
               if (feature.geometry?.type === 'Point') {
                 const [longitude, latitude] = feature.geometry.coordinates;
-                const zoomHeight = 50000; // Closer zoom level for clicked features
+                const zoomHeight = 50000;
 
                 viewer.camera.flyTo({
                   destination: Cesium.Cartesian3.fromDegrees(longitude, latitude, zoomHeight),
@@ -199,11 +204,9 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId, onFeat
       });
 
       // Add these settings for better text rendering:
-      viewer.scene.postProcessStages.fxaa.enabled = false; // Try disabling FXAA
-      viewer.resolutionScale = 2.0; // Try higher resolution scale
-      viewer.scene.highDynamicRange = false; // Disable HDR for better text
-
-      // Additional settings to try:
+      viewer.scene.postProcessStages.fxaa.enabled = false;
+      viewer.resolutionScale = 2.0;
+      viewer.scene.highDynamicRange = false;
       viewer.scene.globe.enableLighting = false;
       viewer.scene.fog.enabled = false;
       viewer.scene.skyAtmosphere.show = false;
@@ -213,6 +216,7 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId, onFeat
 
       viewerRef.current = viewer;
       setLoading(false);
+      setViewerReady(true);
 
       setTimeout(() => viewer.resize(), 100);
 
@@ -220,8 +224,17 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId, onFeat
       console.error('Failed to initialize Cesium viewer:', error);
       setError('Failed to initialize 3D map: ' + (error as Error).message);
       setLoading(false);
+      setViewerReady(false);
     }
-  }, [setupCameraControls, loadCountryBoundaries, features, onMapClick, onFeatureClick]);
+  }, [setupCameraControls, loadCountryBoundaries, onMapClick, onFeatureClick]); // Remove features dependency
+
+  // Add a ref to track features
+  const featuresRef = useRef(features);
+
+  // Update the features ref when features change
+  useEffect(() => {
+    featuresRef.current = features;
+  }, [features]);
 
   const containerCallbackRef = useCallback((containerElement: HTMLDivElement | null) => {
     if (containerElement) {
@@ -231,13 +244,20 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId, onFeat
 
   // Camera control functions
   const handleZoom = useCallback((zoomIn: boolean) => {
-    if (!viewerRef.current) return;
+    console.log('Zoom button clicked:', zoomIn, 'viewerReady:', viewerReady, 'viewer exists:', !!viewerRef.current);
+
+    if (!viewerRef.current) {
+      console.log('No viewer reference available');
+      return;
+    }
 
     const camera = viewerRef.current.scene.camera;
     const currentHeight = camera.positionCartographic.height;
     const newHeight = zoomIn
       ? Math.max(currentHeight * 0.5, ZOOM_LIMITS.min)
       : Math.min(currentHeight * 2, ZOOM_LIMITS.max);
+
+    console.log('Executing zoom from', currentHeight, 'to', newHeight);
 
     camera.flyTo({
       destination: Cesium.Cartesian3.fromRadians(
@@ -253,7 +273,7 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId, onFeat
       duration: ANIMATION_DURATIONS.zoom,
       easingFunction: Cesium.EasingFunction.CUBIC_IN_OUT
     });
-  }, []);
+  }, [viewerReady]); // Add viewerReady as dependency
 
   const handleTiltAdjust = useCallback((direction: 'up' | 'down') => {
     if (!viewerRef.current) return;
@@ -318,6 +338,7 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId, onFeat
       if (viewerRef.current) {
         viewerRef.current.destroy();
         viewerRef.current = null;
+        setViewerReady(false);
       }
     };
   }, []);
@@ -349,8 +370,8 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId, onFeat
               heightReference: Cesium.HeightReference.NONE, // Changed from CLAMP_TO_GROUND
               disableDepthTestDistance: Number.POSITIVE_INFINITY, // Always visible
             },
-            label: feature.properties?.name ? {
-              text: feature.properties.name,
+            label: feature.properties?.title ? { // Changed from 'name' to 'title'
+              text: feature.properties.title,
               font: isSelected ? '14pt sans-serif' : '12pt sans-serif',
               pixelOffset: new Cesium.Cartesian2(0, isSelected ? -50 : -40),
               fillColor: Cesium.Color.WHITE,
@@ -491,20 +512,20 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId, onFeat
       {/* Control Panel */}
       <div style={{
         position: "absolute",
-        bottom: "50px", // Change from "20px" to "50px" to account for footer
+        bottom: "50px",
         right: "20px",
         display: "flex",
         flexDirection: "column",
         gap: "8px",
         zIndex: 1000
       }}>
-        <button onClick={handleHome} style={smallButtonStyle} title="View Home">🏠</button>
-        <button onClick={() => handleZoom(true)} style={buttonStyle} title="Zoom In">+</button>
-        <button onClick={() => handleZoom(false)} style={buttonStyle} title="Zoom Out">−</button>
-        <button onClick={() => handleTiltAdjust('up')} style={smallButtonStyle} title="Tilt Up">↑</button>
-        <button onClick={() => handleTiltAdjust('down')} style={smallButtonStyle} title="Tilt Down">↓</button>
-        <button onClick={() => handleRotate('left')} style={smallButtonStyle} title="Rotate Left">↶</button>
-        <button onClick={() => handleRotate('right')} style={smallButtonStyle} title="Rotate Right">↷</button>
+        <button onClick={handleHome} style={smallButtonStyle} title="View Home" disabled={!viewerReady}>🏠</button>
+        <button onClick={() => handleZoom(true)} style={buttonStyle} title="Zoom In" disabled={!viewerReady}>+</button>
+        <button onClick={() => handleZoom(false)} style={buttonStyle} title="Zoom Out" disabled={!viewerReady}>−</button>
+        <button onClick={() => handleTiltAdjust('up')} style={smallButtonStyle} title="Tilt Up" disabled={!viewerReady}>↑</button>
+        <button onClick={() => handleTiltAdjust('down')} style={smallButtonStyle} title="Tilt Down" disabled={!viewerReady}>↓</button>
+        <button onClick={() => handleRotate('left')} style={smallButtonStyle} title="Rotate Left" disabled={!viewerReady}>↶</button>
+        <button onClick={() => handleRotate('right')} style={smallButtonStyle} title="Rotate Right" disabled={!viewerReady}>↷</button>
       </div>
     </div>
   );
