@@ -47,10 +47,9 @@ export function Map({ children, onMapClick, onFeatureClick, onFeatureHover, feat
             width: isSelected ? 3 : 2
           }),
         }),
-        // Remove text completely - no titles shown on map
+        // Completely remove any text rendering
       });
     } else if (featureType === 'clickLocation') {
-      // Orange style for click locations
       return new Style({
         image: new Circle({
           radius: 8,
@@ -59,7 +58,6 @@ export function Map({ children, onMapClick, onFeatureClick, onFeatureHover, feat
         }),
       });
     } else {
-      // Default style for features
       return new Style({
         image: new Circle({
           radius: 7,

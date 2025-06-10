@@ -67,9 +67,7 @@ export function App() {
           geometry: feature.location,
           properties: {
             id: feature.id,
-            title: feature.title,
-            author: feature.author,
-            publication: feature.publication,
+            // Remove title, author, and publication - these should not be on the map
             featureType: 'feature',
             isSelected: feature.id === selectedFeatureId
           },
@@ -206,7 +204,7 @@ export function App() {
         <Box sx={{
           position: "absolute",
           top: 56,
-          right: selectedFeatureId ? 340 : 16, // Adjust position when info panel is visible
+          right: 16,
           zIndex: 200
         }}>
           <Tooltip title={is3DMode ? "2D kartta" : "3D maapallo"}>
