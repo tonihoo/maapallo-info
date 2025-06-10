@@ -16,6 +16,7 @@ import { FeatureLike } from 'ol/Feature';
 import { Zoom } from 'ol/control';
 import { toLonLat, fromLonLat } from 'ol/proj';
 import { Feature as GeoJSONFeature, Geometry, GeoJsonProperties } from 'geojson';
+import { CoordinatesDisplay } from "./CoordinatesDisplay";
 
 // Define the Finnish coordinate system
 proj4.defs("EPSG:3067", "+proj=utm +zone=35 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs +type=crs");
@@ -26,12 +27,13 @@ interface Props {
   features?: GeoJSONFeature<Geometry, GeoJsonProperties>[];
   onMapClick?: (coordinates: number[]) => void;
   onFeatureClick?: (featureId: number) => void;
-  onFeatureHover?: (featureId: number | null) => void; // Add hover callback
+  onFeatureHover?: (featureId: number | null) => void;
   selectedFeatureId?: number | null;
 }
 
 export function Map({ children, onMapClick, onFeatureClick, onFeatureHover, features = [], selectedFeatureId }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
+  const [mouseCoordinates, setMouseCoordinates] = useState<{ lon: number; lat: number } | null>(null);
 
   const styleFunction = (feature: FeatureLike) => {
     const featureType = feature.get('featureType');
@@ -106,122 +108,161 @@ export function Map({ children, onMapClick, onFeatureClick, onFeatureHover, feat
 
   /** olMap -object's initialization on startup  */
   useEffect(() => {
+    if (!mapRef.current) return;
+
     olMap.setTarget(mapRef.current as HTMLElement);
 
     // Handle click events
-    olMap.on("click", (event) => {
-      // Check if a feature was clicked
-      const feature = olMap.forEachFeatureAtPixel(event.pixel, (feature) => feature);
+    const clickHandler = (event: any) => {
+      try {
+        // Check if a feature was clicked
+        const feature = olMap.forEachFeatureAtPixel(event.pixel, (feature) => feature);
 
-      if (feature && feature.get('featureType') === 'feature') {
-        // Feature clicked
-        const featureId = feature.get('id');
-        if (featureId && onFeatureClick) {
-          onFeatureClick(featureId);
+        if (feature && feature.get('featureType') === 'feature') {
+          // Feature clicked
+          const featureId = feature.get('id');
+          if (featureId && onFeatureClick) {
+            onFeatureClick(featureId);
 
-          // Zoom to feature
-          const geometry = feature.getGeometry();
-          if (geometry) {
-            olView.animate({
-              center: (geometry as any).getCoordinates(),
-              zoom: 8,
-              duration: 1000,
-            });
+            // Zoom to feature
+            const geometry = feature.getGeometry();
+            if (geometry) {
+              olView.animate({
+                center: (geometry as any).getCoordinates(),
+                zoom: 8,
+                duration: 1000,
+              });
+            }
+          }
+        } else if (onMapClick && event.coordinate) {
+          // Empty space clicked - convert coordinates to lon/lat
+          const coordinates = toLonLat(event.coordinate);
+          onMapClick(coordinates);
+        }
+      } catch (error) {
+        console.error('Error in click handler:', error);
+      }
+    };
+
+    // Handle hover events and coordinate tracking
+    const pointerMoveHandler = (event: any) => {
+      try {
+        if (!event.coordinate) return;
+
+        const feature = olMap.forEachFeatureAtPixel(event.pixel, (feature) => feature);
+
+        // Update mouse coordinates
+        const coordinates = toLonLat(event.coordinate);
+        setMouseCoordinates({
+          lon: Number(coordinates[0].toFixed(4)),
+          lat: Number(coordinates[1].toFixed(4))
+        });
+
+        if (feature && feature.get('featureType') === 'feature') {
+          const featureId = feature.get('id');
+          if (onFeatureHover) {
+            onFeatureHover(featureId);
+          }
+          // Change cursor to pointer when hovering over features
+          const viewport = olMap.getViewport();
+          if (viewport) {
+            viewport.style.cursor = 'pointer';
+          }
+        } else {
+          if (onFeatureHover) {
+            onFeatureHover(null);
+          }
+          // Reset cursor when not hovering over features
+          const viewport = olMap.getViewport();
+          if (viewport) {
+            viewport.style.cursor = '';
           }
         }
-      } else if (onMapClick) {
-        // Empty space clicked - convert coordinates to lon/lat
-        const coordinates = toLonLat(event.coordinate);
-        onMapClick(coordinates);
+      } catch (error) {
+        console.error('Error in pointer move handler:', error);
       }
-    });
+    };
 
-    // Handle hover events
-    olMap.on("pointermove", (event) => {
-      const feature = olMap.forEachFeatureAtPixel(event.pixel, (feature) => feature);
-
-      if (feature && feature.get('featureType') === 'feature') {
-        const featureId = feature.get('id');
-        if (onFeatureHover) {
-          onFeatureHover(featureId);
-        }
-        // Change cursor to pointer when hovering over features
-        olMap.getViewport().style.cursor = 'pointer';
-      } else {
-        if (onFeatureHover) {
-          onFeatureHover(null);
-        }
-        // Reset cursor when not hovering over features
-        olMap.getViewport().style.cursor = '';
-      }
-    });
+    olMap.on("click", clickHandler);
+    olMap.on("pointermove", pointerMoveHandler);
 
     // Clean up event listeners on unmount
     return () => {
-      olMap.un("click");
-      olMap.un("pointermove");
+      olMap.un("click", clickHandler);
+      olMap.un("pointermove", pointerMoveHandler);
     };
   }, [olMap, onMapClick, onFeatureClick, onFeatureHover, olView]);
 
   /** Listen for changes in the 'features' property */
   useEffect(() => {
-    const layers = olMap.getLayers().getArray();
-    const vectorLayer = layers[1] as VectorLayer<VectorSource>;
-    const source = vectorLayer.getSource();
+    try {
+      const layers = olMap.getLayers().getArray();
+      if (!layers || layers.length < 2) return;
 
-    // Clear existing features
-    source?.clear();
+      const vectorLayer = layers[1] as VectorLayer<VectorSource>;
+      const source = vectorLayer.getSource();
+      if (!source) return;
 
-    // Skip adding new features if none provided
-    if (!features || !features.length) return;
+      // Clear existing features
+      source.clear();
 
-    // Add new features
-    const olFeatures = features.map((geoJsonFeature) => {
-      const olFeature = new Feature({
-        geometry: new GeoJSON().readGeometry(geoJsonFeature.geometry, {
-          dataProjection: 'EPSG:4326',
-          featureProjection: 'EPSG:3857'
-        }),
+      // Skip adding new features if none provided
+      if (!features || !features.length) return;
+
+      // Add new features
+      const olFeatures = features.map((geoJsonFeature) => {
+        const olFeature = new Feature({
+          geometry: new GeoJSON().readGeometry(geoJsonFeature.geometry, {
+            dataProjection: 'EPSG:4326',
+            featureProjection: 'EPSG:3857'
+          }),
+        });
+
+        // Copy properties to the OpenLayers feature
+        if (geoJsonFeature.properties) {
+          Object.keys(geoJsonFeature.properties).forEach(key => {
+            olFeature.set(key, geoJsonFeature.properties?.[key]);
+          });
+        }
+
+        return olFeature;
       });
 
-      // Copy properties to the OpenLayers feature
-      if (geoJsonFeature.properties) {
-        Object.keys(geoJsonFeature.properties).forEach(key => {
-          olFeature.set(key, geoJsonFeature.properties?.[key]);
-        });
-      }
-
-      return olFeature;
-    });
-
-    source?.addFeatures(olFeatures);
+      source.addFeatures(olFeatures);
+    } catch (error) {
+      console.error('Error updating features:', error);
+    }
   }, [features, olMap]);
 
   // Zoom to selected feature
   useEffect(() => {
-    if (!selectedFeatureId) return;
+    try {
+      if (!selectedFeatureId) return;
 
-    const selectedFeature = features.find(feature =>
-      feature.properties?.id === selectedFeatureId
-    );
+      const selectedFeature = features.find(feature =>
+        feature.properties?.id === selectedFeatureId
+      );
 
-    if (selectedFeature?.geometry?.type === 'Point') {
-      const [lon, lat] = selectedFeature.geometry.coordinates;
-      olView.animate({
-        center: fromLonLat([lon, lat]),
-        zoom: 6,
-        duration: 1500,
-      });
+      if (selectedFeature?.geometry?.type === 'Point') {
+        const [lon, lat] = selectedFeature.geometry.coordinates;
+        olView.animate({
+          center: fromLonLat([lon, lat]),
+          zoom: 6,
+          duration: 1500,
+        });
+      }
+    } catch (error) {
+      console.error('Error zooming to feature:', error);
     }
   }, [selectedFeatureId, features, olView]);
 
   return (
-    <div style={{ width: "100%", height: "100%" }}>
+    <div style={{ width: "100%", height: "100%", position: "relative" }}>
       {/* Styles for the OpenLayers controls */}
       <GlobalStyles
         styles={{
           ".ol-viewport": {
-            cursor: "default", // Changed from pointer to default
+            cursor: "default",
           },
           ".ol-zoom": {
             position: "absolute",
@@ -241,6 +282,8 @@ export function Map({ children, onMapClick, onFeatureClick, onFeatureHover, feat
       >
         {children}
       </div>
+
+      <CoordinatesDisplay coordinates={mouseCoordinates} />
     </div>
   );
 }
