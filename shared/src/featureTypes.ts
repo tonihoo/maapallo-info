@@ -6,13 +6,16 @@ import { z } from "zod";
 
 export const featureSchema = z.object({
   id: z.number().optional(), // ID is optional for new features
-  name: z.string().min(1),
-  age: z.number().int().nonnegative("Age must be zero or positive"),
-  gender: z.enum(["male", "female", "unknown"]),
+  title: z.string().min(1),
+  author: z.string().min(1),
+  thumbnail: z.string().url().optional().nullable(),
+  excerpt: z.string().min(1),
+  publication: z.string().min(1),
+  link: z.string().url(),
   location: z.object({
-    type: z.literal("Point"),
-    coordinates: z.array(z.number()).length(2)
-  })
+    type: z.enum(["Point", "Polygon"]),
+    coordinates: z.array(z.any()), // Accepts [number, number] for Point, or array of arrays for Polygon
+  }),
 });
 
 export type FeatureTypes = z.infer<typeof featureSchema>;

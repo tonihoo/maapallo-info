@@ -1,8 +1,8 @@
-import { Box, MenuItem, Paper, Typography } from "@mui/material";
+import { Box, MenuItem, Paper, Typography, Avatar } from "@mui/material";
 import { FeatureTypes } from "@shared/featureTypes";
 import { useEffect, useState } from "react";
 
-export default function HedgeHogList({
+export default function FeatureList({
   onSelectFeature,
   selectedFeatureId = null,
   refreshTrigger = 0,
@@ -49,7 +49,7 @@ export default function HedgeHogList({
         }}
       >
         <Typography sx={{ color: "darkslategrey" }}>
-          Rekisteröidyt sijaintit
+          Artikkelit
         </Typography>
       </Box>
       {features.length ? (
@@ -62,14 +62,32 @@ export default function HedgeHogList({
                   onSelectFeature(feature.id);
                 }
               }}
-              selected={selectedFeatureId === feature.id}            >
-              {feature.name}
+              selected={selectedFeatureId === feature.id}
+              sx={{ display: "flex", alignItems: "center", gap: 1 }}
+            >
+              {feature.thumbnail && (
+                <Avatar
+                  src={feature.thumbnail}
+                  alt={feature.title}
+                  sx={{ width: 32, height: 32, marginRight: 1 }}
+                  variant="square"
+                />
+              )}
+              <Box>
+                <Typography variant="subtitle1">{feature.title}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  {feature.author} &middot; {feature.publication}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" noWrap>
+                  {feature.excerpt}
+                </Typography>
+              </Box>
             </MenuItem>
           ))}
         </Box>
       ) : (
         <Typography sx={{ padding: "1em" }}>
-          Ei siilejä tietokannassa.
+          Ei artikkeleita tietokannassa.
         </Typography>
       )}
     </Paper>

@@ -1,4 +1,4 @@
-import { Paper, Typography } from "@mui/material";
+import { Paper, Typography, Link, Avatar } from "@mui/material";
 import { useState, useEffect } from "react";
 
 interface Props {
@@ -7,20 +7,17 @@ interface Props {
 
 interface Feature {
   id: number;
-  name: string;
-  age: number;
-  gender: 'female' | 'male' | 'unknown';
+  title: string;
+  author: string;
+  thumbnail?: string | null;
+  excerpt: string;
+  publication: string;
+  link: string;
   location: {
-    type: 'Point';
-    coordinates: [number, number];
+    type: "Point" | "Polygon";
+    coordinates: any;
   };
 }
-
-const genderTranslations: Record<string, string> = {
-  female: 'Naaras',
-  male: 'Uros',
-  unknown: 'Tuntematon'
-};
 
 export function FeatureInfo({ featureId }: Props) {
   const [feature, setFeature] = useState<Feature | null>(null);
@@ -36,13 +33,11 @@ export function FeatureInfo({ featureId }: Props) {
       setLoading(true);
       try {
         const res = await fetch(`/api/v1/feature/${featureId}`);
-
         if (!res.ok) {
           console.error(`API returned status: ${res.status}`);
           const errorText = await res.text();
           throw new Error(`Failed to fetch feature: ${errorText}`);
         }
-
         const data = await res.json();
         setFeature(data.feature);
       } catch (err) {
@@ -54,6 +49,27 @@ export function FeatureInfo({ featureId }: Props) {
 
     fetchFeature();
   }, [featureId]);
+
+  // Helper for location display
+  const renderLocation = (location: Feature["location"]) => {
+    if (!location) return null;
+    if (location.type === "Point") {
+      const [lon, lat] = location.coordinates;
+      return (
+        <Typography>
+          Sijainti: E {lon?.toFixed(0)}, N {lat?.toFixed(0)}
+        </Typography>
+      );
+    }
+    if (location.type === "Polygon") {
+      return (
+        <Typography>
+          Sijainti: Alue (Polygon, {location.coordinates[0]?.length || 0} pistettä)
+        </Typography>
+      );
+    }
+    return null;
+  };
 
   return (
     <Paper
@@ -68,17 +84,28 @@ export function FeatureInfo({ featureId }: Props) {
         <Typography>Ladataan...</Typography>
       ) : feature ? (
         <>
-          <Typography variant="h6">{feature.name}</Typography>
-          <Typography data-cy="feature-age-display">Ikä: {feature.age}</Typography>
-          <Typography data-cy="feature-gender-display">
-            Sukupuoli: {genderTranslations[feature.gender]}
+          {feature.thumbnail && (
+            <Avatar
+              src={feature.thumbnail}
+              alt={feature.title}
+              sx={{ width: 64, height: 64, mb: 1 }}
+              variant="square"
+            />
+          )}
+          <Typography variant="h6">{feature.title}</Typography>
+          <Typography variant="subtitle2" color="text.secondary">
+            {feature.author} &middot; {feature.publication}
           </Typography>
-          <Typography>
-            Sijainti: E {feature.location.coordinates[0].toFixed(0)}, N {feature.location.coordinates[1].toFixed(0)}
+          <Typography sx={{ mt: 1 }}>{feature.excerpt}</Typography>
+          <Typography sx={{ mt: 1 }}>
+            <Link href={feature.link} target="_blank" rel="noopener">
+              Lue koko artikkeli
+            </Link>
           </Typography>
+          {renderLocation(feature.location)}
         </>
       ) : (
-        <Typography>Valitse sijainti vasemmalla olevasta listasta</Typography>
+        <Typography>Valitse artikkeli vasemmalla olevasta listasta</Typography>
       )}
     </Paper>
   );

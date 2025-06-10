@@ -7,11 +7,11 @@ export async function getAllFeatures() {
   try {
     const features = await getPool().query(
       sql.type(featureSchema)`
-        SELECT id, name, age, gender, ST_AsGeoJSON(location)::json AS location
+        SELECT id, title, author, thumbnail, excerpt, publication, link,
+               ST_AsGeoJSON(location)::json AS location
         FROM feature
       `
     );
-
     return features.rows;
   } catch (error: unknown) {
     logger.error("Failed to retrieve features list:", error);
@@ -25,12 +25,12 @@ export async function getFeatureById(id: number) {
   try {
     const feature = await getPool().maybeOne(
       sql.type(featureSchema)`
-        SELECT id, name, age, gender, ST_AsGeoJSON(location)::json AS location
+        SELECT id, title, author, thumbnail, excerpt, publication, link,
+               ST_AsGeoJSON(location)::json AS location
         FROM feature
         WHERE id = ${id}
       `
     );
-
     return feature;
   } catch (error: unknown) {
     logger.error(`Failed to retrieve feature with ID ${id}:`, error);
@@ -41,12 +41,15 @@ export async function getFeatureById(id: number) {
 }
 
 export async function createFeature(featureData: {
-  name: string;
-  age: number;
-  gender: string;
+  title: string;
+  author: string;
+  thumbnail?: string | null;
+  excerpt: string;
+  publication: string;
+  link: string;
   location: {
     type: string;
-    coordinates: number[];
+    coordinates: any;
   };
 }) {
   try {
@@ -54,14 +57,18 @@ export async function createFeature(featureData: {
 
     const newFeature = await getPool().one(
       sql.type(featureSchema)`
-        INSERT INTO feature (name, age, gender, location)
+        INSERT INTO feature (title, author, thumbnail, excerpt, publication, link, location)
         VALUES (
-          ${featureData.name},
-          ${featureData.age},
-          ${featureData.gender},
+          ${featureData.title},
+          ${featureData.author},
+          ${featureData.thumbnail ?? null},
+          ${featureData.excerpt},
+          ${featureData.publication},
+          ${featureData.link},
           ST_SetSRID(ST_GeomFromGeoJSON(${locationJson}), 3067)
         )
-        RETURNING id, name, age, gender, ST_AsGeoJSON(location)::json as location
+        RETURNING id, title, author, thumbnail, excerpt, publication, link,
+                  ST_AsGeoJSON(location)::json as location
       `
     );
 
