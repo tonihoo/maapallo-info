@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import * as Cesium from "cesium";
 import { GlobalStyles } from "@mui/material";
 import { Feature, Geometry, GeoJsonProperties } from 'geojson';
+import { CoordinatesDisplay } from "./CoordinatesDisplay";
 
 // Set Cesium configuration
 if (typeof window !== 'undefined') {
@@ -47,6 +48,7 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId, onFeat
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewerReady, setViewerReady] = useState(false);
+  const [mouseCoordinates, setMouseCoordinates] = useState<{ lon: number; lat: number } | null>(null);
 
   const loadCountryBoundaries = useCallback(async (viewer: Cesium.Viewer) => {
     try {
@@ -143,8 +145,25 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId, onFeat
         requestRenderMode: true
       });
 
+      // Add mouse move handler for coordinate tracking
+      const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+
+      handler.setInputAction((movement: any) => {
+        const cartesian = viewer.camera.pickEllipsoid(movement.endPosition, viewer.scene.globe.ellipsoid);
+        if (cartesian) {
+          const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+          const longitude = Cesium.Math.toDegrees(cartographic.longitude);
+          const latitude = Cesium.Math.toDegrees(cartographic.latitude);
+
+          setMouseCoordinates({
+            lon: Number(longitude.toFixed(4)),
+            lat: Number(latitude.toFixed(4))
+          });
+        }
+      }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
       // Add click handler for feature selection and zoom
-      viewer.cesiumWidget.screenSpaceEventHandler.setInputAction((click: any) => {
+      handler.setInputAction((click: any) => {
         const pickedObject = viewer.scene.pick(click.position);
 
         if (pickedObject && pickedObject.id) {
@@ -527,6 +546,8 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId, onFeat
         <button onClick={() => handleRotate('left')} style={smallButtonStyle} title="Rotate Left" disabled={!viewerReady}>↶</button>
         <button onClick={() => handleRotate('right')} style={smallButtonStyle} title="Rotate Right" disabled={!viewerReady}>↷</button>
       </div>
+
+      <CoordinatesDisplay coordinates={mouseCoordinates} />
     </div>
   );
 }
