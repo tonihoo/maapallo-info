@@ -82,7 +82,7 @@ export function Map({ children, onMapClick, onFeatureClick, features = [], selec
    */
   const [olView] = useState(() => {
     return new View({
-      center: fromLonLat([25, 0]), // Center on Africa in lon/lat
+      center: fromLonLat([25, 20]), // Center on Horn of Africa in lon/lat
       zoom: 3,
       projection: 'EPSG:3857', // Web Mercator for global view
     });
