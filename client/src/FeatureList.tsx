@@ -37,7 +37,7 @@ export default function FeatureList({
   }, [refreshTrigger]);
 
   return (
-    <Paper elevation={3} sx={{ margin: "1em", overflow: "hidden", height: "calc(100vh - 2em)" }}>
+    <Paper elevation={3} sx={{ overflow: "hidden", height: "100%" }}> {/* Changed to use 100% height instead of viewport calculations */}
       <Box
         sx={{
           backgroundColor: "#ffe7c5",
@@ -49,7 +49,7 @@ export default function FeatureList({
         }}
       >
         <Typography sx={{ color: "darkslategrey" }}>
-          Artikkelit
+          Maapallo-lehden artikkeleita
         </Typography>
       </Box>
       {features.length ? (
@@ -57,7 +57,7 @@ export default function FeatureList({
           sx={{
             overflowY: "auto",
             height: "calc(100% - 3em)", // Subtract header height
-            maxHeight: "calc(100vh - 5em)", // Ensure it doesn't exceed viewport
+            // Removed maxHeight viewport calculation
             '&::-webkit-scrollbar': {
               width: '8px',
             },

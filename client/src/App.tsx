@@ -202,10 +202,10 @@ export function App() {
             elevation={8}
             sx={{
               position: "absolute",
-              top: 56, // Move down to account for header
-              right: 16,
-              width: 300,
-              maxHeight: 300,
+              top: 170, // Move down to account for header
+              right: 100,
+              width: 600,
+              maxHeight: 500,
               ...panelStyle,
               zIndex: 100
             }}
@@ -218,7 +218,7 @@ export function App() {
         <Box sx={{
           position: "absolute",
           top: 56, // Move down to account for header (40px + 16px margin)
-          right: selectedFeatureId ? 340 : 16, // Keep existing position logic
+          right: 16, // Keep existing position logic
           zIndex: 200
         }}>
           <Tooltip title={is3DMode ? "2D kartta" : "3D maapallo"}>
