@@ -9,7 +9,7 @@ import { Circle } from "ol/style";
 import Fill from "ol/style/Fill";
 import Stroke from "ol/style/Stroke";
 import Style from "ol/style/Style";
-import { ReactNode, useEffect, useRef, useState } from "react";
+import { ReactNode, useEffect, useRef, useState, useCallback } from "react";
 import { FeatureLike } from 'ol/Feature';
 import { Zoom } from 'ol/control';
 import { toLonLat, fromLonLat } from 'ol/proj';
@@ -24,6 +24,23 @@ interface Props {
   onFeatureHover?: (featureId: number | null) => void;
   selectedFeatureId?: number | null;
 }
+
+// Constants for 2D map controls
+const INITIAL_VIEW = {
+  center: [25, 20], // Horn of Africa in lon/lat
+  zoom: 3
+};
+
+const ZOOM_LIMITS = {
+  min: 1,
+  max: 18
+};
+
+const ANIMATION_DURATIONS = {
+  zoom: 500,
+  rotate: 300,
+  home: 1500
+};
 
 export function Map({ children, onMapClick, onFeatureClick, onFeatureHover, features = [], selectedFeatureId }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -69,9 +86,11 @@ export function Map({ children, onMapClick, onFeatureClick, onFeatureHover, feat
    */
   const [olView] = useState(() => {
     return new View({
-      center: fromLonLat([25, 20]), // Center on Horn of Africa in lon/lat
-      zoom: 3,
+      center: fromLonLat(INITIAL_VIEW.center), // Center on Horn of Africa in lon/lat
+      zoom: INITIAL_VIEW.zoom,
       projection: 'EPSG:3857', // Web Mercator for global view
+      minZoom: ZOOM_LIMITS.min,
+      maxZoom: ZOOM_LIMITS.max,
     });
   });
 
@@ -99,6 +118,41 @@ export function Map({ children, onMapClick, onFeatureClick, onFeatureHover, feat
       ],
     });
   });
+
+  // Control functions
+  const handleZoom = useCallback((zoomIn: boolean) => {
+    const currentZoom = olView.getZoom() || INITIAL_VIEW.zoom;
+    const newZoom = zoomIn
+      ? Math.min(currentZoom + 1, ZOOM_LIMITS.max)
+      : Math.max(currentZoom - 1, ZOOM_LIMITS.min);
+
+    olView.animate({
+      zoom: newZoom,
+      duration: ANIMATION_DURATIONS.zoom
+    });
+  }, [olView]);
+
+  const handleRotate = useCallback((direction: 'left' | 'right') => {
+    const currentRotation = olView.getRotation();
+    const rotationIncrement = Math.PI / 12; // 15 degrees in radians
+    const newRotation = direction === 'left'
+      ? currentRotation - rotationIncrement
+      : currentRotation + rotationIncrement;
+
+    olView.animate({
+      rotation: newRotation,
+      duration: ANIMATION_DURATIONS.rotate
+    });
+  }, [olView]);
+
+  const handleHome = useCallback(() => {
+    olView.animate({
+      center: fromLonLat(INITIAL_VIEW.center),
+      zoom: INITIAL_VIEW.zoom,
+      rotation: 0,
+      duration: ANIMATION_DURATIONS.home
+    });
+  }, [olView]);
 
   /** olMap -object's initialization on startup  */
   useEffect(() => {
@@ -250,6 +304,27 @@ export function Map({ children, onMapClick, onFeatureClick, onFeatureHover, feat
     }
   }, [selectedFeatureId, features, olView]);
 
+  const buttonStyle = {
+    width: "40px",
+    height: "40px",
+    backgroundColor: "rgba(42, 42, 42, 0.8)",
+    color: "white",
+    border: "1px solid rgba(255, 255, 255, 0.3)",
+    borderRadius: "4px",
+    cursor: "pointer",
+    fontSize: "20px",
+    fontWeight: "bold",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center"
+  } as const;
+
+  const smallButtonStyle = {
+    ...buttonStyle,
+    fontSize: "16px",
+    fontWeight: "normal"
+  } as const;
+
   return (
     <div style={{ width: "100%", height: "100%", position: "relative" }}>
       {/* Styles for the OpenLayers controls */}
@@ -275,6 +350,23 @@ export function Map({ children, onMapClick, onFeatureClick, onFeatureHover, feat
         ref={mapRef}
       >
         {children}
+      </div>
+
+      {/* Control Panel */}
+      <div style={{
+        position: "absolute",
+        bottom: "50px",
+        right: "20px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "8px",
+        zIndex: 1000
+      }}>
+        <button onClick={handleHome} style={smallButtonStyle} title="View Home">🏠</button>
+        <button onClick={() => handleZoom(true)} style={buttonStyle} title="Zoom In">+</button>
+        <button onClick={() => handleZoom(false)} style={buttonStyle} title="Zoom Out">−</button>
+        <button onClick={() => handleRotate('left')} style={smallButtonStyle} title="Rotate Left">↶</button>
+        <button onClick={() => handleRotate('right')} style={smallButtonStyle} title="Rotate Right">↷</button>
       </div>
 
       <CoordinatesDisplay coordinates={mouseCoordinates} />
