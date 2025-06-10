@@ -10,17 +10,11 @@ import Fill from "ol/style/Fill";
 import Stroke from "ol/style/Stroke";
 import Style from "ol/style/Style";
 import { ReactNode, useEffect, useRef, useState } from "react";
-import { register } from 'ol/proj/proj4';
-import proj4 from 'proj4';
 import { FeatureLike } from 'ol/Feature';
 import { Zoom } from 'ol/control';
 import { toLonLat, fromLonLat } from 'ol/proj';
 import { Feature as GeoJSONFeature, Geometry, GeoJsonProperties } from 'geojson';
 import { CoordinatesDisplay } from "./CoordinatesDisplay";
-
-// Define the Finnish coordinate system
-proj4.defs("EPSG:3067", "+proj=utm +zone=35 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs +type=crs");
-register(proj4);
 
 interface Props {
   children?: ReactNode;
