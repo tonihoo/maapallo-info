@@ -9,7 +9,6 @@ import { Circle } from "ol/style";
 import Fill from "ol/style/Fill";
 import Stroke from "ol/style/Stroke";
 import Style from "ol/style/Style";
-import Text from "ol/style/Text";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { register } from 'ol/proj/proj4';
 import proj4 from 'proj4';
@@ -27,16 +26,16 @@ interface Props {
   features?: GeoJSONFeature<Geometry, GeoJsonProperties>[];
   onMapClick?: (coordinates: number[]) => void;
   onFeatureClick?: (featureId: number) => void;
+  onFeatureHover?: (featureId: number | null) => void; // Add hover callback
   selectedFeatureId?: number | null;
 }
 
-export function Map({ children, onMapClick, onFeatureClick, features = [], selectedFeatureId }: Props) {
+export function Map({ children, onMapClick, onFeatureClick, onFeatureHover, features = [], selectedFeatureId }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
 
   const styleFunction = (feature: FeatureLike) => {
     const featureType = feature.get('featureType');
     const isSelected = feature.get('id') === selectedFeatureId;
-    const name = feature.get('name');
 
     if (featureType === 'feature') {
       return new Style({
@@ -48,13 +47,7 @@ export function Map({ children, onMapClick, onFeatureClick, features = [], selec
             width: isSelected ? 3 : 2
           }),
         }),
-        text: name ? new Text({
-          text: name,
-          font: isSelected ? 'bold 14px Arial' : 'bold 12px Arial',
-          fill: new Fill({ color: '#ffffff' }),
-          stroke: new Stroke({ color: '#000000', width: 2 }),
-          offsetY: isSelected ? -20 : -15,
-        }) : undefined,
+        // Remove text completely - no titles shown on map
       });
     } else if (featureType === 'clickLocation') {
       // Orange style for click locations
@@ -117,6 +110,7 @@ export function Map({ children, onMapClick, onFeatureClick, features = [], selec
   useEffect(() => {
     olMap.setTarget(mapRef.current as HTMLElement);
 
+    // Handle click events
     olMap.on("click", (event) => {
       // Check if a feature was clicked
       const feature = olMap.forEachFeatureAtPixel(event.pixel, (feature) => feature);
@@ -143,7 +137,33 @@ export function Map({ children, onMapClick, onFeatureClick, features = [], selec
         onMapClick(coordinates);
       }
     });
-  }, [olMap, onMapClick, onFeatureClick, olView]);
+
+    // Handle hover events
+    olMap.on("pointermove", (event) => {
+      const feature = olMap.forEachFeatureAtPixel(event.pixel, (feature) => feature);
+
+      if (feature && feature.get('featureType') === 'feature') {
+        const featureId = feature.get('id');
+        if (onFeatureHover) {
+          onFeatureHover(featureId);
+        }
+        // Change cursor to pointer when hovering over features
+        olMap.getViewport().style.cursor = 'pointer';
+      } else {
+        if (onFeatureHover) {
+          onFeatureHover(null);
+        }
+        // Reset cursor when not hovering over features
+        olMap.getViewport().style.cursor = '';
+      }
+    });
+
+    // Clean up event listeners on unmount
+    return () => {
+      olMap.un("click");
+      olMap.un("pointermove");
+    };
+  }, [olMap, onMapClick, onFeatureClick, onFeatureHover, olView]);
 
   /** Listen for changes in the 'features' property */
   useEffect(() => {
@@ -203,7 +223,7 @@ export function Map({ children, onMapClick, onFeatureClick, features = [], selec
       <GlobalStyles
         styles={{
           ".ol-viewport": {
-            cursor: "pointer",
+            cursor: "default", // Changed from pointer to default
           },
           ".ol-zoom": {
             position: "absolute",

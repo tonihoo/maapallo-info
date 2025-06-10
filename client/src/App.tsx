@@ -9,15 +9,16 @@ import { Feature, Geometry, GeoJsonProperties } from 'geojson';
 
 export function App() {
   const [selectedFeatureId, setSelectedFeatureId] = useState<number | null>(null);
-  const [selectedFeature, setSelectedFeature] = useState<FeatureTypes | null>(null);
+  const [hoveredFeatureId, setHoveredFeatureId] = useState<number | null>(null); // Keep for cursor changes
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [allFeatures, setAllFeatures] = useState<FeatureTypes[]>([]);
-  const [is3DMode, setIs3DMode] = useState(true); // Add 3D/2D mode state
+  const [is3DMode, setIs3DMode] = useState(true);
 
   // Add handlers for map interactions
   const handleMapClick = useCallback((coordinates: number[]) => {
     console.log('Map clicked at coordinates:', coordinates);
-    // You can implement logic to add new features here if needed
+    // Clear selection when clicking empty space
+    setSelectedFeatureId(null);
   }, []);
 
   const handleMapFeatureClick = useCallback((featureId: number) => {
@@ -31,9 +32,8 @@ export function App() {
 
   const handleFeatureAdded = useCallback(async (newFeature: FeatureTypes) => {
     setRefreshTrigger(prev => prev + 1);
-    setSelectedFeature(newFeature);
     setSelectedFeatureId(newFeature.id!);
-  }, []);
+  }, []); // Removed setSelectedFeature references
 
   // Fetch all features
   useEffect(() => {
@@ -54,24 +54,7 @@ export function App() {
 
   const handleFeatureSelect = useCallback(async (id: number) => {
     setSelectedFeatureId(id);
-
-    const feature = allFeatures.find(f => f.id === id);
-    if (feature) {
-      setSelectedFeature(feature);
-    }
-  }, [allFeatures]);
-
-  useEffect(() => {
-    if (!selectedFeatureId) {
-      setSelectedFeature(null);
-      return;
-    }
-
-    const feature = allFeatures.find(f => f.id === selectedFeatureId);
-    if (feature) {
-      setSelectedFeature(feature);
-    }
-  }, [selectedFeatureId, allFeatures]);
+  }, []); // Simplified - no need to find and set feature object
 
   // Create map features for rendering
   const createMapFeatures = (): Feature<Geometry, GeoJsonProperties>[] => {
@@ -84,9 +67,9 @@ export function App() {
           geometry: feature.location,
           properties: {
             id: feature.id,
-            title: feature.title, // Changed from 'name'
-            author: feature.author, // Changed from 'age'
-            publication: feature.publication, // Changed from 'gender'
+            title: feature.title,
+            author: feature.author,
+            publication: feature.publication,
             featureType: 'feature',
             isSelected: feature.id === selectedFeatureId
           },
@@ -98,7 +81,7 @@ export function App() {
   };
 
   const headerStyle = {
-    backgroundColor: is3DMode ? "rgba(126, 199, 129, 0.75)" : "rgba(255, 179, 76, 0.75)", // Green for 3D, orange for 2D
+    backgroundColor: is3DMode ? "rgba(126, 199, 129, 0.75)" : "rgba(255, 179, 76, 0.75)",
     color: "black",
     textAlign: "center" as const,
     boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
@@ -114,12 +97,12 @@ export function App() {
   };
 
   const footerStyle = {
-    backgroundColor: is3DMode ? "rgba(126, 199, 129, 0.75)" : "rgba(255, 179, 76, 0.75)", // Green for 3D, orange for 2D
+    backgroundColor: is3DMode ? "rgba(126, 199, 129, 0.75)" : "rgba(255, 179, 76, 0.75)",
     color: "black",
     textAlign: "center" as const,
-    boxShadow: "0 -2px 4px rgba(0,0,0,0.1)", // Negative shadow for bottom
+    boxShadow: "0 -2px 4px rgba(0,0,0,0.1)",
     position: "fixed" as const,
-    bottom: 0, // Position at bottom
+    bottom: 0,
     left: 0,
     right: 0,
     zIndex: 1000,
@@ -133,6 +116,10 @@ export function App() {
     backgroundColor: "rgba(255, 255, 255, 0.95)",
     backdropFilter: "blur(8px)",
     zIndex: 100
+  };
+
+  const handleFeatureHover = (featureId: number | null) => {
+    setHoveredFeatureId(featureId); // Only for cursor changes, not for showing info panel
   };
 
   return (
@@ -171,6 +158,7 @@ export function App() {
               features={createMapFeatures()}
               onMapClick={handleMapClick}
               onFeatureClick={handleMapFeatureClick}
+              onFeatureHover={handleFeatureHover} // Keep for cursor changes
               selectedFeatureId={selectedFeatureId}
             />
           )}
@@ -181,10 +169,10 @@ export function App() {
           elevation={8}
           sx={{
             position: "absolute",
-            top: 56, // Move down to account for header
+            top: 56,
             left: 16,
-            width: 320, // Increased from 320 to 400 for more width
-            height: 880, // Fixed height instead of maxHeight to control length
+            width: 320, // Fixed width comment
+            height: 880, // Fixed height comment
             ...panelStyle,
             zIndex: 100
           }}
@@ -196,13 +184,13 @@ export function App() {
           />
         </Paper>
 
-        {/* Feature Info Panel */}
+        {/* Feature Info Panel - Show ONLY on selection (click), not hover */}
         {selectedFeatureId && (
           <Paper
             elevation={8}
             sx={{
               position: "absolute",
-              top: 170, // Move down to account for header
+              top: 170,
               right: 100,
               width: 600,
               maxHeight: 500,
@@ -217,8 +205,8 @@ export function App() {
         {/* 3D/2D Toggle Button */}
         <Box sx={{
           position: "absolute",
-          top: 56, // Move down to account for header (40px + 16px margin)
-          right: 16, // Keep existing position logic
+          top: 56,
+          right: selectedFeatureId ? 340 : 16, // Adjust position when info panel is visible
           zIndex: 200
         }}>
           <Tooltip title={is3DMode ? "2D kartta" : "3D maapallo"}>
@@ -226,12 +214,12 @@ export function App() {
               onClick={toggleMapMode}
               sx={{
                 backgroundColor: "rgba(255, 255, 255, 0.9)",
-                color: is3DMode ? "#ffb34c" : "#4caf50", // Orange for 3D mode, green for 2D mode
+                color: is3DMode ? "#ffb34c" : "#4caf50",
                 fontSize: "16px",
                 fontWeight: "bold",
                 "&:hover": {
                   backgroundColor: "rgba(255, 255, 255, 1)",
-                  color: is3DMode ? "#e89d2b" : "#388e3c" // Darker orange/green on hover
+                  color: is3DMode ? "#e89d2b" : "#388e3c"
                 },
                 boxShadow: "0 2px 8px rgba(0,0,0,0.2)"
               }}
