@@ -176,33 +176,6 @@ export function App() {
           )}
         </Box>
 
-        {/* 3D/2D Toggle Button */}
-        <Box sx={{
-          position: "absolute",
-          top: 56, // Move down to account for header (40px + 16px margin)
-          right: selectedFeatureId ? 340 : 16,
-          zIndex: 200
-        }}>
-          <Tooltip title={is3DMode ? "2D kartta" : "3D maapallo"}>
-            <IconButton
-              onClick={toggleMapMode}
-              sx={{
-                backgroundColor: "rgba(255, 255, 255, 0.9)",
-                color: is3DMode ? "#ffb34c" : "#4caf50", // Orange for 3D mode, green for 2D mode
-                fontSize: "16px",
-                fontWeight: "bold",
-                "&:hover": {
-                  backgroundColor: "rgba(255, 255, 255, 1)",
-                  color: is3DMode ? "#e89d2b" : "#388e3c" // Darker orange/green on hover
-                },
-                boxShadow: "0 2px 8px rgba(0,0,0,0.2)"
-              }}
-            >
-              {is3DMode ? "2D" : "3D"}
-            </IconButton>
-          </Tooltip>
-        </Box>
-
         {/* Feature List Panel */}
         <Paper
           elevation={8}
@@ -210,8 +183,8 @@ export function App() {
             position: "absolute",
             top: 56, // Move down to account for header
             left: 16,
-            width: 280,
-            maxHeight: "calc(100vh - 120px)", // Adjust for header and footer
+            width: 320, // Increased from 320 to 400 for more width
+            height: 880, // Fixed height instead of maxHeight to control length
             ...panelStyle,
             zIndex: 100
           }}
@@ -240,6 +213,33 @@ export function App() {
             <FeatureInfo featureId={selectedFeatureId} />
           </Paper>
         )}
+
+        {/* 3D/2D Toggle Button */}
+        <Box sx={{
+          position: "absolute",
+          top: 56, // Move down to account for header (40px + 16px margin)
+          right: selectedFeatureId ? 340 : 16, // Keep existing position logic
+          zIndex: 200
+        }}>
+          <Tooltip title={is3DMode ? "2D kartta" : "3D maapallo"}>
+            <IconButton
+              onClick={toggleMapMode}
+              sx={{
+                backgroundColor: "rgba(255, 255, 255, 0.9)",
+                color: is3DMode ? "#ffb34c" : "#4caf50", // Orange for 3D mode, green for 2D mode
+                fontSize: "16px",
+                fontWeight: "bold",
+                "&:hover": {
+                  backgroundColor: "rgba(255, 255, 255, 1)",
+                  color: is3DMode ? "#e89d2b" : "#388e3c" // Darker orange/green on hover
+                },
+                boxShadow: "0 2px 8px rgba(0,0,0,0.2)"
+              }}
+            >
+              {is3DMode ? "2D" : "3D"}
+            </IconButton>
+          </Tooltip>
+        </Box>
       </Box>
 
       {/* Footer */}

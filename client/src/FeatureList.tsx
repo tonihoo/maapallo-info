@@ -1,4 +1,4 @@
-import { Box, MenuItem, Paper, Typography, Avatar } from "@mui/material";
+import { Box, MenuItem, Paper, Typography } from "@mui/material";
 import { FeatureTypes } from "@shared/featureTypes";
 import { useEffect, useState } from "react";
 
@@ -37,7 +37,7 @@ export default function FeatureList({
   }, [refreshTrigger]);
 
   return (
-    <Paper elevation={3} sx={{ margin: "1em", overflow: "hidden" }}>
+    <Paper elevation={3} sx={{ margin: "1em", overflow: "hidden", height: "calc(100vh - 2em)" }}>
       <Box
         sx={{
           backgroundColor: "#ffe7c5",
@@ -53,7 +53,26 @@ export default function FeatureList({
         </Typography>
       </Box>
       {features.length ? (
-        <Box sx={{ overflowY: "scroll", height: "100%" }}>
+        <Box
+          sx={{
+            overflowY: "auto",
+            height: "calc(100% - 3em)", // Subtract header height
+            maxHeight: "calc(100vh - 5em)", // Ensure it doesn't exceed viewport
+            '&::-webkit-scrollbar': {
+              width: '8px',
+            },
+            '&::-webkit-scrollbar-track': {
+              background: '#f1f1f1',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              background: '#c1c1c1',
+              borderRadius: '4px',
+            },
+            '&::-webkit-scrollbar-thumb:hover': {
+              background: '#a8a8a8',
+            },
+          }}
+        >
           {features.map((feature) => (
             <MenuItem
               key={feature.id}
@@ -63,23 +82,34 @@ export default function FeatureList({
                 }
               }}
               selected={selectedFeatureId === feature.id}
-              sx={{ display: "flex", alignItems: "center", gap: 1 }}
+              sx={{
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 1,
+                py: 1.5,
+                minHeight: 'auto',
+              }}
             >
-              {feature.thumbnail && (
-                <Avatar
-                  src={feature.thumbnail}
-                  alt={feature.title}
-                  sx={{ width: 32, height: 32, marginRight: 1 }}
-                  variant="square"
-                />
-              )}
-              <Box>
-                <Typography variant="subtitle1">{feature.title}</Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {feature.author} &middot; {feature.publication}
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <Typography
+                  variant="subtitle1"
+                  sx={{
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    lineHeight: 1.3,
+                    wordBreak: 'break-word',
+                    hyphens: 'auto',
+                    whiteSpace: 'normal',
+                    fontSize: '0.95rem',
+                  }}
+                >
+                  {feature.title}
                 </Typography>
-                <Typography variant="caption" color="text.secondary" noWrap>
-                  {feature.excerpt}
+                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  {feature.author} &middot; {feature.publication}
                 </Typography>
               </Box>
             </MenuItem>
