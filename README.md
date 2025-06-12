@@ -2,7 +2,7 @@
 
 ## Sovelluksen osat
 
-Sovellus koostuu kolmesta komponentista: serveri/api-rajapinta (Node.js / Fastify), tietokanta (PostgreSQL / PostGIS) sekä käyttöliittymä (React, MUI, OpenLayers).
+Sovellus koostuu kolmesta komponentista: serveri/api-rajapinta (FastAPI/Python), tietokanta (PostgreSQL / PostGIS) sekä käyttöliittymä (React, MUI, OpenLayers).
 
 ## Sovelluksen käynnistäminen
 
