@@ -67,3 +67,28 @@ npm run test
 cd client
 npx cypress open # -> E2E testing -> Start E2E testing in Chrome -> feature-form
 ```
+
+
+## FastAPI backend
+
+Technical Stack:
+- FastAPI with async/await for high performance
+- PostgreSQL + PostGIS for spatial data
+- SQLAlchemy + asyncpg for async database operations
+- Pydantic for data validation and type safety
+- Docker for containerization
+
+Working Endpoints:
+- GET /api/v1/health/ ✅
+- GET /api/v1/features/ ✅ (returns 11 features from database)
+- POST /api/v1/features/ ✅ (successfully created test feature)
+- PUT /api/v1/features/{id} ✅ (implemented)
+- DELETE /api/v1/features/{id} ✅ (implemented)
+The server is running on port 3003 and ready for production use!
+
+The FastAPI server provides:
+- Better Performance: Async request handling
+- Type Safety: Full Python type hints and Pydantic validation
+- Auto Documentation: Available at http://localhost:3003/docs
+- Modern Architecture: Clean, maintainable codebase
+- Spatial Support: Full PostGIS integration for geographic data

@@ -18,15 +18,20 @@ services:
       retries: 10
   server:
     build:
-      context: .
-      dockerfile: server/Dockerfile.dev
+      context: ./server
+      dockerfile: Dockerfile
     volumes:
-      - ./server:/app/server:delegated
-      - ./shared:/app/shared:delegated
-      - /app/server/node_modules
-      - /app/shared/node_modules
+      - ./server:/app:delegated
     ports:
       - "127.0.0.1:3003:3003"
+    environment:
+      - ENVIRONMENT=development
+      - PG_HOST=db
+      - PG_PORT=5432
+      - PG_USER=db_dev_user
+      - PG_PASSWORD=DevPassword
+      - PG_DB=db_dev
+      - SERVER_PORT=3003
     depends_on:
       db:
         condition: service_healthy
