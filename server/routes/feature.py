@@ -9,7 +9,7 @@ import crud
 
 router = APIRouter()
 
-@router.get("/", response_model=List[FeatureResponse])
+@router.get("/", response_model=dict)
 async def get_features(
     category: Optional[str] = Query(None, description="Filter by category"),
     skip: int = Query(0, ge=0, description="Number of records to skip"),
@@ -19,23 +19,24 @@ async def get_features(
     """Get all features with optional filtering and pagination"""
     try:
         features = await crud.get_all_features(db)
-        return features
+        return {"features": features}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error retrieving features: {str(e)}")
 
-@router.get("/{feature_id}", response_model=FeatureResponse)
+@router.get("/{feature_id}", response_model=dict)
 async def get_feature(feature_id: int, db: AsyncSession = Depends(get_db)):
     """Get a specific feature by ID"""
     feature = await crud.get_feature_by_id(db, feature_id=feature_id)
     if feature is None:
         raise HTTPException(status_code=404, detail="Feature not found")
-    return feature
+    return {"feature": feature}
 
-@router.post("/", response_model=FeatureResponse)
+@router.post("/", response_model=dict)
 async def create_feature(feature: FeatureCreate, db: AsyncSession = Depends(get_db)):
     """Create a new feature"""
     try:
-        return await crud.create_feature(db=db, feature_data=feature)
+        created_feature = await crud.create_feature(db=db, feature_data=feature)
+        return {"feature": created_feature, "message": "Feature created successfully"}
     except IntegrityError as e:
         await db.rollback()
         raise HTTPException(status_code=400, detail=f"Database integrity error: {str(e)}")

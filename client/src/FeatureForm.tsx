@@ -126,7 +126,7 @@ export function FeatureForm({ coordinates, onFeatureAdded }: Props) {
         }
       };
 
-      const response = await fetch("/api/v1/feature", {
+      const response = await fetch("/api/v1/feature/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

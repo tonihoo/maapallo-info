@@ -17,7 +17,7 @@ export default function FeatureList({
   useEffect(() => {
     const getAllFeatures = async () => {
       try {
-        const res = await fetch("/api/v1/feature");
+        const res = await fetch("/api/v1/feature/");
 
         if (!res.ok) {
           console.error(`API responded with status: ${res.status}`);

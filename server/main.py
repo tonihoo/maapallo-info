@@ -38,7 +38,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(health.router, prefix="/api/v1/health", tags=["health"])
-app.include_router(feature.router, prefix="/api/v1/features", tags=["features"])
+app.include_router(feature.router, prefix="/api/v1/feature", tags=["features"])
 
 # Serve static files
 static_path = "/app/static"

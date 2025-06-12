@@ -39,7 +39,7 @@ export function App() {
   useEffect(() => {
     const fetchAllFeatures = async () => {
       try {
-        const response = await fetch('/api/v1/feature');
+        const response = await fetch('/api/v1/feature/');
         if (!response.ok) return;
 
         const data = await response.json();
