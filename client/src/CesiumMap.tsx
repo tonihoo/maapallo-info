@@ -3,6 +3,7 @@ import * as Cesium from "cesium";
 import { GlobalStyles } from "@mui/material";
 import { Feature, Geometry, GeoJsonProperties } from 'geojson';
 import { CoordinatesDisplay } from "./CoordinatesDisplay";
+import { LocationSearch } from "./LocationSearch";
 
 // Set Cesium configuration
 if (typeof window !== 'undefined') {
@@ -439,6 +440,18 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId, onFeat
     }
   }, [selectedFeatureId, features]);
 
+  // Handle location search selection
+  const handleLocationSelect = useCallback((lat: number, lon: number) => {
+    if (!viewerRef.current) return;
+
+    // Zoom to the selected location
+    viewerRef.current.camera.flyTo({
+      destination: Cesium.Cartesian3.fromDegrees(lon, lat, 1000000),
+      duration: 2.0,
+      easingFunction: Cesium.EasingFunction.CUBIC_IN_OUT,
+    });
+  }, []);
+
   if (error) {
     return (
       <div style={{
@@ -527,6 +540,9 @@ export function CesiumMap({ features = [], onMapClick, selectedFeatureId, onFeat
           </div>
         )}
       </div>
+
+      {/* Location Search */}
+      <LocationSearch onLocationSelect={handleLocationSelect} />
 
       {/* Control Panel */}
       <div style={{

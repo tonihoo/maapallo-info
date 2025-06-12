@@ -15,6 +15,7 @@ import { Zoom } from 'ol/control';
 import { toLonLat, fromLonLat } from 'ol/proj';
 import { Feature as GeoJSONFeature, Geometry, GeoJsonProperties } from 'geojson';
 import { CoordinatesDisplay } from "./CoordinatesDisplay";
+import { LocationSearch } from "./LocationSearch";
 
 interface Props {
   children?: ReactNode;
@@ -45,10 +46,6 @@ const ANIMATION_DURATIONS = {
 export function Map({ children, onMapClick, onFeatureClick, onFeatureHover, features = [], selectedFeatureId }: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [mouseCoordinates, setMouseCoordinates] = useState<{ lon: number; lat: number } | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [showResults, setShowResults] = useState(false);
 
   const styleFunction = (feature: FeatureLike) => {
     const featureType = feature.get('featureType');
@@ -123,61 +120,14 @@ export function Map({ children, onMapClick, onFeatureClick, onFeatureHover, feat
     });
   });
 
-  // Search functionality
-  const searchLocation = useCallback(async (query: string) => {
-    if (!query.trim()) {
-      setSearchResults([]);
-      setShowResults(false);
-      return;
-    }
-
-    setIsSearching(true);
-    try {
-      // Using Nominatim (OpenStreetMap's geocoding service)
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5`
-      );
-      const results = await response.json();
-
-      setSearchResults(results);
-      setShowResults(true);
-    } catch (error) {
-      console.error('Search error:', error);
-      setSearchResults([]);
-    } finally {
-      setIsSearching(false);
-    }
-  }, []);
-
-  // Debounced search
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (searchQuery) {
-        searchLocation(searchQuery);
-      } else {
-        setSearchResults([]);
-        setShowResults(false);
-      }
-    }, 300);
-
-    return () => clearTimeout(timeoutId);
-  }, [searchQuery, searchLocation]);
-
-  const handleSearchResultClick = useCallback((result: any) => {
-    const lat = parseFloat(result.lat);
-    const lon = parseFloat(result.lon);
-
+  // Handle location search selection
+  const handleLocationSelect = useCallback((lat: number, lon: number) => {
     // Zoom to the selected location
     olView.animate({
       center: fromLonLat([lon, lat]),
       zoom: 12,
       duration: 1000
     });
-
-    // Clear search
-    setSearchQuery("");
-    setShowResults(false);
-    setSearchResults([]);
   }, [olView]);
 
   // Control functions
@@ -413,93 +363,8 @@ export function Map({ children, onMapClick, onFeatureClick, onFeatureHover, feat
         {children}
       </div>
 
-      {/* Search Panel */}
-      <div style={{
-        position: "absolute",
-        top: "80px",
-        right: "20px",
-        zIndex: 1000,
-        width: "300px"
-      }}>
-        <div style={{ position: "relative" }}>
-          <input
-            type="text"
-            placeholder="Hae paikkaa..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "12px 16px",
-              border: "1px solid rgba(255, 255, 255, 0.3)",
-              borderRadius: "8px",
-              backgroundColor: "rgba(42, 42, 42, 0.9)",
-              color: "white",
-              fontSize: "14px",
-              outline: "none",
-              boxSizing: "border-box"
-            }}
-          />
-          {isSearching && (
-            <div style={{
-              position: "absolute",
-              right: "12px",
-              top: "50%",
-              transform: "translateY(-50%)",
-              color: "white",
-              fontSize: "12px"
-            }}>
-              Searching...
-            </div>
-          )}
-        </div>
-
-        {/* Search Results */}
-        {showResults && searchResults.length > 0 && (
-          <div style={{
-            marginTop: "4px",
-            backgroundColor: "rgba(42, 42, 42, 0.95)",
-            border: "1px solid rgba(255, 255, 255, 0.3)",
-            borderRadius: "8px",
-            maxHeight: "200px",
-            overflowY: "auto"
-          }}>
-            {searchResults.map((result, index) => (
-              <div
-                key={index}
-                onClick={() => handleSearchResultClick(result)}
-                style={{
-                  padding: "12px 16px",
-                  color: "white",
-                  cursor: "pointer",
-                  borderBottom: index < searchResults.length - 1 ? "1px solid rgba(255, 255, 255, 0.1)" : "none",
-                  fontSize: "14px",
-                  lineHeight: "1.4"
-                }}
-                onMouseEnter={(e) => {
-                  (e.target as HTMLElement).style.backgroundColor = "rgba(255, 255, 255, 0.1)";
-                }}
-                onMouseLeave={(e) => {
-                  (e.target as HTMLElement).style.backgroundColor = "transparent";
-                }}
-              >
-                <div style={{ fontWeight: "500" }}>
-                  {result.display_name.split(',')[0]}
-                </div>
-                <div style={{
-                  fontSize: "12px",
-                  opacity: 0.7,
-                  marginTop: "2px",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap"
-                }}>
-                  {result.display_name}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Location Search */}
+      <LocationSearch onLocationSelect={handleLocationSelect} />
 
       {/* Control Panel */}
       <div style={{
