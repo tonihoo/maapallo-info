@@ -142,7 +142,7 @@ async def update_feature(db: AsyncSession, feature_id: int, feature_update: Feat
         # Build dynamic update query based on provided fields
         update_fields = []
         params = {'feature_id': feature_id}
-        
+
         if feature_update.title is not None:
             update_fields.append("title = :title")
             params['title'] = feature_update.title
@@ -164,26 +164,26 @@ async def update_feature(db: AsyncSession, feature_id: int, feature_update: Feat
         if feature_update.location is not None:
             update_fields.append("location = ST_SetSRID(ST_GeomFromGeoJSON(:location), 3067)")
             params['location'] = json.dumps(feature_update.location.dict())
-        
+
         if not update_fields:
             # No fields to update, just return the current feature
             return await get_feature_by_id(db, feature_id)
-        
+
         query = text(f"""
-            UPDATE feature 
+            UPDATE feature
             SET {', '.join(update_fields)}
             WHERE id = :feature_id
             RETURNING id, title, author, thumbnail, excerpt, publication, link,
                       ST_AsGeoJSON(location) as location
         """)
-        
+
         result = await db.execute(query, params)
         await db.commit()
-        
+
         feature = result.fetchone()
         if not feature:
             return None
-        
+
         location_data = json.loads(feature.location) if feature.location else None
         feature_dict = {
             'id': feature.id,
@@ -195,7 +195,7 @@ async def update_feature(db: AsyncSession, feature_id: int, feature_update: Feat
             'link': feature.link,
             'location': location_data
         }
-        
+
         return FeatureResponse(**feature_dict)
     except Exception as e:
         logger.error(f"Failed to update feature with ID {feature_id}: {e}")
@@ -209,7 +209,7 @@ async def delete_feature(db: AsyncSession, feature_id: int) -> bool:
         query = text("DELETE FROM feature WHERE id = :feature_id")
         result = await db.execute(query, {'feature_id': feature_id})
         await db.commit()
-        
+
         return result.rowcount > 0
     except Exception as e:
         logger.error(f"Failed to delete feature with ID {feature_id}: {e}")

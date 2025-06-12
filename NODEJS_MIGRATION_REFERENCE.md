@@ -53,7 +53,7 @@ node-server/
 - zod: ^3.22.4
 - @maapallo/shared: file:../shared
 
-### Development Dependencies  
+### Development Dependencies
 - @types/node: ^18.11.18
 - @types/pg: ^8.6.6
 - @types/jest: ^29.5.14

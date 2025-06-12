@@ -15,7 +15,7 @@ Successfully completed the final cleanup phase of the Node.js to FastAPI migrati
 - **Updated**: All client imports from `@shared/featureTypes` to `./types/featureTypes`
 - **Files updated**:
   - `client/src/App.tsx`
-  - `client/src/FeatureList.tsx` 
+  - `client/src/FeatureList.tsx`
   - `client/src/FeatureForm.tsx`
 
 ### 3. Dependency Cleanup
