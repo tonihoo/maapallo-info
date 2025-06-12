@@ -1,100 +1,346 @@
 # Maapallo.info
 
-## Sovelluksen osat
+Location database for Maapallo magazine articles. The application allows you to view article locations on a map, browse the article list, and add new articles.
 
-Sovellus koostuu kolmesta komponentista: serveri/api-rajapinta (FastAPI/Python), tietokanta (PostgreSQL / PostGIS) sekä käyttöliittymä (React, MUI, OpenLayers).
+## Technical Implementation
 
-## Sovelluksen käynnistäminen
+The application consists of four components:
 
-Buildaa sovellus dockerilla (komentoriviltä ajettaessa)
+- **Server**: FastAPI/Python backend (port 3003)
+- **Client**: React/TypeScript frontend (port 8080)
+- **Database**: PostgreSQL + PostGIS database (port 5432)
+- **PgAdmin**: Database administration interface (port 5050)
 
+## Initial Setup
+
+### 1. Clone repository and navigate to folder
+
+```bash
+git clone <repository-url>
+cd maapallo-info
 ```
+
+### 2. Build and start application
+
+```bash
+# Build all Docker containers
 docker compose build
-```
 
-Käynnistä sovellus:
-
-```
+# Start application in background
 docker compose up -d
+
+# Check that all containers are running
+docker compose ps
 ```
 
-Näiden jälkeen tulisi olla kullekin sovelluksen komponentille (server, client, db) oma docker-kontti ajossa. Käyttöliittymän voi nyt avata osoitteesta [http://localhost:8080](http://localhost:8080).
+### 3. Run database migrations
 
-Yksittäisen kontin saa käynnistettyä uudelleen komennolla. Esimerkiksi serverin tapauksessa:
-
-```
-docker compose restart server
-```
-
-Sovelluksen ollessa käynnissä, voidaan tietokantamigraatiot ajaa komennolla:
-
-```
-docker compose exec server npm run db-migrate
+```bash
+# Run migrations with Python script
+docker compose exec server python run_migrations.py
 ```
 
-Ajettavat migraatiot löytyvät kansiosta `/server/db_migrations`. Mikäli teet muutoksia tietokantaan, tee se luomalla uusi migraatiotiedosto johon sisällytät SQL-koodit, jonka jälkeen voit ajaa ylläolevan migraatioajon uudelleen.
+### 4. Open application
 
-Konttien logeja voi seurailla ajamalla komennon:
+- **Frontend**: [http://localhost:8080](http://localhost:8080)
+- **API documentation**: [http://localhost:3003/docs](http://localhost:3003/docs)
+- **PgAdmin**: [http://localhost:5050](http://localhost:5050)
 
+## Daily Development
+
+### Starting the application
+
+```bash
+# Start all containers
+docker compose up -d
+
+# Or start individual container
+docker compose up -d server
+docker compose up -d client
+docker compose up -d db
 ```
-docker compose logs -f <kontin nimi>
+
+### Stopping containers
+
+```bash
+# Stop all containers
+docker compose down
+
+# Stop individual container
+docker compose stop server
 ```
 
-## Uuden riippuvuuden lisääminen
+### Following logs
 
-Jos haluat lisätä uuden riippuvuuden, se pitää viedä myös kontin sisälle buildaamalla kontit uudestaan:
+```bash
+# Follow all container logs
+docker compose logs -f
 
-```sh
-# Asennetaan uusi riippuvuus client-kansiossa
+# Follow logs of one container
+docker compose logs -f server
+docker compose logs -f client
+```
+
+## Dependency Management
+
+### Adding frontend dependencies (React/TypeScript)
+
+```bash
+# Navigate to client folder
 cd client
-npm i <uusi riippuvuus>
 
-# Tai server-kansiossa (Python)
+# Install new dependency
+npm install <package-name>
+
+# Rebuild client container
+docker compose build client
+
+# Restart client
+docker compose up -d client
+```
+
+### Adding backend dependencies (Python)
+
+```bash
+# Navigate to server folder
 cd server
-pip install <uusi riippuvuus>
-echo "<uusi riippuvuus>" >> requirements.txt
 
-# Buildataan kontit uudestaan (muuttumattomat kontit tulevat cachesta)
+# Add dependency to requirements.txt file
+echo "<package-name>==<version>" >> requirements.txt
+
+# OR install and save version automatically
+pip install <package-name>
+pip freeze | grep <package-name> >> requirements.txt
+
+# Rebuild server container
+docker compose build server
+
+# Restart server
+docker compose up -d server
+```
+
+### Removing dependencies
+
+```bash
+# Frontend
+cd client
+npm uninstall <package-name>
+docker compose build client
+
+# Backend
+cd server
+# Remove line from requirements.txt file manually
+docker compose build server
+```
+
+## Container Rebuilding and Reset
+
+### Rebuild containers
+
+```bash
+# Rebuild all containers (no cache)
+docker compose build --no-cache
+
+# Rebuild individual container
+docker compose build --no-cache server
+docker compose build --no-cache client
+```
+
+### Reset all containers and volumes
+
+```bash
+# Stop all containers and remove volumes
+docker compose down -v
+
+# Remove all containers, networks and build cache
+docker compose down --rmi all --volumes --remove-orphans
+
+# Build and start from scratch
 docker compose build
+docker compose up -d
 
-# Ajetaan sovellus uudestaan ylös, samalla luoden nimeämättömät (node_modules) voluumit uudestaan
-docker compose up -d -V
+# Run migrations again
+docker compose exec server python run_migrations.py
+```
+
+### Fixing node_modules issues (client)
+
+```bash
+# Remove client container and volumes
+docker compose stop client
+docker compose rm client
+docker volume rm $(docker volume ls -q | grep client)
+
+# Build and start again
+docker compose build client
+docker compose up -d client
+```
+
+### Database reset
+
+```bash
+# Stop database and remove data
+docker compose stop db
+docker compose rm db
+docker volume rm $(docker volume ls -q | grep db)
+
+# Start database again
+docker compose up -d db
+
+# Wait for database to be ready and run migrations
+sleep 10
+docker compose exec server python run_migrations.py
 ```
 
 
-## Testien ajaminen
+## Testing
 
-```sh
-# Backend-testit (Jest)
-cd server
-npm run test
+### Frontend tests (Cypress E2E)
 
-# Frontend-testit (Cypress)
+```bash
+# Open Cypress testing environment
 cd client
-npx cypress open # -> E2E testing -> Start E2E testing in Chrome -> feature-form
+npx cypress open
+
+# Run tests from command line
+npx cypress run
 ```
 
+### Backend tests
 
-## FastAPI backend
+```bash
+# Run Python tests (if available)
+docker compose exec server python -m pytest
 
-Technical Stack:
-- FastAPI with async/await for high performance
-- PostgreSQL + PostGIS for spatial data
-- SQLAlchemy + asyncpg for async database operations
-- Pydantic for data validation and type safety
-- Docker for containerization
+# Or directly inside container
+docker compose exec server bash
+python -m pytest
+```
 
-Working Endpoints:
-- GET /api/v1/health/ ✅
-- GET /api/v1/features/ ✅ (returns 11 features from database)
-- POST /api/v1/features/ ✅ (successfully created test feature)
-- PUT /api/v1/features/{id} ✅ (implemented)
-- DELETE /api/v1/features/{id} ✅ (implemented)
-The server is running on port 3003 and ready for production use!
+### API testing
 
-The FastAPI server provides:
-- Better Performance: Async request handling
-- Type Safety: Full Python type hints and Pydantic validation
-- Auto Documentation: Available at http://localhost:3003/docs
-- Modern Architecture: Clean, maintainable codebase
-- Spatial Support: Full PostGIS integration for geographic data
+```bash
+# Test API endpoints with curl
+curl http://localhost:3003/api/v1/health/
+curl http://localhost:3003/api/v1/feature/
+
+# Or open interactive API documentation
+open http://localhost:3003/docs
+```
+
+## Database Migrations
+
+Migrations are located in `/server/migrations/` folder and contain SQL scripts for database structure management.
+
+### Running migrations
+
+```bash
+# Run all migrations
+docker compose exec server python run_migrations.py
+
+# Check migration status
+docker compose exec server python -c "from migrate import check_migration_status; check_migration_status()"
+```
+
+### Creating a new migration
+
+1. Create new SQL file: `/server/migrations/XXXX_description.sql`
+2. Number the file next in sequence (e.g. `0003_add_new_table.sql`)
+3. Write SQL commands to the file
+4. Run migrations: `docker compose exec server python run_migrations.py`
+
+
+## Technical Documentation
+
+### FastAPI Backend
+
+**Technical stack:**
+- **FastAPI**: Modern, async Python web framework
+- **SQLAlchemy**: Async ORM with PostgreSQL
+- **Pydantic**: Data validation and type safety
+- **PostGIS**: Spatial database extensions
+- **Uvicorn**: ASGI server for production
+
+**API Endpoints:**
+- `GET /api/v1/health/` - Health check
+- `GET /api/v1/feature/` - List all features
+- `POST /api/v1/feature/` - Create new feature
+- `GET /api/v1/feature/{id}` - Get feature by ID
+- `PUT /api/v1/feature/{id}` - Update feature
+- `DELETE /api/v1/feature/{id}` - Delete feature
+
+**Documentation:** [http://localhost:3003/docs](http://localhost:3003/docs)
+
+### React Frontend
+
+**Technical stack:**
+- **React 18**: Modern React with hooks
+- **TypeScript**: Type safety
+- **Material-UI**: UI component library
+- **OpenLayers**: 2D mapping
+- **Cesium**: 3D globe visualization
+- **Vite**: Fast build tool
+
+### PostgreSQL + PostGIS Database
+
+**Configuration:**
+- PostgreSQL 13 with PostGIS 3.3
+- Spatial data support for geographic features
+- SRID 3067 (Finland coordinate system) for locations
+
+## Troubleshooting
+
+### Common issues
+
+**Container won't start:**
+```bash
+# Check containers
+docker compose ps
+
+# View error logs
+docker compose logs <container-name>
+
+# Restart container
+docker compose restart <container-name>
+```
+
+**Port already in use error:**
+```bash
+# Check what's using the port
+lsof -i :8080  # client
+lsof -i :3003  # server
+lsof -i :5432  # database
+
+# Kill process or change port in docker-compose.yml
+```
+
+**Database connection error:**
+```bash
+# Check that database is running
+docker compose ps db
+
+# Test connection
+docker compose exec db psql -U postgres -d maapallo_info -c "SELECT version();"
+```
+
+**Frontend doesn't show changes:**
+```bash
+# Clear browser cache or use incognito mode
+# Or restart client container
+docker compose restart client
+```
+
+## Development Environment
+
+Recommended tools:
+- **VS Code** + Python and TypeScript extensions
+- **Docker Desktop** for container management
+- **Postman** or **curl** for API testing
+- **PgAdmin** for database management
+
+## Additional Information
+
+- **FastAPI documentation**: [http://localhost:3003/docs](http://localhost:3003/docs)
+- **Migration summary**: `FASTAPI_MIGRATION_SUMMARY.md`
+- **Cleanup summary**: `CLEANUP_COMPLETION_SUMMARY.md`
+- **Node.js reference**: `NODEJS_MIGRATION_REFERENCE.md`
