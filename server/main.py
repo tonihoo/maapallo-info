@@ -1,9 +1,6 @@
-from fastapi import FastAPI, HTTPException, status
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
-import os
 from contextlib import asynccontextmanager
 
 from database import init_db
@@ -40,18 +37,10 @@ app.add_middleware(
 app.include_router(health.router, prefix="/api/v1/health", tags=["health"])
 app.include_router(feature.router, prefix="/api/v1/feature", tags=["features"])
 
-# Serve static files
-static_path = "/app/static"
-if os.path.exists(static_path):
-    app.mount("/", StaticFiles(directory=static_path, html=True), name="static")
-else:
-    # For development
-    @app.get("/{full_path:path}")
-    async def catch_all(full_path: str):
-        if full_path.startswith("api/"):
-            raise HTTPException(status_code=404, detail=f"{full_path} not found")
-        # Return index.html for client-side routing
-        return FileResponse("/app/static/index.html")
+# Simple health check for root path
+@app.get("/")
+async def root():
+    return {"message": "Maapallo Info API is running", "version": "1.0.0"}
 
 
 if __name__ == "__main__":

@@ -6,9 +6,7 @@ services:
       dockerfile: client/Dockerfile.dev
     volumes:
       - ./client:/app/client:delegated
-      - ./shared:/app/shared:delegated
       - /app/client/node_modules
-      - /app/shared/node_modules
     ports:
       - "127.0.0.1:8080:8080"
     healthcheck:

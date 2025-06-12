@@ -45,8 +45,14 @@ docker compose logs -f <kontin nimi>
 Jos haluat lisätä uuden riippuvuuden, se pitää viedä myös kontin sisälle buildaamalla kontit uudestaan:
 
 ```sh
-# Asennetaan uusi riippuvuus client/server/shared-kansiossa
+# Asennetaan uusi riippuvuus client-kansiossa
+cd client
 npm i <uusi riippuvuus>
+
+# Tai server-kansiossa (Python)
+cd server
+pip install <uusi riippuvuus>
+echo "<uusi riippuvuus>" >> requirements.txt
 
 # Buildataan kontit uudestaan (muuttumattomat kontit tulevat cachesta)
 docker compose build

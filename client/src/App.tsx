@@ -4,7 +4,7 @@ import { CesiumMap } from "./CesiumMap";
 import { Map } from "./Map";
 import FeatureList from "./FeatureList";
 import { FeatureInfo } from "./FeatureInfo";
-import { FeatureTypes } from "@shared/featureTypes";
+import { FeatureTypes } from "./types/featureTypes";
 import { Feature, Geometry, GeoJsonProperties } from 'geojson';
 
 export function App() {

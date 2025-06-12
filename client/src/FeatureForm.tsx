@@ -1,6 +1,6 @@
 import { Paper, Typography, TextField, Button, Box, FormControl, FormLabel, RadioGroup, FormControlLabel, Radio, FormHelperText, Alert } from "@mui/material";
 import { useState, useEffect } from "react";
-import { FeatureTypes } from "@shared/featureTypes";
+import { FeatureTypes } from "./types/featureTypes";
 
 interface Props {
   coordinates: number[];

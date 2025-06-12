@@ -12,8 +12,7 @@
     "baseUrl": ".",
     "outDir": "build",
     "paths": {
-      "@client/*": ["src/*"],
-      "@shared/*": ["node_modules/@maapallo/shared/src/*"]
+      "@client/*": ["src/*"]
     }
   },
   "include": ["src/**/*"]

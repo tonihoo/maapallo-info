@@ -1,5 +1,5 @@
 import { Box, MenuItem, Paper, Typography } from "@mui/material";
-import { FeatureTypes } from "@shared/featureTypes";
+import { FeatureTypes } from "./types/featureTypes";
 import { useEffect, useState } from "react";
 
 export default function FeatureList({
