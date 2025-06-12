@@ -11,7 +11,7 @@
 ### Method 1: Command Palette (Recommended)
 1. **Open Command Palette** in VS Code:
    - Press `Cmd+Shift+P` (macOS)
-   
+
 2. **Search for dev container command**:
    - Type: `Dev Containers: Reopen in Container`
    - Select the command from the dropdown
@@ -82,7 +82,7 @@ docker compose up -d
 
 Once you're in the container, you'll have a seamless Python development experience with:
 - 🐍 Full FastAPI IntelliSense
-- 🗄️ Database connection support  
+- 🗄️ Database connection support
 - 🔧 Automatic code formatting
 - 🐛 Debugging capabilities
 - 📡 All your dependencies available
