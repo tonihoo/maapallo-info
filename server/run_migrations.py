@@ -6,7 +6,9 @@ Usage: python run_migrations.py
 
 import asyncio
 import sys
+
 from migrate import run_all_migrations
+
 
 async def main():
     print("Running database migrations...")
@@ -21,6 +23,7 @@ async def main():
     except Exception as e:
         print(f"❌ Migration failed with error: {e}")
         return 1
+
 
 if __name__ == "__main__":
     exit_code = asyncio.run(main())

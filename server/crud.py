@@ -1,12 +1,13 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, text
-from sqlalchemy.dialects.postgresql import insert
-from database import Feature
-from schemas import FeatureCreate, FeatureResponse, FeatureUpdate, FeatureUpdate
-from geoalchemy2.functions import ST_AsGeoJSON, ST_GeomFromGeoJSON, ST_SetSRID
-from typing import List, Optional
 import json
 import logging
+from typing import List, Optional
+
+from geoalchemy2.functions import ST_AsGeoJSON
+from sqlalchemy import select, text
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from database import Feature
+from schemas import FeatureCreate, FeatureResponse, FeatureUpdate
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +23,7 @@ async def get_all_features(db: AsyncSession) -> List[FeatureResponse]:
             Feature.excerpt,
             Feature.publication,
             Feature.link,
-            ST_AsGeoJSON(Feature.location).label('location')
+            ST_AsGeoJSON(Feature.location).label("location"),
         )
 
         result = await db.execute(query)
@@ -32,14 +33,14 @@ async def get_all_features(db: AsyncSession) -> List[FeatureResponse]:
         for feature in features:
             location_data = json.loads(feature.location) if feature.location else None
             feature_dict = {
-                'id': feature.id,
-                'title': feature.title,
-                'author': feature.author,
-                'thumbnail': feature.thumbnail,
-                'excerpt': feature.excerpt,
-                'publication': feature.publication,
-                'link': feature.link,
-                'location': location_data
+                "id": feature.id,
+                "title": feature.title,
+                "author": feature.author,
+                "thumbnail": feature.thumbnail,
+                "excerpt": feature.excerpt,
+                "publication": feature.publication,
+                "link": feature.link,
+                "location": location_data,
             }
             feature_list.append(FeatureResponse(**feature_dict))
 
@@ -49,7 +50,9 @@ async def get_all_features(db: AsyncSession) -> List[FeatureResponse]:
         raise Exception(f"Database error: {str(e)}")
 
 
-async def get_feature_by_id(db: AsyncSession, feature_id: int) -> Optional[FeatureResponse]:
+async def get_feature_by_id(
+    db: AsyncSession, feature_id: int
+) -> Optional[FeatureResponse]:
     """Get a single feature by ID"""
     try:
         query = select(
@@ -60,7 +63,7 @@ async def get_feature_by_id(db: AsyncSession, feature_id: int) -> Optional[Featu
             Feature.excerpt,
             Feature.publication,
             Feature.link,
-            ST_AsGeoJSON(Feature.location).label('location')
+            ST_AsGeoJSON(Feature.location).label("location"),
         ).where(Feature.id == feature_id)
 
         result = await db.execute(query)
@@ -71,14 +74,14 @@ async def get_feature_by_id(db: AsyncSession, feature_id: int) -> Optional[Featu
 
         location_data = json.loads(feature.location) if feature.location else None
         feature_dict = {
-            'id': feature.id,
-            'title': feature.title,
-            'author': feature.author,
-            'thumbnail': feature.thumbnail,
-            'excerpt': feature.excerpt,
-            'publication': feature.publication,
-            'link': feature.link,
-            'location': location_data
+            "id": feature.id,
+            "title": feature.title,
+            "author": feature.author,
+            "thumbnail": feature.thumbnail,
+            "excerpt": feature.excerpt,
+            "publication": feature.publication,
+            "link": feature.link,
+            "location": location_data,
         }
 
         return FeatureResponse(**feature_dict)
@@ -87,29 +90,38 @@ async def get_feature_by_id(db: AsyncSession, feature_id: int) -> Optional[Featu
         raise Exception(f"Database error: {str(e)}")
 
 
-async def create_feature(db: AsyncSession, feature_data: FeatureCreate) -> FeatureResponse:
+async def create_feature(
+    db: AsyncSession, feature_data: FeatureCreate
+) -> FeatureResponse:
     """Create a new feature"""
     try:
         location_json = json.dumps(feature_data.location.dict())
 
         # Use raw SQL for spatial operations
-        query = text("""
+        query = text(
+            """
             INSERT INTO feature (title, author, thumbnail, excerpt, publication, link, location)
             VALUES (:title, :author, :thumbnail, :excerpt, :publication, :link,
                     ST_SetSRID(ST_GeomFromGeoJSON(:location), 3067))
             RETURNING id, title, author, thumbnail, excerpt, publication, link,
                       ST_AsGeoJSON(location) as location
-        """)
+        """
+        )
 
-        result = await db.execute(query, {
-            'title': feature_data.title,
-            'author': feature_data.author,
-            'thumbnail': str(feature_data.thumbnail) if feature_data.thumbnail else None,
-            'excerpt': feature_data.excerpt,
-            'publication': feature_data.publication,
-            'link': str(feature_data.link),
-            'location': location_json
-        })
+        result = await db.execute(
+            query,
+            {
+                "title": feature_data.title,
+                "author": feature_data.author,
+                "thumbnail": (
+                    str(feature_data.thumbnail) if feature_data.thumbnail else None
+                ),
+                "excerpt": feature_data.excerpt,
+                "publication": feature_data.publication,
+                "link": str(feature_data.link),
+                "location": location_json,
+            },
+        )
 
         await db.commit()
 
@@ -119,14 +131,14 @@ async def create_feature(db: AsyncSession, feature_data: FeatureCreate) -> Featu
 
         location_data = json.loads(feature.location) if feature.location else None
         feature_dict = {
-            'id': feature.id,
-            'title': feature.title,
-            'author': feature.author,
-            'thumbnail': feature.thumbnail,
-            'excerpt': feature.excerpt,
-            'publication': feature.publication,
-            'link': feature.link,
-            'location': location_data
+            "id": feature.id,
+            "title": feature.title,
+            "author": feature.author,
+            "thumbnail": feature.thumbnail,
+            "excerpt": feature.excerpt,
+            "publication": feature.publication,
+            "link": feature.link,
+            "location": location_data,
         }
 
         return FeatureResponse(**feature_dict)
@@ -136,46 +148,54 @@ async def create_feature(db: AsyncSession, feature_data: FeatureCreate) -> Featu
         raise Exception(f"Database error: {str(e)}")
 
 
-async def update_feature(db: AsyncSession, feature_id: int, feature_update: FeatureUpdate) -> Optional[FeatureResponse]:
+async def update_feature(
+    db: AsyncSession, feature_id: int, feature_update: FeatureUpdate
+) -> Optional[FeatureResponse]:
     """Update an existing feature"""
     try:
         # Build dynamic update query based on provided fields
         update_fields = []
-        params = {'feature_id': feature_id}
+        params = {"feature_id": feature_id}
 
         if feature_update.title is not None:
             update_fields.append("title = :title")
-            params['title'] = feature_update.title
+            params["title"] = feature_update.title
         if feature_update.author is not None:
             update_fields.append("author = :author")
-            params['author'] = feature_update.author
+            params["author"] = feature_update.author
         if feature_update.thumbnail is not None:
             update_fields.append("thumbnail = :thumbnail")
-            params['thumbnail'] = str(feature_update.thumbnail) if feature_update.thumbnail else None
+            params["thumbnail"] = (
+                str(feature_update.thumbnail) if feature_update.thumbnail else None
+            )
         if feature_update.excerpt is not None:
             update_fields.append("excerpt = :excerpt")
-            params['excerpt'] = feature_update.excerpt
+            params["excerpt"] = feature_update.excerpt
         if feature_update.publication is not None:
             update_fields.append("publication = :publication")
-            params['publication'] = feature_update.publication
+            params["publication"] = feature_update.publication
         if feature_update.link is not None:
             update_fields.append("link = :link")
-            params['link'] = str(feature_update.link)
+            params["link"] = str(feature_update.link)
         if feature_update.location is not None:
-            update_fields.append("location = ST_SetSRID(ST_GeomFromGeoJSON(:location), 3067)")
-            params['location'] = json.dumps(feature_update.location.dict())
+            update_fields.append(
+                "location = ST_SetSRID(ST_GeomFromGeoJSON(:location), 3067)"
+            )
+            params["location"] = json.dumps(feature_update.location.dict())
 
         if not update_fields:
             # No fields to update, just return the current feature
             return await get_feature_by_id(db, feature_id)
 
-        query = text(f"""
+        query = text(
+            f"""
             UPDATE feature
             SET {', '.join(update_fields)}
             WHERE id = :feature_id
             RETURNING id, title, author, thumbnail, excerpt, publication, link,
                       ST_AsGeoJSON(location) as location
-        """)
+        """
+        )
 
         result = await db.execute(query, params)
         await db.commit()
@@ -186,14 +206,14 @@ async def update_feature(db: AsyncSession, feature_id: int, feature_update: Feat
 
         location_data = json.loads(feature.location) if feature.location else None
         feature_dict = {
-            'id': feature.id,
-            'title': feature.title,
-            'author': feature.author,
-            'thumbnail': feature.thumbnail,
-            'excerpt': feature.excerpt,
-            'publication': feature.publication,
-            'link': feature.link,
-            'location': location_data
+            "id": feature.id,
+            "title": feature.title,
+            "author": feature.author,
+            "thumbnail": feature.thumbnail,
+            "excerpt": feature.excerpt,
+            "publication": feature.publication,
+            "link": feature.link,
+            "location": location_data,
         }
 
         return FeatureResponse(**feature_dict)
@@ -207,7 +227,7 @@ async def delete_feature(db: AsyncSession, feature_id: int) -> bool:
     """Delete a feature"""
     try:
         query = text("DELETE FROM feature WHERE id = :feature_id")
-        result = await db.execute(query, {'feature_id': feature_id})
+        result = await db.execute(query, {"feature_id": feature_id})
         await db.commit()
 
         return result.rowcount > 0

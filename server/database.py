@@ -1,9 +1,11 @@
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import Column, Integer, String, Text
-from geoalchemy2 import Geometry
-from config import settings
 import logging
+
+from geoalchemy2 import Geometry
+from sqlalchemy import Column, Integer, String, Text
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.declarative import declarative_base
+
+from config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +34,7 @@ class Feature(Base):
     excerpt = Column(Text, nullable=False)
     publication = Column(String, nullable=False)
     link = Column(Text, nullable=False)
-    location = Column(Geometry('GEOMETRY', srid=3067), nullable=False)
+    location = Column(Geometry("GEOMETRY", srid=3067), nullable=False)
 
 
 async def get_db():
@@ -48,9 +50,10 @@ async def check_db_connection():
     """Check database connection for health endpoint"""
     try:
         from sqlalchemy import text
+
         async with async_session_maker() as session:
             result = await session.execute(text("SELECT 'pong'"))
-            return result.scalar() == 'pong'
+            return result.scalar() == "pong"
     except Exception as e:
         logger.error(f"Database connection check failed: {e}")
         return False
@@ -63,6 +66,7 @@ async def init_db():
         # In production, you might want to run Alembic migrations here
         async with async_session_maker() as session:
             from sqlalchemy import text
+
             await session.execute(text("SELECT 1"))
         logger.info("Database connection established")
     except Exception as e:

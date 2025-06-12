@@ -1,5 +1,6 @@
+from typing import Any, List, Optional, Union
+
 from pydantic import BaseModel, HttpUrl
-from typing import Optional, Any, List, Union
 
 
 class GeoJSONGeometry(BaseModel):
