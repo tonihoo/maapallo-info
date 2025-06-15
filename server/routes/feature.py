@@ -1,12 +1,11 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession
-
 import crud
 from database import get_db
+from fastapi import APIRouter, Depends, HTTPException, Query
 from schemas import FeatureCreate, FeatureResponse, FeatureUpdate
+from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter()
 
@@ -21,7 +20,7 @@ async def get_features(
     """Get all features with optional filtering and pagination"""
     if db is None:
         return {"features": [], "message": "Database not configured"}
-    
+
     try:
         features = await crud.get_all_features(db)
         return {"features": features}
@@ -30,7 +29,8 @@ async def get_features(
         if "disabled" in str(e).lower() or "connection" in str(e).lower():
             return {"features": [], "message": "Database not configured"}
         raise HTTPException(
-            status_code=500, detail=f"Error retrieving features: Database error: {str(e)}"
+            status_code=500,
+            detail=f"Error retrieving features: Database error: {str(e)}",
         )
 
 

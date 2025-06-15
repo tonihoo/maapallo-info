@@ -344,11 +344,55 @@ az webapp log tail --name maapallo-info-app --resource-group maapallo-info-group
 # Check container logs specifically
 az webapp log tail --name maapallo-info-app --resource-group maapallo-info-group --provider application
 
+# Check deployment logs
+az webapp log deployment show --name maapallo-info-app --resource-group maapallo-info-group
+
 # Check app status
 az webapp show --name maapallo-info-app --resource-group maapallo-info-group --query state
 
 # Restart the app
 az webapp restart --name maapallo-info-app --resource-group maapallo-info-group
+```
+
+### Current Status
+- ✅ **Container startup**: Fixed SSL connection issues
+- ✅ **Static files**: Cesium assets now properly served
+- ✅ **API endpoints**: Basic health check working
+- ⚠️ **Database**: Currently disabled for testing (returns empty features)
+
+### Setting Up Production Database
+
+To enable full functionality with a managed PostgreSQL database:
+
+```bash
+# Create Azure Database for PostgreSQL
+az postgres flexible-server create \
+  --resource-group maapallo-info-group \
+  --name maapallo-postgres \
+  --location "West Europe" \
+  --admin-user dbadmin \
+  --admin-password "YourSecurePassword123!" \
+  --sku-name Standard_B1ms \
+  --tier Burstable \
+  --version 13
+
+# Configure firewall for Azure services
+az postgres flexible-server firewall-rule create \
+  --resource-group maapallo-info-group \
+  --name maapallo-postgres \
+  --rule-name AllowAzureServices \
+  --start-ip-address 0.0.0.0 \
+  --end-ip-address 0.0.0.0
+
+# Update app environment variables
+az webapp config appsettings set --name maapallo-info-app \
+  --resource-group maapallo-info-group \
+  --settings \
+    PG_HOST="maapallo-postgres.postgres.database.azure.com" \
+    PG_USER="dbadmin" \
+    PG_PASS="YourSecurePassword123!" \
+    PG_DATABASE="postgres" \
+    PG_SSLMODE="require"
 ```
 
 ### Common Azure Issues

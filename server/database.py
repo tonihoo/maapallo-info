@@ -1,11 +1,10 @@
 import logging
 
+from config import settings
 from geoalchemy2 import Geometry
 from sqlalchemy import Column, Integer, String, Text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
-
-from config import settings
 
 logger = logging.getLogger(__name__)
 
