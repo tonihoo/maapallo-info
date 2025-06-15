@@ -301,6 +301,17 @@ export function CesiumMap({
         setupCameraControls(viewer);
         await loadCountryBoundaries(viewer);
 
+        // Add camera move handler to update marker visibility
+        viewer.scene.camera.changed.addEventListener(() => {
+          // Debounce the camera change events to avoid excessive updates
+          if (cameraChangeTimeoutRef.current) {
+            clearTimeout(cameraChangeTimeoutRef.current);
+          }
+          cameraChangeTimeoutRef.current = setTimeout(() => {
+            updateMarkerVisibility();
+          }, 100);
+        });
+
         viewerRef.current = viewer;
         setLoading(false);
         setViewerReady(true);
@@ -316,14 +327,99 @@ export function CesiumMap({
     [setupCameraControls, loadCountryBoundaries, onMapClick, onFeatureClick]
   ); // Remove features dependency
 
-  // Add a ref to track features
+  // Add a ref to track features and camera change timeout
   const featuresRef = useRef(features);
+  const cameraChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Helper function to check if a point is on the visible hemisphere
+  const isPointOnVisibleHemisphere = useCallback(
+    (longitude: number, latitude: number): boolean => {
+      if (!viewerRef.current) return true;
+
+      const camera = viewerRef.current.scene.camera;
+      const cameraPosition = camera.positionWC;
+
+      // Convert marker position to Cartesian3
+      const markerPosition = Cesium.Cartesian3.fromDegrees(longitude, latitude);
+
+      // Calculate vector from Earth center to camera
+      const cameraFromCenter = Cesium.Cartesian3.normalize(
+        cameraPosition,
+        new Cesium.Cartesian3()
+      );
+
+      // Calculate vector from Earth center to marker
+      const markerFromCenter = Cesium.Cartesian3.normalize(
+        markerPosition,
+        new Cesium.Cartesian3()
+      );
+
+      // Calculate dot product - if positive, they're on the same hemisphere
+      const cameraHeight = camera.positionCartographic.height;
+      const dotProduct = Cesium.Cartesian3.dot(
+        cameraFromCenter,
+        markerFromCenter
+      ); // Very permissive threshold - only hide markers that are clearly on the opposite side
+      const threshold = -0.8; // Much more permissive
+
+      // Debug log for Ecuador location
+      if (
+        Math.abs(longitude - -78.6473) < 0.01 &&
+        Math.abs(latitude - -1.2225) < 0.01
+      ) {
+        console.log("Ecuador marker debug (global):", {
+          longitude,
+          latitude,
+          dotProduct,
+          threshold,
+          cameraHeight,
+          heightRatio,
+          isVisible: dotProduct > threshold,
+        });
+      }
+
+      return dotProduct > threshold;
+    },
+    []
+  );
+
+  // Function to update marker visibility based on current camera position
+  const updateMarkerVisibility = useCallback(() => {
+    if (!viewerRef.current?.entities) return;
+
+    const entities = viewerRef.current.entities.values;
+    entities.forEach((entity) => {
+      if (
+        entity.id &&
+        typeof entity.id === "string" &&
+        entity.id.startsWith("feature-")
+      ) {
+        const featureIndex = parseInt(entity.id.replace("feature-", ""));
+        const feature = featuresRef.current[featureIndex];
+
+        if (
+          feature?.geometry?.type === "Point" &&
+          feature.geometry.coordinates
+        ) {
+          const [longitude, latitude] = feature.geometry.coordinates;
+          const isVisible = isPointOnVisibleHemisphere(longitude, latitude);
+
+          // Update entity visibility
+          if (entity.point) {
+            entity.point.show = isVisible;
+          }
+          if (entity.label) {
+            entity.label.show = isVisible;
+          }
+        }
+      }
+    });
+  }, [isPointOnVisibleHemisphere]);
 
   // Update the features ref when features change
   useEffect(() => {
     featuresRef.current = features;
   }, [features]);
-
   const containerCallbackRef = useCallback(
     (containerElement: HTMLDivElement | null) => {
       if (containerElement) {
@@ -438,6 +534,11 @@ export function CesiumMap({
   // Effects
   useEffect(() => {
     return () => {
+      // Clean up timeout
+      if (cameraChangeTimeoutRef.current) {
+        clearTimeout(cameraChangeTimeoutRef.current);
+      }
+
       if (viewerRef.current) {
         viewerRef.current.destroy();
         viewerRef.current = null;
@@ -457,11 +558,70 @@ export function CesiumMap({
           typeof entity.id === "string" &&
           entity.id.startsWith("feature-")
       );
-      entitiesToRemove.forEach((entity) =>
-        viewerRef.current!.entities.remove(entity)
-      );
+      entitiesToRemove.forEach((entity) => {
+        if (viewerRef.current) {
+          viewerRef.current.entities.remove(entity);
+        }
+      });
 
-      // Add new features
+      // Helper function to check if a point is on the visible hemisphere
+      const isPointOnVisibleHemisphere = (
+        longitude: number,
+        latitude: number
+      ): boolean => {
+        if (!viewerRef.current) return true;
+
+        const camera = viewerRef.current.scene.camera;
+        const cameraPosition = camera.positionWC;
+
+        // Convert marker position to Cartesian3
+        const markerPosition = Cesium.Cartesian3.fromDegrees(
+          longitude,
+          latitude
+        );
+
+        // Calculate vector from Earth center to camera
+        const cameraFromCenter = Cesium.Cartesian3.normalize(
+          cameraPosition,
+          new Cesium.Cartesian3()
+        );
+
+        // Calculate vector from Earth center to marker
+        const markerFromCenter = Cesium.Cartesian3.normalize(
+          markerPosition,
+          new Cesium.Cartesian3()
+        );
+
+        // Calculate dot product - if positive, they're on the same hemisphere
+        const cameraHeight = camera.positionCartographic.height;
+        const dotProduct = Cesium.Cartesian3.dot(
+          cameraFromCenter,
+          markerFromCenter
+        );
+
+        // Very permissive threshold - only hide markers that are clearly on the opposite side
+        const threshold = -0.8; // Much more permissive
+
+        // Debug log for Ecuador location
+        if (
+          Math.abs(longitude - -78.6473) < 0.01 &&
+          Math.abs(latitude - -1.2225) < 0.01
+        ) {
+          console.log("Ecuador marker debug:", {
+            longitude,
+            latitude,
+            dotProduct,
+            threshold,
+            cameraHeight,
+            heightRatio,
+            isVisible: dotProduct > threshold,
+          });
+        }
+
+        return dotProduct > threshold;
+      };
+
+      // Add new features with visibility filtering
       features.forEach((feature, index) => {
         if (
           feature?.geometry?.type === "Point" &&
@@ -470,37 +630,70 @@ export function CesiumMap({
           const [longitude, latitude] = feature.geometry.coordinates;
           const isSelected = feature.properties?.isSelected;
 
-          viewerRef.current!.entities.add({
-            id: `feature-${index}`,
-            position: Cesium.Cartesian3.fromDegrees(
+          // Debug log for Ecuador location
+          if (
+            Math.abs(longitude - -78.6473) < 0.01 &&
+            Math.abs(latitude - -1.2225) < 0.01
+          ) {
+            console.log("Ecuador marker found in features:", {
               longitude,
               latitude,
-              100000
-            ), // Add height: 100km above ground
-            point: {
-              pixelSize: isSelected ? 25 : 15,
-              color: isSelected ? Cesium.Color.RED : Cesium.Color.ORANGE,
-              outlineColor: isSelected
-                ? Cesium.Color.WHITE
-                : Cesium.Color.DARKBLUE,
-              outlineWidth: isSelected ? 3 : 2,
-              heightReference: Cesium.HeightReference.NONE, // Changed from CLAMP_TO_GROUND
-              disableDepthTestDistance: Number.POSITIVE_INFINITY, // Always visible
-            },
-            label: feature.properties?.title
-              ? {
-                  // Changed from 'name' to 'title'
-                  text: feature.properties.title,
-                  font: isSelected ? "14pt sans-serif" : "12pt sans-serif",
-                  pixelOffset: new Cesium.Cartesian2(0, isSelected ? -50 : -40),
-                  fillColor: Cesium.Color.WHITE,
-                  outlineColor: Cesium.Color.BLACK,
-                  outlineWidth: 2,
-                  style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-                  disableDepthTestDistance: Number.POSITIVE_INFINITY, // Always visible
-                }
-              : undefined,
-          });
+              title: feature.properties?.title,
+              index,
+            });
+          }
+
+          // Check if the marker is on the visible hemisphere
+          const isVisible = isPointOnVisibleHemisphere(longitude, latitude);
+
+          // For debugging, always show the Ecuador marker for now
+          const forceVisible =
+            Math.abs(longitude - -78.6473) < 0.01 &&
+            Math.abs(latitude - -1.2225) < 0.01;
+
+          if ((isVisible || forceVisible) && viewerRef.current) {
+            console.log(`Adding marker ${index}:`, {
+              longitude,
+              latitude,
+              isVisible,
+              forceVisible,
+            });
+
+            viewerRef.current.entities.add({
+              id: `feature-${index}`,
+              position: Cesium.Cartesian3.fromDegrees(
+                longitude,
+                latitude,
+                100000
+              ), // Add height: 100km above ground
+              point: {
+                pixelSize: isSelected ? 25 : 15,
+                color: isSelected ? Cesium.Color.RED : Cesium.Color.ORANGE,
+                outlineColor: isSelected
+                  ? Cesium.Color.WHITE
+                  : Cesium.Color.DARKBLUE,
+                outlineWidth: isSelected ? 3 : 2,
+                heightReference: Cesium.HeightReference.NONE, // Changed from CLAMP_TO_GROUND
+                disableDepthTestDistance: Number.POSITIVE_INFINITY, // Always visible
+              },
+              label: feature.properties?.title
+                ? {
+                    // Changed from 'name' to 'title'
+                    text: feature.properties.title,
+                    font: isSelected ? "14pt sans-serif" : "12pt sans-serif",
+                    pixelOffset: new Cesium.Cartesian2(
+                      0,
+                      isSelected ? -50 : -40
+                    ),
+                    fillColor: Cesium.Color.WHITE,
+                    outlineColor: Cesium.Color.BLACK,
+                    outlineWidth: 2,
+                    style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+                    disableDepthTestDistance: Number.POSITIVE_INFINITY, // Always visible
+                  }
+                : undefined,
+            });
+          }
         }
       });
 
