@@ -8,5 +8,5 @@ CREATE TABLE feature (
   excerpt TEXT NOT NULL,
   publication TEXT NOT NULL,
   link TEXT NOT NULL,
-  location geometry(GEOMETRY, 3067) NOT NULL
+  location geometry(GEOMETRY, 4326) NOT NULL
 );

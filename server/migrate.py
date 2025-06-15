@@ -6,10 +6,9 @@ import asyncio
 import logging
 from pathlib import Path
 
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-
 from config import settings
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 logger = logging.getLogger(__name__)
 
@@ -29,9 +28,9 @@ async def run_migration_file(filepath: str) -> bool:
         # Create explicit async engine with debug info
         database_url = settings.database_url
         logger.info(f"Using database URL: {database_url}")
-        
+
         engine = create_async_engine(database_url, echo=True)
-        
+
         async with engine.begin() as conn:
             # Split on semicolons and execute each statement separately
             statements = [

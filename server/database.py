@@ -33,7 +33,7 @@ class Feature(Base):
     excerpt = Column(Text, nullable=False)
     publication = Column(String, nullable=False)
     link = Column(Text, nullable=False)
-    location = Column(Geometry("GEOMETRY", srid=3067), nullable=False)
+    location = Column(Geometry("GEOMETRY", srid=4326), nullable=False)
 
 
 async def get_db():
