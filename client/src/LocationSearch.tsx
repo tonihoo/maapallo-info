@@ -96,6 +96,7 @@ export function LocationSearch({ onLocationSelect, placeholder = "Hae paikkaa...
             backgroundColor: "rgba(42, 42, 42, 0.9)",
             color: "white",
             fontSize: "14px",
+            fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
             outline: "none",
             boxSizing: "border-box"
           }}
@@ -107,7 +108,8 @@ export function LocationSearch({ onLocationSelect, placeholder = "Hae paikkaa...
             top: "50%",
             transform: "translateY(-50%)",
             color: "white",
-            fontSize: "12px"
+            fontSize: "12px",
+            fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif'
           }}>
             Searching...
           </div>
@@ -122,7 +124,8 @@ export function LocationSearch({ onLocationSelect, placeholder = "Hae paikkaa...
           border: "1px solid rgba(255, 255, 255, 0.3)",
           borderRadius: "8px",
           maxHeight: "200px",
-          overflowY: "auto"
+          overflowY: "auto",
+          fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif'
         }}>
           {searchResults.map((result, index) => (
             <div
