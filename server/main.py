@@ -1,11 +1,12 @@
+import os
 from contextlib import asynccontextmanager
 
 import uvicorn
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
 from config import settings
 from database import init_db
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from routes import feature, health
 
 
@@ -37,17 +38,28 @@ app.add_middleware(
 app.include_router(health.router, prefix="/api/v1/health", tags=["health"])
 app.include_router(feature.router, prefix="/api/v1/feature", tags=["features"])
 
+# Serve static files in production
+if settings.is_production:
+    static_dir = os.path.join(os.path.dirname(__file__), "static")
+    if os.path.exists(static_dir):
+        app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
 
-# Simple health check for root path
-@app.get("/")
+
+# Simple health check for root path (API only)
+@app.get("/api")
 async def root():
     return {"message": "Maapallo Info API is running", "version": "1.0.0"}
 
 
 if __name__ == "__main__":
+    import os
+
+    # Use PORT environment variable if available (Azure App Service requirement)
+    port = int(os.getenv("PORT", settings.server_port))
+
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=settings.server_port,
+        port=port,
         reload=True if settings.environment == "development" else False,
     )

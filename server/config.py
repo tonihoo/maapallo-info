@@ -20,15 +20,21 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> str:
-        return f"postgresql+asyncpg://{self.pg_user}:{self.pg_pass}@{self.pg_host}:{self.pg_port}/{self.pg_database}"
+        return f"postgresql+asyncpg://{self.pg_user}:{self.pg_pass}@{self.pg_host}:{self.pg_port}/{self.pg_database}?sslmode={self.pg_sslmode}"
 
     @property
     def database_url_sync(self) -> str:
-        return f"postgresql://{self.pg_user}:{self.pg_pass}@{self.pg_host}:{self.pg_port}/{self.pg_database}"
+        return f"postgresql://{self.pg_user}:{self.pg_pass}@{self.pg_host}:{self.pg_port}/{self.pg_database}?sslmode={self.pg_sslmode}"
+
+    @property
+    def is_production(self) -> bool:
+        return self.environment.lower() == "production"
 
     class Config:
         env_file = ".env"
         case_sensitive = False
+        # Allow environment variables to override .env file
+        env_file_encoding = "utf-8"
 
 
 settings = Settings()
