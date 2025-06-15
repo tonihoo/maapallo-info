@@ -7,14 +7,15 @@ import logging
 from pathlib import Path
 
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 
-from database import async_session_maker
+from config import settings
 
 logger = logging.getLogger(__name__)
 
 
 async def run_migration_file(filepath: str) -> bool:
-    """Run a single SQL migration file"""
+    """Run a single SQL migration file using explicit async engine"""
     try:
         migration_path = Path(__file__).parent / "migrations" / filepath
 
@@ -25,7 +26,13 @@ async def run_migration_file(filepath: str) -> bool:
         with open(migration_path, "r", encoding="utf-8") as f:
             sql_content = f.read()
 
-        async with async_session_maker() as session:
+        # Create explicit async engine with debug info
+        database_url = settings.database_url
+        logger.info(f"Using database URL: {database_url}")
+        
+        engine = create_async_engine(database_url, echo=True)
+        
+        async with engine.begin() as conn:
             # Split on semicolons and execute each statement separately
             statements = [
                 stmt.strip() for stmt in sql_content.split(";") if stmt.strip()
@@ -34,10 +41,9 @@ async def run_migration_file(filepath: str) -> bool:
             for statement in statements:
                 if statement:
                     logger.info(f"Executing: {statement[:100]}...")
-                    await session.execute(text(statement))
+                    await conn.execute(text(statement))
 
-            await session.commit()
-
+        await engine.dispose()
         logger.info(f"Successfully ran migration: {filepath}")
         return True
 
