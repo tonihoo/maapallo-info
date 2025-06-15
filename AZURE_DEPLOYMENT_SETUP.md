@@ -20,7 +20,7 @@ az login
 az account set --subscription "your-subscription-id"
 
 # Create resource group
-az group create --name maapallo-info-group --location "West Europe"
+az group create --name maapallo-info-group --location "North Europe"
 
 # Create Azure Container Registry
 az acr create --resource-group maapallo-info-group \
@@ -102,7 +102,7 @@ az webapp config appsettings set --name maapallo-info-app \
 # Create PostgreSQL server
 az postgres server create --resource-group maapallo-info-group \
   --name maapallo-postgres \
-  --location "West Europe" \
+  --location "North Europe" \
   --admin-user dbadmin \
   --admin-password "YourSecurePassword123!" \
   --sku-name GP_Gen5_2 \

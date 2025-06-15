@@ -369,7 +369,7 @@ To enable full functionality with a managed PostgreSQL database:
 az postgres flexible-server create \
   --resource-group maapallo-info-group \
   --name maapallo-postgres \
-  --location "West Europe" \
+  --location "North Europe" \
   --admin-user dbadmin \
   --admin-password "YourSecurePassword123!" \
   --sku-name Standard_B1ms \
