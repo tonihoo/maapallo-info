@@ -219,6 +219,7 @@ export function App() {
             onSelectFeature={handleFeatureSelect}
             selectedFeatureId={selectedFeatureId}
             refreshTrigger={refreshTrigger}
+            is3DMode={is3DMode}
           />
         </Paper>
 

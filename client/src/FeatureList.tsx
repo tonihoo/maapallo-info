@@ -6,10 +6,12 @@ export default function FeatureList({
   onSelectFeature,
   selectedFeatureId = null,
   refreshTrigger = 0,
+  is3DMode = true,
 }: {
   onSelectFeature: (id: number) => void;
   selectedFeatureId?: number | null;
   refreshTrigger?: number;
+  is3DMode?: boolean;
 }) {
   const [features, setFeatures] = useState<FeatureTypes[]>([]);
 
@@ -37,10 +39,12 @@ export default function FeatureList({
   }, [refreshTrigger]);
 
   return (
-    <Paper elevation={3} sx={{ overflow: "hidden", height: "100%" }}> {/* Changed to use 100% height instead of viewport calculations */}
+    <Paper elevation={3} sx={{ overflow: "hidden", height: "100%" }}>
+      {" "}
+      {/* Changed to use 100% height instead of viewport calculations */}
       <Box
         sx={{
-          backgroundColor: "#ffe7c5",
+          backgroundColor: is3DMode ? "#ffe7c5" : "#388e3c",
           height: "3em",
           display: "flex",
           zIndex: 2,
@@ -48,7 +52,7 @@ export default function FeatureList({
           alignItems: "center",
         }}
       >
-        <Typography sx={{ color: "darkslategrey" }}>
+        <Typography sx={{ color: is3DMode ? "darkslategrey" : "white" }}>
           Maapallo-lehden artikkeleita
         </Typography>
       </Box>
@@ -58,18 +62,18 @@ export default function FeatureList({
             overflowY: "auto",
             height: "calc(100% - 3em)", // Subtract header height
             // Removed maxHeight viewport calculation
-            '&::-webkit-scrollbar': {
-              width: '8px',
+            "&::-webkit-scrollbar": {
+              width: "8px",
             },
-            '&::-webkit-scrollbar-track': {
-              background: '#f1f1f1',
+            "&::-webkit-scrollbar-track": {
+              background: "#f1f1f1",
             },
-            '&::-webkit-scrollbar-thumb': {
-              background: '#c1c1c1',
-              borderRadius: '4px',
+            "&::-webkit-scrollbar-thumb": {
+              background: "#c1c1c1",
+              borderRadius: "4px",
             },
-            '&::-webkit-scrollbar-thumb:hover': {
-              background: '#a8a8a8',
+            "&::-webkit-scrollbar-thumb:hover": {
+              background: "#a8a8a8",
             },
           }}
         >
@@ -87,28 +91,32 @@ export default function FeatureList({
                 alignItems: "flex-start",
                 gap: 1,
                 py: 1.5,
-                minHeight: 'auto',
+                minHeight: "auto",
               }}
             >
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography
                   variant="subtitle1"
                   sx={{
-                    display: '-webkit-box',
+                    display: "-webkit-box",
                     WebkitLineClamp: 2,
-                    WebkitBoxOrient: 'vertical',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
+                    WebkitBoxOrient: "vertical",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
                     lineHeight: 1.3,
-                    wordBreak: 'break-word',
-                    hyphens: 'auto',
-                    whiteSpace: 'normal',
-                    fontSize: '0.95rem',
+                    wordBreak: "break-word",
+                    hyphens: "auto",
+                    whiteSpace: "normal",
+                    fontSize: "0.95rem",
                   }}
                 >
                   {feature.title}
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ mt: 0.5 }}
+                >
                   {feature.author} &middot; {feature.publication}
                 </Typography>
               </Box>
