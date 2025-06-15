@@ -15,6 +15,10 @@ echo "PG_USER: $PG_USER"
 echo "PG_DATABASE: $PG_DATABASE"
 echo "PG_SSLMODE: $PG_SSLMODE"
 
+# Test database connection
+echo "🔬 Testing database connection..."
+python test_db_connection.py
+
 # Run database migrations
 echo "📊 Running database migrations..."
 python run_migrations.py
