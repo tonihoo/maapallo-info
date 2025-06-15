@@ -41,6 +41,9 @@ COPY server/ ./
 # Copy built client files to serve as static files
 COPY --from=client-build /app/client/dist ./static
 
+# Copy Cesium assets for production
+COPY --from=client-build /app/client/node_modules/cesium/Build/Cesium ./static/cesium
+
 # Copy world.geojson file for the application
 COPY client/public/data/world.geojson ./static/data/
 

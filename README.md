@@ -330,17 +330,39 @@ docker compose exec db psql -U postgres -d maapallo_info -c "SELECT version();"
 docker compose restart client
 ```
 
-## Development Environment
+## Azure Deployment
 
-Recommended tools:
-- **VS Code** + Python and TypeScript extensions
-- **Docker Desktop** for container management
-- **Postman** or **curl** for API testing
-- **PgAdmin** for database management
+### Production URL
+- **Live App**: [https://maapallo-info-app.azurewebsites.net](https://maapallo-info-app.azurewebsites.net)
 
-## Additional Information
+### Viewing Azure Logs
 
-- **FastAPI documentation**: [http://localhost:3003/docs](http://localhost:3003/docs)
-- **Migration summary**: `FASTAPI_MIGRATION_SUMMARY.md`
-- **Cleanup summary**: `CLEANUP_COMPLETION_SUMMARY.md`
-- **Node.js reference**: `NODEJS_MIGRATION_REFERENCE.md`
+```bash
+# Stream live logs from Azure
+az webapp log tail --name maapallo-info-app --resource-group maapallo-info-group
+
+# Check container logs specifically
+az webapp log tail --name maapallo-info-app --resource-group maapallo-info-group --provider application
+
+# Check app status
+az webapp show --name maapallo-info-app --resource-group maapallo-info-group --query state
+
+# Restart the app
+az webapp restart --name maapallo-info-app --resource-group maapallo-info-group
+```
+
+### Common Azure Issues
+
+**Database connection errors:**
+- Check that database environment variables are set correctly
+- Verify SSL configuration for production database
+- Ensure firewall rules allow Azure services
+
+**Container startup failures:**
+- Check GitHub Actions for build errors
+- Verify all GitHub secrets are configured
+- Check that Cesium Ion token is valid
+
+**Static files not loading:**
+- Verify client build completed successfully
+- Check that static files are copied to container

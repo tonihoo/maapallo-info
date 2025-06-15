@@ -19,12 +19,18 @@ async def get_features(
     db: AsyncSession = Depends(get_db),
 ):
     """Get all features with optional filtering and pagination"""
+    if db is None:
+        return {"features": [], "message": "Database not configured"}
+    
     try:
         features = await crud.get_all_features(db)
         return {"features": features}
     except Exception as e:
+        # Return empty features list if database is not available
+        if "disabled" in str(e).lower() or "connection" in str(e).lower():
+            return {"features": [], "message": "Database not configured"}
         raise HTTPException(
-            status_code=500, detail=f"Error retrieving features: {str(e)}"
+            status_code=500, detail=f"Error retrieving features: Database error: {str(e)}"
         )
 
 

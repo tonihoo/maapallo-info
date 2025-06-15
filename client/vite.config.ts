@@ -2,6 +2,8 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
 export default defineConfig(({ mode }) => {
+  const isProduction = mode === "production";
+
   return {
     plugins: [react()],
     server: {
@@ -16,7 +18,9 @@ export default defineConfig(({ mode }) => {
       },
     },
     define: {
-      CESIUM_BASE_URL: JSON.stringify("/node_modules/cesium/Build/Cesium/"),
+      CESIUM_BASE_URL: JSON.stringify(
+        isProduction ? "/cesium/" : "/node_modules/cesium/Build/Cesium/"
+      ),
     },
     optimizeDeps: {
       include: ["cesium"],

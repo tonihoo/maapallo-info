@@ -39,11 +39,16 @@ class Feature(Base):
 
 async def get_db():
     """Dependency to get database session"""
-    async with async_session_maker() as session:
-        try:
-            yield session
-        finally:
-            await session.close()
+    try:
+        async with async_session_maker() as session:
+            try:
+                yield session
+            finally:
+                await session.close()
+    except Exception as e:
+        # If database connection fails, yield None
+        logger.warning(f"Database connection failed: {e}")
+        yield None
 
 
 async def check_db_connection():

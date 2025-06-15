@@ -27,7 +27,7 @@ class Settings(BaseSettings):
             ssl_param = "ssl=true"
         else:
             ssl_param = "ssl=prefer"
-        
+
         return f"postgresql+asyncpg://{self.pg_user}:{self.pg_pass}@{self.pg_host}:{self.pg_port}/{self.pg_database}?{ssl_param}"
 
     @property
