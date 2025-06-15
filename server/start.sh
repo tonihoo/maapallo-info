@@ -3,7 +3,17 @@
 # Production startup script for maapallo.info
 # This script runs database migrations before starting the FastAPI server
 
+set -e
+
 echo "🚀 Starting maapallo.info production server..."
+
+# Debug: Show environment variables
+echo "🔍 Environment check:"
+echo "ENVIRONMENT: $ENVIRONMENT"
+echo "PG_HOST: $PG_HOST"
+echo "PG_USER: $PG_USER"
+echo "PG_DATABASE: $PG_DATABASE"
+echo "PG_SSLMODE: $PG_SSLMODE"
 
 # Run database migrations
 echo "📊 Running database migrations..."
