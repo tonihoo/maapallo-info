@@ -5,10 +5,12 @@ import { Map } from "./Map";
 import FeatureList from "./FeatureList";
 import { FeatureInfo } from "./FeatureInfo";
 import { FeatureTypes } from "./types/featureTypes";
-import { Feature, Geometry, GeoJsonProperties } from 'geojson';
+import { Feature, Geometry, GeoJsonProperties } from "geojson";
 
 export function App() {
-  const [selectedFeatureId, setSelectedFeatureId] = useState<number | null>(null);
+  const [selectedFeatureId, setSelectedFeatureId] = useState<number | null>(
+    null
+  );
   const [hoveredFeatureId, setHoveredFeatureId] = useState<number | null>(null); // Keep for cursor changes
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [allFeatures, setAllFeatures] = useState<FeatureTypes[]>([]);
@@ -16,7 +18,7 @@ export function App() {
 
   // Add handlers for map interactions
   const handleMapClick = useCallback((coordinates: number[]) => {
-    console.log('Map clicked at coordinates:', coordinates);
+    console.log("Map clicked at coordinates:", coordinates);
     // Clear selection when clicking empty space
     setSelectedFeatureId(null);
   }, []);
@@ -27,11 +29,11 @@ export function App() {
 
   // Toggle between 3D and 2D modes
   const toggleMapMode = useCallback(() => {
-    setIs3DMode(prev => !prev);
+    setIs3DMode((prev) => !prev);
   }, []);
 
   const handleFeatureAdded = useCallback(async (newFeature: FeatureTypes) => {
-    setRefreshTrigger(prev => prev + 1);
+    setRefreshTrigger((prev) => prev + 1);
     setSelectedFeatureId(newFeature.id!);
   }, []); // Removed setSelectedFeature references
 
@@ -39,7 +41,7 @@ export function App() {
   useEffect(() => {
     const fetchAllFeatures = async () => {
       try {
-        const response = await fetch('/api/v1/feature/');
+        const response = await fetch("/api/v1/feature/");
         if (!response.ok) return;
 
         const data = await response.json();
@@ -60,7 +62,7 @@ export function App() {
   const createMapFeatures = (): Feature<Geometry, GeoJsonProperties>[] => {
     const features: Feature<Geometry, GeoJsonProperties>[] = [];
 
-    allFeatures.forEach(feature => {
+    allFeatures.forEach((feature) => {
       if (feature.location) {
         features.push({
           type: "Feature",
@@ -68,8 +70,8 @@ export function App() {
           properties: {
             id: feature.id,
             // Remove title, author, and publication - these should not be on the map
-            featureType: 'feature',
-            isSelected: feature.id === selectedFeatureId
+            featureType: "feature",
+            isSelected: feature.id === selectedFeatureId,
           },
         });
       }
@@ -79,9 +81,10 @@ export function App() {
   };
 
   const headerStyle = {
-    backgroundColor: is3DMode ? "rgba(126, 199, 129, 0.75)" : "rgba(255, 179, 76, 0.75)",
+    backgroundColor: is3DMode
+      ? "rgba(126, 199, 129, 0.75)"
+      : "rgba(255, 179, 76, 0.75)",
     color: "black",
-    textAlign: "center" as const,
     boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
     position: "fixed" as const,
     top: 0,
@@ -91,11 +94,14 @@ export function App() {
     height: "40px",
     display: "flex",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "space-between",
+    paddingX: "16px",
   };
 
   const footerStyle = {
-    backgroundColor: is3DMode ? "rgba(126, 199, 129, 0.75)" : "rgba(255, 179, 76, 0.75)",
+    backgroundColor: is3DMode
+      ? "rgba(126, 199, 129, 0.75)"
+      : "rgba(255, 179, 76, 0.75)",
     color: "black",
     textAlign: "center" as const,
     boxShadow: "0 -2px 4px rgba(0,0,0,0.1)",
@@ -113,7 +119,7 @@ export function App() {
   const panelStyle = {
     backgroundColor: "rgba(255, 255, 255, 0.95)",
     backdropFilter: "blur(8px)",
-    zIndex: 100
+    zIndex: 100,
   };
 
   const handleFeatureHover = (featureId: number | null) => {
@@ -124,26 +130,56 @@ export function App() {
     <>
       {/* Header */}
       <Box sx={headerStyle}>
+        {/* Empty left space for balanced layout */}
+        <Box sx={{ width: "40px" }} />
+
         <Typography variant="overline" component="h1">
           Maapallo.info
         </Typography>
+
+        {/* 3D/2D Toggle Button in header */}
+        <Tooltip title={is3DMode ? "2D kartta" : "3D maapallo"}>
+          <IconButton
+            onClick={toggleMapMode}
+            size="small"
+            sx={{
+              backgroundColor: "rgba(255, 255, 255, 0.9)",
+              color: is3DMode ? "#ffb34c" : "#4caf50",
+              fontSize: "12px",
+              fontWeight: "bold",
+              width: "32px",
+              height: "32px",
+              "&:hover": {
+                backgroundColor: "rgba(255, 255, 255, 1)",
+                color: is3DMode ? "#e89d2b" : "#388e3c",
+              },
+              boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+            }}
+          >
+            {is3DMode ? "2D" : "3D"}
+          </IconButton>
+        </Tooltip>
       </Box>
 
       {/* Main content area */}
-      <Box sx={{
-        position: "relative",
-        height: "100vh",
-        overflow: "hidden"
-      }}>
+      <Box
+        sx={{
+          position: "relative",
+          height: "100vh",
+          overflow: "hidden",
+        }}
+      >
         {/* Fullscreen map */}
-        <Box sx={{
-          position: "absolute",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 0
-        }}>
+        <Box
+          sx={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 0,
+          }}
+        >
           {is3DMode ? (
             <CesiumMap
               features={createMapFeatures()}
@@ -172,7 +208,7 @@ export function App() {
             width: 320, // Fixed width comment
             height: 880, // Fixed height comment
             ...panelStyle,
-            zIndex: 100
+            zIndex: 100,
           }}
         >
           <FeatureList
@@ -193,39 +229,12 @@ export function App() {
               width: 600,
               maxHeight: 500,
               ...panelStyle,
-              zIndex: 100
+              zIndex: 100,
             }}
           >
             <FeatureInfo featureId={selectedFeatureId} />
           </Paper>
         )}
-
-        {/* 3D/2D Toggle Button */}
-        <Box sx={{
-          position: "absolute",
-          top: 56,
-          right: 16,
-          zIndex: 200
-        }}>
-          <Tooltip title={is3DMode ? "2D kartta" : "3D maapallo"}>
-            <IconButton
-              onClick={toggleMapMode}
-              sx={{
-                backgroundColor: "rgba(255, 255, 255, 0.9)",
-                color: is3DMode ? "#ffb34c" : "#4caf50",
-                fontSize: "16px",
-                fontWeight: "bold",
-                "&:hover": {
-                  backgroundColor: "rgba(255, 255, 255, 1)",
-                  color: is3DMode ? "#e89d2b" : "#388e3c"
-                },
-                boxShadow: "0 2px 8px rgba(0,0,0,0.2)"
-              }}
-            >
-              {is3DMode ? "2D" : "3D"}
-            </IconButton>
-          </Tooltip>
-        </Box>
       </Box>
 
       {/* Footer */}
