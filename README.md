@@ -333,7 +333,7 @@ docker compose restart client
 ## Azure Deployment
 
 ### Production URL
-- **Live App**: [https://maapallo-info-app.azurewebsites.net](https://maapallo-info-app.azurewebsites.net)
+https://maapallo-info-app.azurewebsites.net
 
 ### Viewing Azure Logs
 
