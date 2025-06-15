@@ -18,9 +18,6 @@ async def get_features(
     db: AsyncSession = Depends(get_db),
 ):
     """Get all features with optional filtering and pagination"""
-    if db is None:
-        return {"features": [], "message": "Database not configured"}
-
     try:
         features = await crud.get_all_features(db)
         return {"features": features}
