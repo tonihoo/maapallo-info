@@ -13,7 +13,12 @@ from routes import feature, health
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    await init_db()
+    try:
+        await init_db()
+        print("✅ Database connected successfully")
+    except Exception as e:
+        print(f"⚠️ Database connection failed: {e}")
+        print("🔄 Continuing without database...")
     yield
     # Shutdown
 
