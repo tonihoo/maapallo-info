@@ -121,7 +121,28 @@ az postgres server firewall-rule create --resource-group maapallo-info-group \
   --end-ip-address 0.0.0.0
 ```
 
-## Step 5: Manual First Deployment
+## Step 5: PostGIS Extension Setup
+
+Azure PostgreSQL Flexible Server requires PostGIS to be enabled via the `azure.extensions` parameter:
+
+```bash
+# Enable PostGIS extension
+az postgres flexible-server parameter set \
+  --resource-group maapallo-info-group \
+  --server-name maapallo-info-db \
+  --name azure.extensions \
+  --value "POSTGIS"
+
+# Create the PostGIS extension in the database
+az postgres flexible-server execute \
+  --name maapallo-info-db \
+  --admin-user maapalloadmin \
+  --database-name maapallo_info \
+  --admin-password "your-password" \
+  --querytext "CREATE EXTENSION IF NOT EXISTS postgis;"
+```
+
+## Step 6: Manual First Deployment
 
 After setting up all resources and secrets, trigger the first deployment:
 
@@ -129,7 +150,16 @@ After setting up all resources and secrets, trigger the first deployment:
 2. Check GitHub Actions for deployment status
 3. Verify the app is running at: https://maapallo-info-app.azurewebsites.net
 
-## Troubleshooting
+## 🎉 Deployment Status
+
+✅ **Deployment Complete!**
+
+The application is successfully deployed and running at:
+- **Frontend**: https://maapallo-info-app.azurewebsites.net/
+- **API Health**: https://maapallo-info-app.azurewebsites.net/api/v1/health/
+- **API Features**: https://maapallo-info-app.azurewebsites.net/api/v1/feature/
+
+## Step 7: Troubleshooting
 
 ### Check application logs:
 ```bash
@@ -144,4 +174,14 @@ az webapp show --name maapallo-info-app --resource-group maapallo-info-group --q
 ### Restart the app:
 ```bash
 az webapp restart --name maapallo-info-app --resource-group maapallo-info-group
+```
+
+### Verify PostGIS extension is installed:
+```bash
+az postgres flexible-server execute \
+  --name maapallo-info-db \
+  --admin-user maapalloadmin \
+  --database-name maapallo_info \
+  --admin-password "your-password" \
+  --querytext "SELECT extname FROM pg_extension WHERE extname = 'postgis';"
 ```

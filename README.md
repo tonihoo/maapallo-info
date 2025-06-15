@@ -2,7 +2,10 @@
 
 Location database for Maapallo magazine articles. The application allows you to view article locations on a map, browse the article list, and add new articles.
 
-TBC...
+## 🚀 Live Application
+
+✅ **Successfully deployed on Azure!**
+👉 **Visit**: https://maapallo-info-app.azurewebsites.net/
 
 ## Technical Implementation
 
@@ -334,8 +337,15 @@ docker compose restart client
 
 ## Azure Deployment
 
-### Production URL
-https://maapallo-info-app.azurewebsites.net
+### Production URL ✅
+
+**The application is successfully deployed and running!**
+
+- **Frontend**: https://maapallo-info-app.azurewebsites.net/
+- **API Health**: https://maapallo-info-app.azurewebsites.net/api/v1/health/
+- **API Features**: https://maapallo-info-app.azurewebsites.net/api/v1/feature/
+
+For detailed deployment instructions, see [AZURE_DEPLOYMENT_SETUP.md](./AZURE_DEPLOYMENT_SETUP.md).
 
 ### Viewing Azure Logs
 
