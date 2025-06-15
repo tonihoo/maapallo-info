@@ -80,7 +80,7 @@ export function LocationSearch({
 
   const defaultStyle: React.CSSProperties = {
     position: "absolute",
-    top: "80px",
+    top: "136px", // Moved down further to accommodate the larger 2D/3D button (64px + 8px margin)
     right: "20px",
     zIndex: 1000,
     width: "300px",

@@ -141,29 +141,36 @@ export function App() {
           Maapallo.info
         </Typography>
 
-        {/* 3D/2D Toggle Button in header */}
-        <Tooltip title={is3DMode ? "2D kartta" : "3D maapallo"}>
-          <IconButton
-            onClick={toggleMapMode}
-            size="small"
-            sx={{
-              backgroundColor: "rgba(255, 255, 255, 0.9)",
-              color: is3DMode ? "#ffb34c" : "#4caf50",
-              fontSize: "12px",
-              fontWeight: "bold",
-              width: "32px",
-              height: "32px",
-              "&:hover": {
-                backgroundColor: "rgba(255, 255, 255, 1)",
-                color: is3DMode ? "#e89d2b" : "#388e3c",
-              },
-              boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-            }}
-          >
-            {is3DMode ? "2D" : "3D"}
-          </IconButton>
-        </Tooltip>
+        {/* Empty right space for balanced layout */}
+        <Box sx={{ width: "40px" }} />
       </Box>
+
+      {/* 3D/2D Toggle Button - positioned below header in top right corner */}
+      <Tooltip title={is3DMode ? "2D kartta" : "3D maapallo"}>
+        <IconButton
+          onClick={toggleMapMode}
+          size="small"
+          sx={{
+            position: "absolute",
+            top: "64px", // Below the header (header height is approximately 56px + some margin)
+            right: "20px",
+            zIndex: 1001,
+            backgroundColor: "rgba(255, 255, 255, 0.9)",
+            color: is3DMode ? "#ffb34c" : "#4caf50",
+            fontSize: "24px", // Doubled from 12px
+            fontWeight: "bold",
+            width: "64px", // Doubled from 32px
+            height: "64px", // Doubled from 32px
+            "&:hover": {
+              backgroundColor: "rgba(255, 255, 255, 1)",
+              color: is3DMode ? "#e89d2b" : "#388e3c",
+            },
+            boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+          }}
+        >
+          {is3DMode ? "2D" : "3D"}
+        </IconButton>
+      </Tooltip>
 
       {/* Main content area */}
       <Box
@@ -229,7 +236,7 @@ export function App() {
             elevation={8}
             sx={{
               position: "absolute",
-              top: 170,
+              top: 220, // Moved down further to accommodate the larger elements above
               right: 100,
               width: 600,
               maxHeight: 500,
