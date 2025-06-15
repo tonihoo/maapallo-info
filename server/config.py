@@ -36,7 +36,18 @@ class Settings(BaseSettings):
 
     @property
     def database_url_sync(self) -> str:
-        return f"postgresql://{self.pg_user}:{self.pg_pass}@{self.pg_host}:{self.pg_port}/{self.pg_database}?sslmode={self.pg_sslmode}"
+        # Ensure sslmode is valid
+        valid_ssl_modes = [
+            "disable",
+            "allow",
+            "prefer",
+            "require",
+            "verify-ca",
+            "verify-full",
+        ]
+        ssl_mode = self.pg_sslmode if self.pg_sslmode in valid_ssl_modes else "prefer"
+
+        return f"postgresql://{self.pg_user}:{self.pg_pass}@{self.pg_host}:{self.pg_port}/{self.pg_database}?sslmode={ssl_mode}"
 
     @property
     def is_production(self) -> bool:
