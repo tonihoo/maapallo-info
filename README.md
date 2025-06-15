@@ -2,6 +2,8 @@
 
 Location database for Maapallo magazine articles. The application allows you to view article locations on a map, browse the article list, and add new articles.
 
+TBC...
+
 ## Technical Implementation
 
 The application consists of four components:
