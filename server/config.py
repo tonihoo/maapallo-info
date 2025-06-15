@@ -24,15 +24,9 @@ class Settings(BaseSettings):
         if self.environment == "development":
             return f"postgresql+asyncpg://{self.pg_user}:{self.pg_pass}@{self.pg_host}:{self.pg_port}/{self.pg_database}"
 
-        # For production, use SSL parameter (asyncpg doesn't support sslmode)
-        if self.pg_sslmode == "disable":
-            ssl_param = "ssl=false"
-        elif self.pg_sslmode == "require":
-            ssl_param = "ssl=true"
-        else:
-            ssl_param = "ssl=prefer"
-
-        return f"postgresql+asyncpg://{self.pg_user}:{self.pg_pass}@{self.pg_host}:{self.pg_port}/{self.pg_database}?{ssl_param}"
+        # For production with asyncpg, use the correct SSL parameters
+        # asyncpg uses 'ssl' parameter but it expects 'require', 'prefer', 'disable', etc.
+        return f"postgresql+asyncpg://{self.pg_user}:{self.pg_pass}@{self.pg_host}:{self.pg_port}/{self.pg_database}?ssl={self.pg_sslmode}"
 
     @property
     def database_url_sync(self) -> str:
