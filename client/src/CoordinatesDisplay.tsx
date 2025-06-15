@@ -9,7 +9,7 @@ export function CoordinatesDisplay({ coordinates }: CoordinatesDisplayProps) {
     <div
       style={{
         position: "absolute",
-        bottom: "40px", // 30px footer + 10px gap
+        bottom: "50px", // 30px footer + 10px gap
         left: "50%",
         transform: "translateX(-50%)",
         backgroundColor: "rgba(128, 128, 128, 0.9)",
@@ -23,7 +23,8 @@ export function CoordinatesDisplay({ coordinates }: CoordinatesDisplayProps) {
         pointerEvents: "none",
       }}
     >
-      {coordinates.lat > 0 ? 'N' : 'S'} {Math.abs(coordinates.lat).toFixed(4)}°, {coordinates.lon > 0 ? 'E' : 'W'} {Math.abs(coordinates.lon).toFixed(4)}°
+      {coordinates.lat > 0 ? "N" : "S"} {Math.abs(coordinates.lat).toFixed(4)}°,{" "}
+      {coordinates.lon > 0 ? "E" : "W"} {Math.abs(coordinates.lon).toFixed(4)}°
     </div>
   );
 }

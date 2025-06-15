@@ -14,7 +14,7 @@ interface Props {
 
 export function LocationSearch({
   onLocationSelect,
-  placeholder = "Hae paikkaa...",
+  placeholder = "Hae sijaintia...",
   style,
 }: Props) {
   const [searchQuery, setSearchQuery] = useState("");
