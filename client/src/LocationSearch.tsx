@@ -80,8 +80,8 @@ export function LocationSearch({
 
   const defaultStyle: React.CSSProperties = {
     position: "absolute",
-    top: "136px", // Moved down further to accommodate the larger 2D/3D button (64px + 8px margin)
-    right: "20px",
+    bottom: "50px", // Adjusted to align with the bottom of the "Rotate right" button
+    right: "120px", // Positioned to the left of control buttons (assuming buttons are ~100px wide + margin)
     zIndex: 1000,
     width: "300px",
     ...style,
@@ -89,47 +89,14 @@ export function LocationSearch({
 
   return (
     <div style={defaultStyle}>
-      <div style={{ position: "relative" }}>
-        <input
-          type="text"
-          placeholder={placeholder}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          style={{
-            width: "100%",
-            padding: "12px 16px",
-            border: "1px solid rgba(255, 255, 255, 0.3)",
-            borderRadius: "8px",
-            backgroundColor: "rgba(42, 42, 42, 0.9)",
-            color: "white",
-            fontSize: "14px",
-            fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-            outline: "none",
-            boxSizing: "border-box",
-          }}
-        />
-        {isSearching && (
-          <div
-            style={{
-              position: "absolute",
-              right: "12px",
-              top: "50%",
-              transform: "translateY(-50%)",
-              color: "white",
-              fontSize: "12px",
-              fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-            }}
-          >
-            Searching...
-          </div>
-        )}
-      </div>
-
-      {/* Search Results */}
+      {/* Search Results - positioned above the search bar */}
       {showResults && searchResults.length > 0 && (
         <div
           style={{
-            marginTop: "4px",
+            position: "absolute",
+            bottom: "60px", // Position above the search input (input height + margin)
+            left: "0",
+            right: "0",
             backgroundColor: "rgba(42, 42, 42, 0.95)",
             border: "1px solid rgba(255, 255, 255, 0.3)",
             borderRadius: "8px",
@@ -180,6 +147,42 @@ export function LocationSearch({
           ))}
         </div>
       )}
+
+      <div style={{ position: "relative" }}>
+        <input
+          type="text"
+          placeholder={placeholder}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{
+            width: "100%",
+            padding: "12px 16px",
+            border: "1px solid rgba(255, 255, 255, 0.3)",
+            borderRadius: "8px",
+            backgroundColor: "rgba(42, 42, 42, 0.9)",
+            color: "white",
+            fontSize: "14px",
+            fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+            outline: "none",
+            boxSizing: "border-box",
+          }}
+        />
+        {isSearching && (
+          <div
+            style={{
+              position: "absolute",
+              right: "12px",
+              top: "50%",
+              transform: "translateY(-50%)",
+              color: "white",
+              fontSize: "12px",
+              fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+            }}
+          >
+            Searching...
+          </div>
+        )}
+      </div>
     </div>
   );
 }

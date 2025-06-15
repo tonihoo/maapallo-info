@@ -236,7 +236,7 @@ export function App() {
             elevation={8}
             sx={{
               position: "absolute",
-              top: 220, // Moved down further to accommodate the larger elements above
+              top: 140, // Moved back up since search bar is now at bottom
               right: 100,
               width: 600,
               maxHeight: 500,
