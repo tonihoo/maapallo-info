@@ -1,8 +1,10 @@
-import { Paper, Typography, Link, Avatar } from "@mui/material";
+import { Paper, Typography, Link, Avatar, IconButton } from "@mui/material";
+import { Close } from "@mui/icons-material";
 import { useState, useEffect } from "react";
 
 interface Props {
   featureId: number | null;
+  onClose?: () => void;
 }
 
 interface Feature {
@@ -15,11 +17,11 @@ interface Feature {
   link: string;
   location: {
     type: "Point" | "Polygon";
-    coordinates: any;
+    coordinates: number[] | number[][];
   };
 }
 
-export function FeatureInfo({ featureId }: Props) {
+export function FeatureInfo({ featureId, onClose }: Props) {
   const [feature, setFeature] = useState<Feature | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -64,7 +66,8 @@ export function FeatureInfo({ featureId }: Props) {
     if (location.type === "Polygon") {
       return (
         <Typography>
-          Sijainti: Alue (Polygon, {location.coordinates[0]?.length || 0} pistettä)
+          Sijainti: Alue (Polygon, {location.coordinates[0]?.length || 0}{" "}
+          pistettä)
         </Typography>
       );
     }
@@ -77,9 +80,30 @@ export function FeatureInfo({ featureId }: Props) {
       sx={{
         margin: "1em 0em 1em 0em",
         padding: "1em",
+        position: "relative",
       }}
       data-cy="feature-detail"
     >
+      {featureId && onClose && (
+        <IconButton
+          onClick={onClose}
+          sx={{
+            position: "absolute",
+            top: 8,
+            right: 8,
+            width: 32,
+            height: 32,
+            backgroundColor: "rgba(0, 0, 0, 0.04)",
+            "&:hover": {
+              backgroundColor: "rgba(0, 0, 0, 0.08)",
+            },
+          }}
+          size="small"
+          aria-label="close"
+        >
+          <Close fontSize="small" />
+        </IconButton>
+      )}
       {loading ? (
         <Typography>Ladataan...</Typography>
       ) : feature ? (

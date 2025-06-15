@@ -58,6 +58,10 @@ export function App() {
     setSelectedFeatureId(id);
   }, []); // Simplified - no need to find and set feature object
 
+  const handleFeatureInfoClose = useCallback(() => {
+    setSelectedFeatureId(null);
+  }, []);
+
   // Create map features for rendering
   const createMapFeatures = (): Feature<Geometry, GeoJsonProperties>[] => {
     const features: Feature<Geometry, GeoJsonProperties>[] = [];
@@ -232,7 +236,10 @@ export function App() {
               zIndex: 100,
             }}
           >
-            <FeatureInfo featureId={selectedFeatureId} />
+            <FeatureInfo
+              featureId={selectedFeatureId}
+              onClose={handleFeatureInfoClose}
+            />
           </Paper>
         )}
       </Box>
