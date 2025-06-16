@@ -87,7 +87,7 @@ export function LocationSearch({
     bottom: isMobile ? "40px" : "55px", // Much higher on mobile to avoid Cesium controls
     right: isMobile ? "20px" : "120px", // Closer to edge on mobile
     left: isMobile ? "20px" : "auto", // Full width minus margins on mobile
-    zIndex: 1000,
+    zIndex: 2000,
     width: isMobile ? "auto" : "300px", // Auto width on mobile for responsive design
     ...style,
   };
