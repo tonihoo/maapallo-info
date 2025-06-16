@@ -373,7 +373,6 @@ export function CesiumMap({
           dotProduct,
           threshold,
           cameraHeight,
-          heightRatio,
           isVisible: dotProduct > threshold,
         });
       }
@@ -613,7 +612,6 @@ export function CesiumMap({
             dotProduct,
             threshold,
             cameraHeight,
-            heightRatio,
             isVisible: dotProduct > threshold,
           });
         }
@@ -815,6 +813,28 @@ export function CesiumMap({
           },
           ".cesium-viewer-toolbar": {
             display: "none !important",
+          },
+          // Move Cesium navigation widget higher on mobile to avoid search panel overlap
+          "@media (max-width: 959px)": {
+            ".cesium-viewer .cesium-viewer-navigationContainer": {
+              bottom: "250px !important", // Lift navigation controls much higher on mobile
+              right: "15px !important",
+            },
+            ".cesium-navigationHelpButton-wrapper": {
+              bottom: "250px !important", // Lift navigation controls much higher on mobile
+            },
+            ".cesium-viewer .cesium-navigationHelpButton-wrapper": {
+              bottom: "250px !important",
+            },
+            ".cesium-navigation-help": {
+              bottom: "250px !important",
+            },
+            ".cesium-compass": {
+              bottom: "250px !important",
+            },
+            ".cesium-zoomControls": {
+              bottom: "250px !important",
+            },
           },
         }}
       />

@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { useMediaQuery, useTheme } from "@mui/material";
 
 interface SearchResult {
   lat: string;
@@ -17,6 +18,9 @@ export function LocationSearch({
   placeholder = "Hae sijaintia...",
   style,
 }: Props) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
@@ -80,10 +84,11 @@ export function LocationSearch({
 
   const defaultStyle: React.CSSProperties = {
     position: "absolute",
-    bottom: "50px", // Adjusted to align with the bottom of the "Rotate right" button
-    right: "120px", // Positioned to the left of control buttons (assuming buttons are ~100px wide + margin)
+    bottom: isMobile ? "200px" : "55px", // Much higher on mobile to avoid Cesium controls
+    right: isMobile ? "20px" : "120px", // Closer to edge on mobile
+    left: isMobile ? "20px" : "auto", // Full width minus margins on mobile
     zIndex: 1000,
-    width: "300px",
+    width: isMobile ? "auto" : "300px", // Auto width on mobile for responsive design
     ...style,
   };
 
