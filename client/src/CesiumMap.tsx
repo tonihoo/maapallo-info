@@ -50,29 +50,16 @@ interface Props {
   onFeatureClick?: (featureId: number) => void;
 }
 
-// Constants
-const INITIAL_CAMERA_POSITION = {
-  longitude: 44.0,
-  latitude: 10.0,
-  height: 16000000,
+// Configuration
+const INITIAL_CAMERA = {
+  position: { longitude: 44.0, latitude: 10.0, height: 16000000 },
+  orientation: { heading: 0.0, pitch: -Cesium.Math.PI_OVER_TWO, roll: 0.0 },
 };
 
-const INITIAL_CAMERA_ORIENTATION = {
-  heading: 0.0,
-  pitch: -Cesium.Math.PI_OVER_TWO,
-  roll: 0.0,
-};
-
-const ZOOM_LIMITS = {
-  min: 0,
-  max: 15000000,
-};
-
-const ANIMATION_DURATIONS = {
-  zoom: 0.8,
-  tilt: 0.5,
-  rotate: 0.5,
-  home: 2.0,
+const LIMITS_AND_DURATIONS = {
+  zoom: { min: 0, max: 15000000 },
+  animation: { zoom: 0.8, tilt: 0.5, rotate: 0.5, home: 2.0 },
+  visibility: { threshold: -0.8 },
 };
 
 export function CesiumMap({
@@ -85,6 +72,9 @@ export function CesiumMap({
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   const viewerRef = useRef<Cesium.Viewer | null>(null);
+  const featuresRef = useRef(features);
+  const cameraChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewerReady, setViewerReady] = useState(false);
@@ -92,6 +82,54 @@ export function CesiumMap({
     lon: number;
     lat: number;
   } | null>(null);
+
+  const isPointOnVisibleHemisphere = useCallback(
+    (longitude: number, latitude: number): boolean => {
+      if (!viewerRef.current) return true;
+
+      const camera = viewerRef.current.scene.camera;
+      const cameraPosition = camera.positionWC;
+      const markerPosition = Cesium.Cartesian3.fromDegrees(longitude, latitude);
+
+      const cameraFromCenter = Cesium.Cartesian3.normalize(
+        cameraPosition,
+        new Cesium.Cartesian3()
+      );
+      const markerFromCenter = Cesium.Cartesian3.normalize(
+        markerPosition,
+        new Cesium.Cartesian3()
+      );
+      const dotProduct = Cesium.Cartesian3.dot(
+        cameraFromCenter,
+        markerFromCenter
+      );
+
+      return dotProduct > LIMITS_AND_DURATIONS.visibility.threshold;
+    },
+    []
+  );
+
+  const updateMarkerVisibility = useCallback(() => {
+    if (!viewerRef.current?.entities) return;
+
+    const entities = viewerRef.current.entities.values;
+    entities.forEach((entity) => {
+      if (entity.id?.toString().startsWith("feature-")) {
+        const featureIndex = parseInt(
+          entity.id.toString().replace("feature-", "")
+        );
+        const feature = featuresRef.current[featureIndex];
+
+        if (feature?.geometry?.type === "Point") {
+          const [longitude, latitude] = feature.geometry.coordinates;
+          const isVisible = isPointOnVisibleHemisphere(longitude, latitude);
+
+          if (entity.point) entity.point.show = isVisible;
+          if (entity.label) entity.label.show = isVisible;
+        }
+      }
+    });
+  }, [isPointOnVisibleHemisphere]);
 
   const loadCountryBoundaries = useCallback(async (viewer: Cesium.Viewer) => {
     try {
@@ -166,26 +204,98 @@ export function CesiumMap({
 
   const setupCameraControls = useCallback((viewer: Cesium.Viewer) => {
     const controller = viewer.scene.screenSpaceCameraController;
-
-    controller.minimumZoomDistance = ZOOM_LIMITS.min;
-    controller.maximumZoomDistance = ZOOM_LIMITS.max;
+    controller.minimumZoomDistance = LIMITS_AND_DURATIONS.zoom.min;
+    controller.maximumZoomDistance = LIMITS_AND_DURATIONS.zoom.max;
     controller.enableCollisionDetection = false;
 
-    // Enforce zoom limits
     viewer.scene.postRender.addEventListener(() => {
       const height = viewer.scene.camera.positionCartographic.height;
-      if (height > ZOOM_LIMITS.max || height < ZOOM_LIMITS.min) {
+      if (
+        height > LIMITS_AND_DURATIONS.zoom.max ||
+        height < LIMITS_AND_DURATIONS.zoom.min
+      ) {
         const position = viewer.scene.camera.positionCartographic;
         viewer.scene.camera.position = Cesium.Cartesian3.fromRadians(
           position.longitude,
           position.latitude,
-          Math.max(ZOOM_LIMITS.min, Math.min(height, ZOOM_LIMITS.max))
+          Math.max(
+            LIMITS_AND_DURATIONS.zoom.min,
+            Math.min(height, LIMITS_AND_DURATIONS.zoom.max)
+          )
         );
       }
     });
   }, []);
 
-  // Move the initializeViewer function to only depend on stable callbacks
+  const createEventHandlers = useCallback(
+    (viewer: Cesium.Viewer) => {
+      const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+
+      handler.setInputAction((movement: any) => {
+        const cartesian = viewer.camera.pickEllipsoid(
+          movement.endPosition,
+          viewer.scene.globe.ellipsoid
+        );
+        if (cartesian) {
+          const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+          const longitude = Cesium.Math.toDegrees(cartographic.longitude);
+          const latitude = Cesium.Math.toDegrees(cartographic.latitude);
+          setMouseCoordinates({
+            lon: Number(longitude.toFixed(4)),
+            lat: Number(latitude.toFixed(4)),
+          });
+        }
+      }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+
+      handler.setInputAction((click: any) => {
+        const pickedObject = viewer.scene.pick(click.position);
+
+        if (pickedObject?.id?.toString().startsWith("feature-")) {
+          const featureIndex = parseInt(
+            pickedObject.id.toString().replace("feature-", "")
+          );
+          const feature = featuresRef.current[featureIndex];
+
+          if (feature?.properties?.id) {
+            onFeatureClick?.(feature.properties.id);
+
+            if (feature.geometry?.type === "Point") {
+              const [longitude, latitude] = feature.geometry.coordinates;
+              viewer.camera.flyTo({
+                destination: Cesium.Cartesian3.fromDegrees(
+                  longitude,
+                  latitude,
+                  50000
+                ),
+                orientation: {
+                  heading: viewer.scene.camera.heading,
+                  pitch: viewer.scene.camera.pitch,
+                  roll: viewer.scene.camera.roll,
+                },
+                duration: 1.5,
+                easingFunction: Cesium.EasingFunction.CUBIC_IN_OUT,
+              });
+            }
+          }
+        } else if (onMapClick) {
+          const cartesian = viewer.camera.pickEllipsoid(
+            click.position,
+            viewer.scene.globe.ellipsoid
+          );
+          if (cartesian) {
+            const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+            const longitude = Cesium.Math.toDegrees(cartographic.longitude);
+            const latitude = Cesium.Math.toDegrees(cartographic.latitude);
+            onMapClick([longitude, latitude]);
+          }
+        }
+      }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+      return handler;
+    },
+    [onMapClick, onFeatureClick]
+  );
+
   const initializeViewer = useCallback(
     async (containerElement: HTMLDivElement) => {
       try {
@@ -201,97 +311,18 @@ export function CesiumMap({
           requestRenderMode: true,
         });
 
-        // Add mouse move handler for coordinate tracking
-        const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+        createEventHandlers(viewer);
 
-        handler.setInputAction((movement: any) => {
-          const cartesian = viewer.camera.pickEllipsoid(
-            movement.endPosition,
-            viewer.scene.globe.ellipsoid
-          );
-          if (cartesian) {
-            const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
-            const longitude = Cesium.Math.toDegrees(cartographic.longitude);
-            const latitude = Cesium.Math.toDegrees(cartographic.latitude);
-
-            setMouseCoordinates({
-              lon: Number(longitude.toFixed(4)),
-              lat: Number(latitude.toFixed(4)),
-            });
-          }
-        }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
-
-        // Add click handler for feature selection and zoom
-        handler.setInputAction((click: any) => {
-          const pickedObject = viewer.scene.pick(click.position);
-
-          if (pickedObject && pickedObject.id) {
-            const entity = pickedObject.id;
-
-            // Check if it's a feature entity (starts with 'feature-')
-            if (
-              typeof entity.id === "string" &&
-              entity.id.startsWith("feature-")
-            ) {
-              // Extract the feature index from the entity ID
-              const featureIndex = parseInt(entity.id.replace("feature-", ""));
-
-              // Use the current features from the ref instead of closure
-              const currentFeatures = featuresRef.current;
-              const feature = currentFeatures[featureIndex];
-
-              if (feature && feature.properties?.id) {
-                // Call the onFeatureClick callback if provided
-                onFeatureClick?.(feature.properties.id);
-
-                // Zoom to the feature immediately on single click
-                if (feature.geometry?.type === "Point") {
-                  const [longitude, latitude] = feature.geometry.coordinates;
-                  const zoomHeight = 50000;
-
-                  viewer.camera.flyTo({
-                    destination: Cesium.Cartesian3.fromDegrees(
-                      longitude,
-                      latitude,
-                      zoomHeight
-                    ),
-                    orientation: {
-                      heading: viewer.scene.camera.heading,
-                      pitch: viewer.scene.camera.pitch,
-                      roll: viewer.scene.camera.roll,
-                    },
-                    duration: 1.5,
-                    easingFunction: Cesium.EasingFunction.CUBIC_IN_OUT,
-                  });
-                }
-              }
-            }
-          } else if (onMapClick) {
-            // Clicked on empty space - handle map click for adding new features
-            const cartesian = viewer.camera.pickEllipsoid(
-              click.position,
-              viewer.scene.globe.ellipsoid
-            );
-            if (cartesian) {
-              const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
-              const longitude = Cesium.Math.toDegrees(cartographic.longitude);
-              const latitude = Cesium.Math.toDegrees(cartographic.latitude);
-              onMapClick([longitude, latitude]);
-            }
-          }
-        }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
-
-        // Set initial camera position
         viewer.camera.setView({
           destination: Cesium.Cartesian3.fromDegrees(
-            INITIAL_CAMERA_POSITION.longitude,
-            INITIAL_CAMERA_POSITION.latitude,
-            INITIAL_CAMERA_POSITION.height
+            INITIAL_CAMERA.position.longitude,
+            INITIAL_CAMERA.position.latitude,
+            INITIAL_CAMERA.position.height
           ),
-          orientation: INITIAL_CAMERA_ORIENTATION,
+          orientation: INITIAL_CAMERA.orientation,
         });
 
-        // Add these settings for better text rendering:
+        // Scene optimizations
         viewer.scene.postProcessStages.fxaa.enabled = false;
         viewer.resolutionScale = 2.0;
         viewer.scene.highDynamicRange = false;
@@ -302,109 +333,35 @@ export function CesiumMap({
         setupCameraControls(viewer);
         await loadCountryBoundaries(viewer);
 
-        // Add camera move handler to update marker visibility
         viewer.scene.camera.changed.addEventListener(() => {
-          // Debounce the camera change events to avoid excessive updates
           if (cameraChangeTimeoutRef.current) {
             clearTimeout(cameraChangeTimeoutRef.current);
           }
-          cameraChangeTimeoutRef.current = setTimeout(() => {
-            updateMarkerVisibility();
-          }, 100);
+          cameraChangeTimeoutRef.current = setTimeout(
+            updateMarkerVisibility,
+            100
+          );
         });
 
         viewerRef.current = viewer;
         setLoading(false);
         setViewerReady(true);
-
         setTimeout(() => viewer.resize(), 100);
       } catch (error) {
         console.error("Failed to initialize Cesium viewer:", error);
         setError("Failed to initialize 3D map: " + (error as Error).message);
         setLoading(false);
-        setViewerReady(false);
       }
     },
-    [setupCameraControls, loadCountryBoundaries, onMapClick, onFeatureClick]
+    [
+      setupCameraControls,
+      loadCountryBoundaries,
+      createEventHandlers,
+      updateMarkerVisibility,
+    ]
   );
 
-  // Add a ref to track features and camera change timeout
-  const featuresRef = useRef(features);
-  const cameraChangeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Helper function to check if a point is on the visible hemisphere
-  const isPointOnVisibleHemisphere = useCallback(
-    (longitude: number, latitude: number): boolean => {
-      if (!viewerRef.current) return true;
-
-      const camera = viewerRef.current.scene.camera;
-      const cameraPosition = camera.positionWC;
-
-      // Convert marker position to Cartesian3
-      const markerPosition = Cesium.Cartesian3.fromDegrees(longitude, latitude);
-
-      // Calculate vector from Earth center to camera
-      const cameraFromCenter = Cesium.Cartesian3.normalize(
-        cameraPosition,
-        new Cesium.Cartesian3()
-      );
-
-      // Calculate vector from Earth center to marker
-      const markerFromCenter = Cesium.Cartesian3.normalize(
-        markerPosition,
-        new Cesium.Cartesian3()
-      );
-
-      // Calculate dot product - if positive, they're on the same hemisphere
-      const cameraHeight = camera.positionCartographic.height;
-      const dotProduct = Cesium.Cartesian3.dot(
-        cameraFromCenter,
-        markerFromCenter
-      );
-      const threshold = -0.8;
-
-      return dotProduct > threshold;
-    },
-    []
-  );
-
-  // Function to update marker visibility based on current camera position
-  const updateMarkerVisibility = useCallback(() => {
-    if (!viewerRef.current?.entities) return;
-
-    const entities = viewerRef.current.entities.values;
-    entities.forEach((entity) => {
-      if (
-        entity.id &&
-        typeof entity.id === "string" &&
-        entity.id.startsWith("feature-")
-      ) {
-        const featureIndex = parseInt(entity.id.replace("feature-", ""));
-        const feature = featuresRef.current[featureIndex];
-
-        if (
-          feature?.geometry?.type === "Point" &&
-          feature.geometry.coordinates
-        ) {
-          const [longitude, latitude] = feature.geometry.coordinates;
-          const isVisible = isPointOnVisibleHemisphere(longitude, latitude);
-
-          // Update entity visibility
-          if (entity.point) {
-            entity.point.show = isVisible;
-          }
-          if (entity.label) {
-            entity.label.show = isVisible;
-          }
-        }
-      }
-    });
-  }, [isPointOnVisibleHemisphere]);
-
-  // Update the features ref when features change
-  useEffect(() => {
-    featuresRef.current = features;
-  }, [features]);
+  // Container ref for initializing viewer
   const containerCallbackRef = useCallback(
     (containerElement: HTMLDivElement | null) => {
       if (containerElement) {
@@ -417,15 +374,13 @@ export function CesiumMap({
   // Camera control functions
   const handleZoom = useCallback(
     (zoomIn: boolean) => {
-      if (!viewerRef.current) {
-        return;
-      }
+      if (!viewerRef.current) return;
 
       const camera = viewerRef.current.scene.camera;
       const currentHeight = camera.positionCartographic.height;
       const newHeight = zoomIn
-        ? Math.max(currentHeight * 0.5, ZOOM_LIMITS.min)
-        : Math.min(currentHeight * 2, ZOOM_LIMITS.max);
+        ? Math.max(currentHeight * 0.5, LIMITS_AND_DURATIONS.zoom.min)
+        : Math.min(currentHeight * 2, LIMITS_AND_DURATIONS.zoom.max);
 
       camera.flyTo({
         destination: Cesium.Cartesian3.fromRadians(
@@ -438,12 +393,12 @@ export function CesiumMap({
           pitch: camera.pitch,
           roll: camera.roll,
         },
-        duration: ANIMATION_DURATIONS.zoom,
+        duration: LIMITS_AND_DURATIONS.animation.zoom,
         easingFunction: Cesium.EasingFunction.CUBIC_IN_OUT,
       });
     },
     [viewerReady]
-  ); // Add viewerReady as dependency
+  );
 
   const handleTiltAdjust = useCallback((direction: "up" | "down") => {
     if (!viewerRef.current) return;
@@ -462,7 +417,7 @@ export function CesiumMap({
         pitch: newPitch,
         roll: camera.roll,
       },
-      duration: ANIMATION_DURATIONS.tilt,
+      duration: LIMITS_AND_DURATIONS.animation.tilt,
       easingFunction: Cesium.EasingFunction.CUBIC_IN_OUT,
     });
   }, []);
@@ -484,7 +439,7 @@ export function CesiumMap({
         pitch: camera.pitch,
         roll: camera.roll,
       },
-      duration: ANIMATION_DURATIONS.rotate,
+      duration: LIMITS_AND_DURATIONS.animation.rotate,
       easingFunction: Cesium.EasingFunction.CUBIC_IN_OUT,
     });
   }, []);
@@ -494,15 +449,20 @@ export function CesiumMap({
 
     viewerRef.current.camera.flyTo({
       destination: Cesium.Cartesian3.fromDegrees(
-        INITIAL_CAMERA_POSITION.longitude,
-        INITIAL_CAMERA_POSITION.latitude,
-        INITIAL_CAMERA_POSITION.height
+        INITIAL_CAMERA.position.longitude,
+        INITIAL_CAMERA.position.latitude,
+        INITIAL_CAMERA.position.height
       ),
-      orientation: INITIAL_CAMERA_ORIENTATION,
-      duration: ANIMATION_DURATIONS.home,
+      orientation: INITIAL_CAMERA.orientation,
+      duration: LIMITS_AND_DURATIONS.animation.home,
       easingFunction: Cesium.EasingFunction.CUBIC_IN_OUT,
     });
   }, []);
+
+  // Update the features ref when features change
+  useEffect(() => {
+    featuresRef.current = features;
+  }, [features]);
 
   // Effects
   useEffect(() => {
@@ -526,67 +486,17 @@ export function CesiumMap({
     try {
       // Remove existing feature entities
       const entitiesToRemove = viewerRef.current.entities.values.filter(
-        (entity) =>
-          entity.id &&
-          typeof entity.id === "string" &&
-          entity.id.startsWith("feature-")
+        (entity) => entity.id?.toString().startsWith("feature-")
       );
-      entitiesToRemove.forEach((entity) => {
-        if (viewerRef.current) {
-          viewerRef.current.entities.remove(entity);
-        }
-      });
+      entitiesToRemove.forEach((entity) =>
+        viewerRef.current?.entities.remove(entity)
+      );
 
-      // Helper function to check if a point is on the visible hemisphere
-      const isPointOnVisibleHemisphere = (
-        longitude: number,
-        latitude: number
-      ): boolean => {
-        if (!viewerRef.current) return true;
-
-        const camera = viewerRef.current.scene.camera;
-        const cameraPosition = camera.positionWC;
-
-        // Convert marker position to Cartesian3
-        const markerPosition = Cesium.Cartesian3.fromDegrees(
-          longitude,
-          latitude
-        );
-
-        // Calculate vector from Earth center to camera
-        const cameraFromCenter = Cesium.Cartesian3.normalize(
-          cameraPosition,
-          new Cesium.Cartesian3()
-        );
-
-        // Calculate vector from Earth center to marker
-        const markerFromCenter = Cesium.Cartesian3.normalize(
-          markerPosition,
-          new Cesium.Cartesian3()
-        );
-
-        // Calculate dot product - if positive, they're on the same hemisphere
-        const cameraHeight = camera.positionCartographic.height;
-        const dotProduct = Cesium.Cartesian3.dot(
-          cameraFromCenter,
-          markerFromCenter
-        );
-
-        const threshold = -0.8;
-
-        return dotProduct > threshold;
-      };
-
-      // Add new features with visibility filtering
+      // Add new features
       features.forEach((feature, index) => {
-        if (
-          feature?.geometry?.type === "Point" &&
-          feature.geometry.coordinates
-        ) {
+        if (feature?.geometry?.type === "Point") {
           const [longitude, latitude] = feature.geometry.coordinates;
           const isSelected = feature.properties?.isSelected;
-
-          // Check if the marker is on the visible hemisphere
           const isVisible = isPointOnVisibleHemisphere(longitude, latitude);
 
           if (isVisible && viewerRef.current) {
@@ -604,12 +514,11 @@ export function CesiumMap({
                   ? Cesium.Color.WHITE
                   : Cesium.Color.DARKBLUE,
                 outlineWidth: isSelected ? 3 : 2,
-                heightReference: Cesium.HeightReference.NONE, // Changed from CLAMP_TO_GROUND
-                disableDepthTestDistance: Number.POSITIVE_INFINITY, // Always visible
+                heightReference: Cesium.HeightReference.NONE,
+                disableDepthTestDistance: Number.POSITIVE_INFINITY,
               },
               label: feature.properties?.title
                 ? {
-                    // Changed from 'name' to 'title'
                     text: feature.properties.title,
                     font: isSelected ? "14pt sans-serif" : "12pt sans-serif",
                     pixelOffset: new Cesium.Cartesian2(
@@ -620,7 +529,7 @@ export function CesiumMap({
                     outlineColor: Cesium.Color.BLACK,
                     outlineWidth: 2,
                     style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-                    disableDepthTestDistance: Number.POSITIVE_INFINITY, // Always visible
+                    disableDepthTestDistance: Number.POSITIVE_INFINITY,
                   }
                 : undefined,
             });
@@ -637,7 +546,7 @@ export function CesiumMap({
     } catch (error) {
       console.error("Error updating features:", error);
     }
-  }, [features]);
+  }, [features, isPointOnVisibleHemisphere]);
 
   useEffect(() => {
     if (!viewerRef.current || !selectedFeatureId) return;
@@ -671,7 +580,6 @@ export function CesiumMap({
   const handleLocationSelect = useCallback((lat: number, lon: number) => {
     if (!viewerRef.current) return;
 
-    // Zoom to the selected location
     viewerRef.current.camera.flyTo({
       destination: Cesium.Cartesian3.fromDegrees(lon, lat, 1000000),
       duration: 2.0,
@@ -747,14 +655,13 @@ export function CesiumMap({
           ".cesium-viewer-toolbar": {
             display: "none !important",
           },
-          // Move Cesium navigation widget higher on mobile to avoid search panel overlap
           "@media (max-width: 959px)": {
             ".cesium-viewer .cesium-viewer-navigationContainer": {
-              bottom: "250px !important", // Lift navigation controls much higher on mobile
+              bottom: "250px !important",
               right: "15px !important",
             },
             ".cesium-navigationHelpButton-wrapper": {
-              bottom: "250px !important", // Lift navigation controls much higher on mobile
+              bottom: "250px !important",
             },
             ".cesium-viewer .cesium-navigationHelpButton-wrapper": {
               bottom: "250px !important",
@@ -794,14 +701,12 @@ export function CesiumMap({
         )}
       </div>
 
-      {/* Location Search */}
       <LocationSearch onLocationSelect={handleLocationSelect} />
 
-      {/* Control Panel */}
       <div
         style={{
           position: "absolute",
-          bottom: isMobile ? "100px" : "50px", // Much higher on mobile to avoid search bar overlap
+          bottom: isMobile ? "100px" : "50px",
           right: "20px",
           display: "flex",
           flexDirection: "column",
