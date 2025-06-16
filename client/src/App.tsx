@@ -27,22 +27,22 @@ export function App() {
   const [allFeatures, setAllFeatures] = useState<FeatureTypes[]>([]);
   const [is3DMode, setIs3DMode] = useState(true);
 
-  // Add handlers for map interactions
-  const handleMapClick = useCallback((coordinates: number[]) => {
-    // Clear selection when clicking empty space
+  const handleMapClick = useCallback(() => {
     setSelectedFeatureId(null);
   }, []);
 
-  const handleMapFeatureClick = useCallback((featureId: number) => {
-    handleFeatureSelect(featureId);
+  const handleFeatureSelect = useCallback((id: number) => {
+    setSelectedFeatureId(id);
   }, []);
 
-  // Toggle between 3D and 2D modes
+  const handleFeatureInfoClose = useCallback(() => {
+    setSelectedFeatureId(null);
+  }, []);
+
   const toggleMapMode = useCallback(() => {
     setIs3DMode((prev) => !prev);
   }, []);
 
-  // Fetch all features
   useEffect(() => {
     const fetchAllFeatures = async () => {
       try {
@@ -59,40 +59,26 @@ export function App() {
     fetchAllFeatures();
   }, [refreshTrigger]);
 
-  const handleFeatureSelect = useCallback(async (id: number) => {
-    setSelectedFeatureId(id);
-  }, []); // Simplified - no need to find and set feature object
-
-  const handleFeatureInfoClose = useCallback(() => {
-    setSelectedFeatureId(null);
-  }, []);
-
-  // Create map features for rendering
   const createMapFeatures = (): Feature<Geometry, GeoJsonProperties>[] => {
-    const features: Feature<Geometry, GeoJsonProperties>[] = [];
-
-    allFeatures.forEach((feature) => {
-      if (feature.location) {
-        features.push({
-          type: "Feature",
-          geometry: feature.location,
-          properties: {
-            id: feature.id,
-            // Remove title, author, and publication - these should not be on the map
-            featureType: "feature",
-            isSelected: feature.id === selectedFeatureId,
-          },
-        });
-      }
-    });
-
-    return features;
+    return allFeatures
+      .filter((feature) => feature.location)
+      .map((feature) => ({
+        type: "Feature",
+        geometry: feature.location,
+        properties: {
+          id: feature.id,
+          featureType: "feature",
+          isSelected: feature.id === selectedFeatureId,
+        },
+      }));
   };
 
+  const headerFooterColor = is3DMode
+    ? "rgba(126, 199, 129, 0.75)"
+    : "rgba(255, 179, 76, 0.75)";
+
   const headerStyle = {
-    backgroundColor: is3DMode
-      ? "rgba(126, 199, 129, 0.75)"
-      : "rgba(255, 179, 76, 0.75)",
+    backgroundColor: headerFooterColor,
     color: "black",
     boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
     position: "fixed" as const,
@@ -100,17 +86,15 @@ export function App() {
     left: 0,
     right: 0,
     zIndex: 1000,
-    height: isMobile ? "64px" : "40px", // Increased height on mobile to accommodate buttons
+    height: isMobile ? "64px" : "40px",
     display: "flex",
     alignItems: "center",
-    justifyContent: isMobile ? "center" : "space-between", // Center text on mobile
+    justifyContent: isMobile ? "center" : "space-between",
     paddingX: "16px",
   };
 
   const footerStyle = {
-    backgroundColor: is3DMode
-      ? "rgba(126, 199, 129, 0.75)"
-      : "rgba(255, 179, 76, 0.75)",
+    backgroundColor: headerFooterColor,
     color: "black",
     textAlign: "center" as const,
     boxShadow: "0 -2px 4px rgba(0,0,0,0.1)",
@@ -131,51 +115,31 @@ export function App() {
     zIndex: 100,
   };
 
-  const handleFeatureHover = (_featureId: number | null) => {
-    // Keep for potential future cursor changes
-  };
-
   return (
     <>
-      {/* Header */}
       <Box sx={headerStyle}>
-        {!isMobile && (
-          <>
-            {/* Empty left space for balanced layout on desktop */}
-            <Box sx={{ width: "40px" }} />
-
-            <Typography variant="overline" component="h1">
-              Maapallo.info
-            </Typography>
-
-            {/* Empty right space for balanced layout on desktop */}
-            <Box sx={{ width: "40px" }} />
-          </>
-        )}
-
-        {isMobile && (
-          <Typography variant="overline" component="h1">
-            Maapallo.info
-          </Typography>
-        )}
+        {!isMobile && <Box sx={{ width: "40px" }} />}
+        <Typography variant="overline" component="h1">
+          Maapallo.info
+        </Typography>
+        {!isMobile && <Box sx={{ width: "40px" }} />}
       </Box>
 
-      {/* 3D/2D Toggle Button - positioned below header in top right corner */}
       <Tooltip title={is3DMode ? "2D kartta" : "3D maapallo"}>
         <IconButton
           onClick={toggleMapMode}
           size="small"
           sx={{
             position: "absolute",
-            top: isMobile ? "8px" : "64px", // On top of header on mobile, below header on desktop
+            top: isMobile ? "8px" : "64px",
             right: "20px",
             zIndex: 1001,
             backgroundColor: "rgba(255, 255, 255, 0.9)",
             color: is3DMode ? "#ffb34c" : "#4caf50",
-            fontSize: isMobile ? "18px" : "24px", // Smaller on mobile
+            fontSize: isMobile ? "18px" : "24px",
             fontWeight: "bold",
-            width: isMobile ? "48px" : "64px", // Smaller on mobile
-            height: isMobile ? "48px" : "64px", // Smaller on mobile
+            width: isMobile ? "48px" : "64px",
+            height: isMobile ? "48px" : "64px",
             "&:hover": {
               backgroundColor: "rgba(255, 255, 255, 1)",
               color: is3DMode ? "#e89d2b" : "#388e3c",
@@ -187,15 +151,7 @@ export function App() {
         </IconButton>
       </Tooltip>
 
-      {/* Main content area */}
-      <Box
-        sx={{
-          position: "relative",
-          height: "100vh",
-          overflow: "hidden",
-        }}
-      >
-        {/* Fullscreen map */}
+      <Box sx={{ position: "relative", height: "100vh", overflow: "hidden" }}>
         <Box
           sx={{
             position: "absolute",
@@ -211,20 +167,19 @@ export function App() {
               features={createMapFeatures()}
               selectedFeatureId={selectedFeatureId}
               onMapClick={handleMapClick}
-              onFeatureClick={handleMapFeatureClick}
+              onFeatureClick={handleFeatureSelect}
             />
           ) : (
             <Map
               features={createMapFeatures()}
               onMapClick={handleMapClick}
-              onFeatureClick={handleMapFeatureClick}
-              onFeatureHover={handleFeatureHover} // Keep for cursor changes
+              onFeatureClick={handleFeatureSelect}
+              onFeatureHover={() => {}}
               selectedFeatureId={selectedFeatureId}
             />
           )}
         </Box>
 
-        {/* Feature List Panel - Hidden on mobile */}
         {!isMobile && (
           <Paper
             elevation={8}
@@ -232,10 +187,9 @@ export function App() {
               position: "absolute",
               top: 56,
               left: 16,
-              width: 320, // Fixed width comment
-              height: 880, // Fixed height comment
+              width: 320,
+              height: 880,
               ...panelStyle,
-              zIndex: 100,
             }}
           >
             <FeatureList
@@ -247,7 +201,6 @@ export function App() {
           </Paper>
         )}
 
-        {/* Mobile Menu - Only visible on mobile */}
         <MobileMenu
           onSelectFeature={handleFeatureSelect}
           selectedFeatureId={selectedFeatureId}
@@ -255,19 +208,17 @@ export function App() {
           is3DMode={is3DMode}
         />
 
-        {/* Feature Info Panel - Show ONLY on selection (click), not hover */}
         {selectedFeatureId && (
           <Paper
             elevation={8}
             sx={{
               position: "absolute",
-              top: isMobile ? 80 : 140, // Account for new mobile header height (64px + margin)
-              right: isMobile ? 16 : 100, // Closer to edge on mobile
-              left: isMobile ? 16 : "auto", // Full width on mobile
-              width: isMobile ? "auto" : 600, // Auto width on mobile
-              maxHeight: isMobile ? "60vh" : 500, // Limit height on mobile
+              top: isMobile ? 80 : 140,
+              right: isMobile ? 16 : 100,
+              left: isMobile ? 16 : "auto",
+              width: isMobile ? "auto" : 600,
+              maxHeight: isMobile ? "60vh" : 500,
               ...panelStyle,
-              zIndex: 100,
             }}
           >
             <FeatureInfo
@@ -278,7 +229,6 @@ export function App() {
         )}
       </Box>
 
-      {/* Footer */}
       <Box sx={footerStyle}>
         <Typography variant="caption">
           Kehitysmaantieteen yhdistys 2025
