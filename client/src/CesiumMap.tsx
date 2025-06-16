@@ -12,7 +12,7 @@ declare const CESIUM_BASE_URL: string;
 // Set up Cesium base URL
 if (typeof window !== "undefined") {
   try {
-    // Set the base URL for Cesium assets
+    // Set the base URL for Cesium
     (window as any).CESIUM_BASE_URL =
       typeof CESIUM_BASE_URL !== "undefined"
         ? CESIUM_BASE_URL
@@ -36,8 +36,6 @@ if (
   console.warn(
     "Please add VITE_CESIUM_ION_TOKEN to your .env file with your token from https://cesium.com/ion/tokens"
   );
-} else {
-  console.log("Cesium Ion token loaded successfully");
 }
 
 // Set the Cesium Ion access token
@@ -46,7 +44,7 @@ if (CESIUM_ION_TOKEN && CESIUM_ION_TOKEN !== "YOUR_NEW_CESIUM_ION_TOKEN_HERE") {
 }
 
 interface Props {
-  features: Feature<Geometry, GeoJsonProperties>[]; // Fixed!
+  features: Feature<Geometry, GeoJsonProperties>[];
   onMapClick?: (coordinates: number[]) => void;
   selectedFeatureId?: number | null;
   onFeatureClick?: (featureId: number) => void;
@@ -325,7 +323,7 @@ export function CesiumMap({
       }
     },
     [setupCameraControls, loadCountryBoundaries, onMapClick, onFeatureClick]
-  ); // Remove features dependency
+  );
 
   // Add a ref to track features and camera change timeout
   const featuresRef = useRef(features);
@@ -359,23 +357,8 @@ export function CesiumMap({
       const dotProduct = Cesium.Cartesian3.dot(
         cameraFromCenter,
         markerFromCenter
-      ); // Very permissive threshold - only hide markers that are clearly on the opposite side
-      const threshold = -0.8; // Much more permissive
-
-      // Debug log for Ecuador location
-      if (
-        Math.abs(longitude - -78.6473) < 0.01 &&
-        Math.abs(latitude - -1.2225) < 0.01
-      ) {
-        console.log("Ecuador marker debug (global):", {
-          longitude,
-          latitude,
-          dotProduct,
-          threshold,
-          cameraHeight,
-          isVisible: dotProduct > threshold,
-        });
-      }
+      );
+      const threshold = -0.8;
 
       return dotProduct > threshold;
     },
@@ -431,17 +414,7 @@ export function CesiumMap({
   // Camera control functions
   const handleZoom = useCallback(
     (zoomIn: boolean) => {
-      console.log(
-        "Zoom button clicked:",
-        zoomIn,
-        "viewerReady:",
-        viewerReady,
-        "viewer exists:",
-        !!viewerRef.current
-      );
-
       if (!viewerRef.current) {
-        console.log("No viewer reference available");
         return;
       }
 
@@ -450,8 +423,6 @@ export function CesiumMap({
       const newHeight = zoomIn
         ? Math.max(currentHeight * 0.5, ZOOM_LIMITS.min)
         : Math.min(currentHeight * 2, ZOOM_LIMITS.max);
-
-      console.log("Executing zoom from", currentHeight, "to", newHeight);
 
       camera.flyTo({
         destination: Cesium.Cartesian3.fromRadians(
@@ -598,23 +569,7 @@ export function CesiumMap({
           markerFromCenter
         );
 
-        // Very permissive threshold - only hide markers that are clearly on the opposite side
-        const threshold = -0.8; // Much more permissive
-
-        // Debug log for Ecuador location
-        if (
-          Math.abs(longitude - -78.6473) < 0.01 &&
-          Math.abs(latitude - -1.2225) < 0.01
-        ) {
-          console.log("Ecuador marker debug:", {
-            longitude,
-            latitude,
-            dotProduct,
-            threshold,
-            cameraHeight,
-            isVisible: dotProduct > threshold,
-          });
-        }
+        const threshold = -0.8;
 
         return dotProduct > threshold;
       };
@@ -628,42 +583,17 @@ export function CesiumMap({
           const [longitude, latitude] = feature.geometry.coordinates;
           const isSelected = feature.properties?.isSelected;
 
-          // Debug log for Ecuador location
-          if (
-            Math.abs(longitude - -78.6473) < 0.01 &&
-            Math.abs(latitude - -1.2225) < 0.01
-          ) {
-            console.log("Ecuador marker found in features:", {
-              longitude,
-              latitude,
-              title: feature.properties?.title,
-              index,
-            });
-          }
-
           // Check if the marker is on the visible hemisphere
           const isVisible = isPointOnVisibleHemisphere(longitude, latitude);
 
-          // For debugging, always show the Ecuador marker for now
-          const forceVisible =
-            Math.abs(longitude - -78.6473) < 0.01 &&
-            Math.abs(latitude - -1.2225) < 0.01;
-
-          if ((isVisible || forceVisible) && viewerRef.current) {
-            console.log(`Adding marker ${index}:`, {
-              longitude,
-              latitude,
-              isVisible,
-              forceVisible,
-            });
-
+          if (isVisible && viewerRef.current) {
             viewerRef.current.entities.add({
               id: `feature-${index}`,
               position: Cesium.Cartesian3.fromDegrees(
                 longitude,
                 latitude,
                 100000
-              ), // Add height: 100km above ground
+              ),
               point: {
                 pixelSize: isSelected ? 25 : 15,
                 color: isSelected ? Cesium.Color.RED : Cesium.Color.ORANGE,

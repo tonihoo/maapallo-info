@@ -29,7 +29,6 @@ export function App() {
 
   // Add handlers for map interactions
   const handleMapClick = useCallback((coordinates: number[]) => {
-    console.log("Map clicked at coordinates:", coordinates);
     // Clear selection when clicking empty space
     setSelectedFeatureId(null);
   }, []);
