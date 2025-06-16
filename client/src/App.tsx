@@ -1,17 +1,28 @@
 import { useState, useCallback, useEffect } from "react";
-import { Box, Paper, Typography, IconButton, Tooltip } from "@mui/material";
+import {
+  Box,
+  Paper,
+  Typography,
+  IconButton,
+  Tooltip,
+  useMediaQuery,
+  useTheme,
+} from "@mui/material";
 import { CesiumMap } from "./CesiumMap";
 import { Map } from "./Map";
 import FeatureList from "./FeatureList";
 import { FeatureInfo } from "./FeatureInfo";
+import { MobileMenu } from "./MobileMenu";
 import { FeatureTypes } from "./types/featureTypes";
 import { Feature, Geometry, GeoJsonProperties } from "geojson";
 
 export function App() {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
   const [selectedFeatureId, setSelectedFeatureId] = useState<number | null>(
     null
   );
-  const [hoveredFeatureId, setHoveredFeatureId] = useState<number | null>(null); // Keep for cursor changes
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [allFeatures, setAllFeatures] = useState<FeatureTypes[]>([]);
   const [is3DMode, setIs3DMode] = useState(true);
@@ -31,11 +42,6 @@ export function App() {
   const toggleMapMode = useCallback(() => {
     setIs3DMode((prev) => !prev);
   }, []);
-
-  const handleFeatureAdded = useCallback(async (newFeature: FeatureTypes) => {
-    setRefreshTrigger((prev) => prev + 1);
-    setSelectedFeatureId(newFeature.id!);
-  }, []); // Removed setSelectedFeature references
 
   // Fetch all features
   useEffect(() => {
@@ -95,10 +101,10 @@ export function App() {
     left: 0,
     right: 0,
     zIndex: 1000,
-    height: "40px",
+    height: isMobile ? "64px" : "40px", // Increased height on mobile to accommodate buttons
     display: "flex",
     alignItems: "center",
-    justifyContent: "space-between",
+    justifyContent: isMobile ? "center" : "space-between", // Center text on mobile
     paddingX: "16px",
   };
 
@@ -126,23 +132,33 @@ export function App() {
     zIndex: 100,
   };
 
-  const handleFeatureHover = (featureId: number | null) => {
-    setHoveredFeatureId(featureId); // Only for cursor changes, not for showing info panel
+  const handleFeatureHover = (_featureId: number | null) => {
+    // Keep for potential future cursor changes
   };
 
   return (
     <>
       {/* Header */}
       <Box sx={headerStyle}>
-        {/* Empty left space for balanced layout */}
-        <Box sx={{ width: "40px" }} />
+        {!isMobile && (
+          <>
+            {/* Empty left space for balanced layout on desktop */}
+            <Box sx={{ width: "40px" }} />
 
-        <Typography variant="overline" component="h1">
-          Maapallo.info
-        </Typography>
+            <Typography variant="overline" component="h1">
+              Maapallo.info
+            </Typography>
 
-        {/* Empty right space for balanced layout */}
-        <Box sx={{ width: "40px" }} />
+            {/* Empty right space for balanced layout on desktop */}
+            <Box sx={{ width: "40px" }} />
+          </>
+        )}
+
+        {isMobile && (
+          <Typography variant="overline" component="h1">
+            Maapallo.info
+          </Typography>
+        )}
       </Box>
 
       {/* 3D/2D Toggle Button - positioned below header in top right corner */}
@@ -152,15 +168,15 @@ export function App() {
           size="small"
           sx={{
             position: "absolute",
-            top: "64px", // Below the header (header height is approximately 56px + some margin)
+            top: isMobile ? "8px" : "64px", // On top of header on mobile, below header on desktop
             right: "20px",
             zIndex: 1001,
             backgroundColor: "rgba(255, 255, 255, 0.9)",
             color: is3DMode ? "#ffb34c" : "#4caf50",
-            fontSize: "24px", // Doubled from 12px
+            fontSize: isMobile ? "18px" : "24px", // Smaller on mobile
             fontWeight: "bold",
-            width: "64px", // Doubled from 32px
-            height: "64px", // Doubled from 32px
+            width: isMobile ? "48px" : "64px", // Smaller on mobile
+            height: isMobile ? "48px" : "64px", // Smaller on mobile
             "&:hover": {
               backgroundColor: "rgba(255, 255, 255, 1)",
               color: is3DMode ? "#e89d2b" : "#388e3c",
@@ -209,26 +225,36 @@ export function App() {
           )}
         </Box>
 
-        {/* Feature List Panel */}
-        <Paper
-          elevation={8}
-          sx={{
-            position: "absolute",
-            top: 56,
-            left: 16,
-            width: 320, // Fixed width comment
-            height: 880, // Fixed height comment
-            ...panelStyle,
-            zIndex: 100,
-          }}
-        >
-          <FeatureList
-            onSelectFeature={handleFeatureSelect}
-            selectedFeatureId={selectedFeatureId}
-            refreshTrigger={refreshTrigger}
-            is3DMode={is3DMode}
-          />
-        </Paper>
+        {/* Feature List Panel - Hidden on mobile */}
+        {!isMobile && (
+          <Paper
+            elevation={8}
+            sx={{
+              position: "absolute",
+              top: 56,
+              left: 16,
+              width: 320, // Fixed width comment
+              height: 880, // Fixed height comment
+              ...panelStyle,
+              zIndex: 100,
+            }}
+          >
+            <FeatureList
+              onSelectFeature={handleFeatureSelect}
+              selectedFeatureId={selectedFeatureId}
+              refreshTrigger={refreshTrigger}
+              is3DMode={is3DMode}
+            />
+          </Paper>
+        )}
+
+        {/* Mobile Menu - Only visible on mobile */}
+        <MobileMenu
+          onSelectFeature={handleFeatureSelect}
+          selectedFeatureId={selectedFeatureId}
+          refreshTrigger={refreshTrigger}
+          is3DMode={is3DMode}
+        />
 
         {/* Feature Info Panel - Show ONLY on selection (click), not hover */}
         {selectedFeatureId && (
@@ -236,10 +262,11 @@ export function App() {
             elevation={8}
             sx={{
               position: "absolute",
-              top: 140, // Moved back up since search bar is now at bottom
-              right: 100,
-              width: 600,
-              maxHeight: 500,
+              top: isMobile ? 80 : 140, // Account for new mobile header height (64px + margin)
+              right: isMobile ? 16 : 100, // Closer to edge on mobile
+              left: isMobile ? 16 : "auto", // Full width on mobile
+              width: isMobile ? "auto" : 600, // Auto width on mobile
+              maxHeight: isMobile ? "60vh" : 500, // Limit height on mobile
               ...panelStyle,
               zIndex: 100,
             }}
