@@ -32,7 +32,7 @@ interface Props {
 
 // Constants for 2D map controls
 const INITIAL_VIEW = {
-  center: [25, 20], // Horn of Africa in lon/lat
+  center: [-13, 18], // Horn of Africa in lon/lat
   zoom: 3,
 };
 
