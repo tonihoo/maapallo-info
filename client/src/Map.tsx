@@ -1,4 +1,4 @@
-import { GlobalStyles } from "@mui/material";
+import { GlobalStyles, useMediaQuery, useTheme } from "@mui/material";
 import { View, Map as OlMap, Feature } from "ol";
 import { GeoJSON } from "ol/format";
 import TileLayer from "ol/layer/Tile";
@@ -10,10 +10,14 @@ import Fill from "ol/style/Fill";
 import Stroke from "ol/style/Stroke";
 import Style from "ol/style/Style";
 import { ReactNode, useEffect, useRef, useState, useCallback } from "react";
-import { FeatureLike } from 'ol/Feature';
-import { Zoom } from 'ol/control';
-import { toLonLat, fromLonLat } from 'ol/proj';
-import { Feature as GeoJSONFeature, Geometry, GeoJsonProperties } from 'geojson';
+import { FeatureLike } from "ol/Feature";
+import { Zoom } from "ol/control";
+import { toLonLat, fromLonLat } from "ol/proj";
+import {
+  Feature as GeoJSONFeature,
+  Geometry,
+  GeoJsonProperties,
+} from "geojson";
 import { CoordinatesDisplay } from "./CoordinatesDisplay";
 import { LocationSearch } from "./LocationSearch";
 
@@ -29,41 +33,55 @@ interface Props {
 // Constants for 2D map controls
 const INITIAL_VIEW = {
   center: [25, 20], // Horn of Africa in lon/lat
-  zoom: 3
+  zoom: 3,
 };
 
 const ZOOM_LIMITS = {
   min: 1,
-  max: 18
+  max: 18,
 };
 
 const ANIMATION_DURATIONS = {
   zoom: 500,
   rotate: 300,
-  home: 1500
+  home: 1500,
 };
 
-export function Map({ children, onMapClick, onFeatureClick, onFeatureHover, features = [], selectedFeatureId }: Props) {
+export function Map({
+  children,
+  onMapClick,
+  onFeatureClick,
+  onFeatureHover,
+  features = [],
+  selectedFeatureId,
+}: Props) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const [mouseCoordinates, setMouseCoordinates] = useState<{ lon: number; lat: number } | null>(null);
+  const [mouseCoordinates, setMouseCoordinates] = useState<{
+    lon: number;
+    lat: number;
+  } | null>(null);
+
+  // Add mobile detection
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   const styleFunction = (feature: FeatureLike) => {
-    const featureType = feature.get('featureType');
-    const isSelected = feature.get('id') === selectedFeatureId;
+    const featureType = feature.get("featureType");
+    const isSelected = feature.get("id") === selectedFeatureId;
 
-    if (featureType === 'feature') {
+    if (featureType === "feature") {
       return new Style({
         image: new Circle({
           radius: isSelected ? 12 : 8,
           fill: new Fill({ color: isSelected ? "#ff0000" : "#ff8c00" }),
           stroke: new Stroke({
             color: isSelected ? "#ffffff" : "#000080",
-            width: isSelected ? 3 : 2
+            width: isSelected ? 3 : 2,
           }),
         }),
         // Completely remove any text rendering
       });
-    } else if (featureType === 'clickLocation') {
+    } else if (featureType === "clickLocation") {
       return new Style({
         image: new Circle({
           radius: 8,
@@ -89,7 +107,7 @@ export function Map({ children, onMapClick, onFeatureClick, onFeatureHover, feat
     return new View({
       center: fromLonLat(INITIAL_VIEW.center), // Center on Horn of Africa in lon/lat
       zoom: INITIAL_VIEW.zoom,
-      projection: 'EPSG:3857', // Web Mercator for global view
+      projection: "EPSG:3857", // Web Mercator for global view
       minZoom: ZOOM_LIMITS.min,
       maxZoom: ZOOM_LIMITS.max,
     });
@@ -103,8 +121,8 @@ export function Map({ children, onMapClick, onFeatureClick, onFeatureHover, feat
       target: "",
       controls: [
         new Zoom({
-          className: 'ol-zoom'
-        })
+          className: "ol-zoom",
+        }),
       ],
       view: olView,
       keyboardEventTarget: document,
@@ -121,47 +139,57 @@ export function Map({ children, onMapClick, onFeatureClick, onFeatureHover, feat
   });
 
   // Handle location search selection
-  const handleLocationSelect = useCallback((lat: number, lon: number) => {
-    // Zoom to the selected location
-    olView.animate({
-      center: fromLonLat([lon, lat]),
-      zoom: 12,
-      duration: 1000
-    });
-  }, [olView]);
+  const handleLocationSelect = useCallback(
+    (lat: number, lon: number) => {
+      // Zoom to the selected location
+      olView.animate({
+        center: fromLonLat([lon, lat]),
+        zoom: 12,
+        duration: 1000,
+      });
+    },
+    [olView]
+  );
 
   // Control functions
-  const handleZoom = useCallback((zoomIn: boolean) => {
-    const currentZoom = olView.getZoom() || INITIAL_VIEW.zoom;
-    const newZoom = zoomIn
-      ? Math.min(currentZoom + 1, ZOOM_LIMITS.max)
-      : Math.max(currentZoom - 1, ZOOM_LIMITS.min);
+  const handleZoom = useCallback(
+    (zoomIn: boolean) => {
+      const currentZoom = olView.getZoom() || INITIAL_VIEW.zoom;
+      const newZoom = zoomIn
+        ? Math.min(currentZoom + 1, ZOOM_LIMITS.max)
+        : Math.max(currentZoom - 1, ZOOM_LIMITS.min);
 
-    olView.animate({
-      zoom: newZoom,
-      duration: ANIMATION_DURATIONS.zoom
-    });
-  }, [olView]);
+      olView.animate({
+        zoom: newZoom,
+        duration: ANIMATION_DURATIONS.zoom,
+      });
+    },
+    [olView]
+  );
 
-  const handleRotate = useCallback((direction: 'left' | 'right') => {
-    const currentRotation = olView.getRotation();
-    const rotationIncrement = Math.PI / 12; // 15 degrees in radians
-    const newRotation = direction === 'left'
-      ? currentRotation - rotationIncrement
-      : currentRotation + rotationIncrement;
+  const handleRotate = useCallback(
+    (direction: "left" | "right") => {
+      const currentRotation = olView.getRotation();
+      const rotationIncrement = Math.PI / 12; // 15 degrees in radians
+      const newRotation =
+        direction === "left"
+          ? currentRotation - rotationIncrement
+          : currentRotation + rotationIncrement;
 
-    olView.animate({
-      rotation: newRotation,
-      duration: ANIMATION_DURATIONS.rotate
-    });
-  }, [olView]);
+      olView.animate({
+        rotation: newRotation,
+        duration: ANIMATION_DURATIONS.rotate,
+      });
+    },
+    [olView]
+  );
 
   const handleHome = useCallback(() => {
     olView.animate({
       center: fromLonLat(INITIAL_VIEW.center),
       zoom: INITIAL_VIEW.zoom,
       rotation: 0,
-      duration: ANIMATION_DURATIONS.home
+      duration: ANIMATION_DURATIONS.home,
     });
   }, [olView]);
 
@@ -175,11 +203,14 @@ export function Map({ children, onMapClick, onFeatureClick, onFeatureHover, feat
     const clickHandler = (event: any) => {
       try {
         // Check if a feature was clicked
-        const feature = olMap.forEachFeatureAtPixel(event.pixel, (feature) => feature);
+        const feature = olMap.forEachFeatureAtPixel(
+          event.pixel,
+          (feature) => feature
+        );
 
-        if (feature && feature.get('featureType') === 'feature') {
+        if (feature && feature.get("featureType") === "feature") {
           // Feature clicked
-          const featureId = feature.get('id');
+          const featureId = feature.get("id");
           if (featureId && onFeatureClick) {
             onFeatureClick(featureId);
 
@@ -199,7 +230,7 @@ export function Map({ children, onMapClick, onFeatureClick, onFeatureHover, feat
           onMapClick(coordinates);
         }
       } catch (error) {
-        console.error('Error in click handler:', error);
+        console.error("Error in click handler:", error);
       }
     };
 
@@ -208,24 +239,27 @@ export function Map({ children, onMapClick, onFeatureClick, onFeatureHover, feat
       try {
         if (!event.coordinate) return;
 
-        const feature = olMap.forEachFeatureAtPixel(event.pixel, (feature) => feature);
+        const feature = olMap.forEachFeatureAtPixel(
+          event.pixel,
+          (feature) => feature
+        );
 
         // Update mouse coordinates
         const coordinates = toLonLat(event.coordinate);
         setMouseCoordinates({
           lon: Number(coordinates[0].toFixed(4)),
-          lat: Number(coordinates[1].toFixed(4))
+          lat: Number(coordinates[1].toFixed(4)),
         });
 
-        if (feature && feature.get('featureType') === 'feature') {
-          const featureId = feature.get('id');
+        if (feature && feature.get("featureType") === "feature") {
+          const featureId = feature.get("id");
           if (onFeatureHover) {
             onFeatureHover(featureId);
           }
           // Change cursor to pointer when hovering over features
           const viewport = olMap.getViewport();
           if (viewport) {
-            viewport.style.cursor = 'pointer';
+            viewport.style.cursor = "pointer";
           }
         } else {
           if (onFeatureHover) {
@@ -234,11 +268,11 @@ export function Map({ children, onMapClick, onFeatureClick, onFeatureHover, feat
           // Reset cursor when not hovering over features
           const viewport = olMap.getViewport();
           if (viewport) {
-            viewport.style.cursor = '';
+            viewport.style.cursor = "";
           }
         }
       } catch (error) {
-        console.error('Error in pointer move handler:', error);
+        console.error("Error in pointer move handler:", error);
       }
     };
 
@@ -272,14 +306,14 @@ export function Map({ children, onMapClick, onFeatureClick, onFeatureHover, feat
       const olFeatures = features.map((geoJsonFeature) => {
         const olFeature = new Feature({
           geometry: new GeoJSON().readGeometry(geoJsonFeature.geometry, {
-            dataProjection: 'EPSG:4326',
-            featureProjection: 'EPSG:3857'
+            dataProjection: "EPSG:4326",
+            featureProjection: "EPSG:3857",
           }),
         });
 
         // Copy properties to the OpenLayers feature
         if (geoJsonFeature.properties) {
-          Object.keys(geoJsonFeature.properties).forEach(key => {
+          Object.keys(geoJsonFeature.properties).forEach((key) => {
             olFeature.set(key, geoJsonFeature.properties?.[key]);
           });
         }
@@ -289,7 +323,7 @@ export function Map({ children, onMapClick, onFeatureClick, onFeatureHover, feat
 
       source.addFeatures(olFeatures);
     } catch (error) {
-      console.error('Error updating features:', error);
+      console.error("Error updating features:", error);
     }
   }, [features, olMap]);
 
@@ -298,11 +332,11 @@ export function Map({ children, onMapClick, onFeatureClick, onFeatureHover, feat
     try {
       if (!selectedFeatureId) return;
 
-      const selectedFeature = features.find(feature =>
-        feature.properties?.id === selectedFeatureId
+      const selectedFeature = features.find(
+        (feature) => feature.properties?.id === selectedFeatureId
       );
 
-      if (selectedFeature?.geometry?.type === 'Point') {
+      if (selectedFeature?.geometry?.type === "Point") {
         const [lon, lat] = selectedFeature.geometry.coordinates;
         olView.animate({
           center: fromLonLat([lon, lat]),
@@ -311,7 +345,7 @@ export function Map({ children, onMapClick, onFeatureClick, onFeatureHover, feat
         });
       }
     } catch (error) {
-      console.error('Error zooming to feature:', error);
+      console.error("Error zooming to feature:", error);
     }
   }, [selectedFeatureId, features, olView]);
 
@@ -327,13 +361,13 @@ export function Map({ children, onMapClick, onFeatureClick, onFeatureHover, feat
     fontWeight: "bold",
     display: "flex",
     alignItems: "center",
-    justifyContent: "center"
+    justifyContent: "center",
   } as const;
 
   const smallButtonStyle = {
     ...buttonStyle,
     fontSize: "16px",
-    fontWeight: "normal"
+    fontWeight: "normal",
   } as const;
 
   return (
@@ -367,20 +401,48 @@ export function Map({ children, onMapClick, onFeatureClick, onFeatureHover, feat
       <LocationSearch onLocationSelect={handleLocationSelect} />
 
       {/* Control Panel */}
-      <div style={{
-        position: "absolute",
-        bottom: "50px",
-        right: "20px",
-        display: "flex",
-        flexDirection: "column",
-        gap: "8px",
-        zIndex: 1000
-      }}>
-        <button onClick={handleHome} style={smallButtonStyle} title="View Home">🏠</button>
-        <button onClick={() => handleZoom(true)} style={buttonStyle} title="Zoom In">+</button>
-        <button onClick={() => handleZoom(false)} style={buttonStyle} title="Zoom Out">−</button>
-        <button onClick={() => handleRotate('left')} style={smallButtonStyle} title="Rotate Left">↶</button>
-        <button onClick={() => handleRotate('right')} style={smallButtonStyle} title="Rotate Right">↷</button>
+      <div
+        style={{
+          position: "absolute",
+          bottom: isMobile ? "250px" : "50px", // Much higher on mobile to avoid search bar overlap
+          right: "20px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "8px",
+          zIndex: 1000,
+        }}
+      >
+        <button onClick={handleHome} style={smallButtonStyle} title="View Home">
+          🏠
+        </button>
+        <button
+          onClick={() => handleZoom(true)}
+          style={buttonStyle}
+          title="Zoom In"
+        >
+          +
+        </button>
+        <button
+          onClick={() => handleZoom(false)}
+          style={buttonStyle}
+          title="Zoom Out"
+        >
+          −
+        </button>
+        <button
+          onClick={() => handleRotate("left")}
+          style={smallButtonStyle}
+          title="Rotate Left"
+        >
+          ↶
+        </button>
+        <button
+          onClick={() => handleRotate("right")}
+          style={smallButtonStyle}
+          title="Rotate Right"
+        >
+          ↷
+        </button>
       </div>
 
       <CoordinatesDisplay coordinates={mouseCoordinates} />
