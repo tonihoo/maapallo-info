@@ -404,7 +404,7 @@ export function Map({
       <div
         style={{
           position: "absolute",
-          bottom: isMobile ? "250px" : "50px", // Much higher on mobile to avoid search bar overlap
+          bottom: isMobile ? "100px" : "50px", // Much higher on mobile to avoid search bar overlap
           right: "20px",
           display: "flex",
           flexDirection: "column",

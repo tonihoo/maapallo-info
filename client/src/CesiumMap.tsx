@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import * as Cesium from "cesium";
-import { GlobalStyles } from "@mui/material";
+import { GlobalStyles, useMediaQuery, useTheme } from "@mui/material";
 import { Feature, Geometry, GeoJsonProperties } from "geojson";
 import { CoordinatesDisplay } from "./CoordinatesDisplay";
 import { LocationSearch } from "./LocationSearch";
@@ -81,6 +81,9 @@ export function CesiumMap({
   selectedFeatureId,
   onFeatureClick,
 }: Props) {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
   const viewerRef = useRef<Cesium.Viewer | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -798,7 +801,7 @@ export function CesiumMap({
       <div
         style={{
           position: "absolute",
-          bottom: "50px",
+          bottom: isMobile ? "100px" : "50px", // Much higher on mobile to avoid search bar overlap
           right: "20px",
           display: "flex",
           flexDirection: "column",
