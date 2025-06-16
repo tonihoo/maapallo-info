@@ -44,7 +44,9 @@ export default function FeatureList({
       {/* Changed to use 100% height instead of viewport calculations */}
       <Box
         sx={{
-          backgroundColor: is3DMode ? "#ffe7c5" : "#388e3c",
+          backgroundColor: is3DMode
+            ? "rgba(255, 179, 76, 0.75)"
+            : "rgba(126, 199, 129, 0.75)",
           height: "3em",
           display: "flex",
           zIndex: 2,
@@ -52,7 +54,7 @@ export default function FeatureList({
           alignItems: "center",
         }}
       >
-        <Typography sx={{ color: is3DMode ? "darkslategrey" : "white" }}>
+        <Typography sx={{ color: "darkslategrey" }}>
           Maapallo-lehden artikkeleita
         </Typography>
       </Box>
