@@ -202,31 +202,38 @@ export function useCesiumViewer({
       handler.setInputAction((click: any) => {
         const pickedObject = viewer.scene.pick(click.position);
 
-        if (pickedObject?.id?.toString().startsWith("feature-")) {
-          const featureIndex = parseInt(
-            pickedObject.id.toString().replace("feature-", "")
-          );
-          const feature = featuresRef.current[featureIndex];
+        if (pickedObject && pickedObject.id) {
+          const entity = pickedObject.id;
 
-          if (feature?.properties?.id) {
-            onFeatureClick?.(feature.properties.id);
+          // Check if this entity has an ID that starts with "feature-"
+          if (
+            entity.id &&
+            typeof entity.id === "string" &&
+            entity.id.startsWith("feature-")
+          ) {
+            const featureIndex = parseInt(entity.id.replace("feature-", ""));
+            const feature = featuresRef.current[featureIndex];
 
-            if (feature.geometry?.type === "Point") {
-              const [longitude, latitude] = feature.geometry.coordinates;
-              viewer.camera.flyTo({
-                destination: Cesium.Cartesian3.fromDegrees(
-                  longitude,
-                  latitude,
-                  50000
-                ),
-                orientation: {
-                  heading: viewer.scene.camera.heading,
-                  pitch: viewer.scene.camera.pitch,
-                  roll: viewer.scene.camera.roll,
-                },
-                duration: 1.5,
-                easingFunction: Cesium.EasingFunction.CUBIC_IN_OUT,
-              });
+            if (feature?.properties?.id) {
+              onFeatureClick?.(feature.properties.id);
+
+              if (feature.geometry?.type === "Point") {
+                const [longitude, latitude] = feature.geometry.coordinates;
+                viewer.camera.flyTo({
+                  destination: Cesium.Cartesian3.fromDegrees(
+                    longitude,
+                    latitude,
+                    50000
+                  ),
+                  orientation: {
+                    heading: viewer.scene.camera.heading,
+                    pitch: viewer.scene.camera.pitch,
+                    roll: viewer.scene.camera.roll,
+                  },
+                  duration: 1.5,
+                  easingFunction: Cesium.EasingFunction.CUBIC_IN_OUT,
+                });
+              }
             }
           }
         } else if (onMapClick) {

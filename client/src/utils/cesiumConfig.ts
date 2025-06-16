@@ -49,7 +49,17 @@ export const INITIAL_CAMERA = {
 };
 
 export const LIMITS_AND_DURATIONS = {
-  zoom: { min: 0, max: 15000000 },
-  animation: { zoom: 0.8, tilt: 0.5, rotate: 0.5, home: 2.0 },
-  visibility: { threshold: -0.8 },
+  zoom: {
+    min: 1000,
+    max: 50000000,
+  },
+  animation: {
+    zoom: 1.0,
+    tilt: 0.5,
+    rotate: 0.5,
+    home: 2.0,
+  },
+  visibility: {
+    threshold: 0.2, // More strict threshold for hemisphere visibility
+  },
 };

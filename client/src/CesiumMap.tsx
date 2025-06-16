@@ -34,7 +34,8 @@ export function CesiumMap({
     viewerReady,
     mouseCoordinates,
     initializeViewer,
-  } = useCesiumViewer({ onMapClick: undefined, onFeatureClick: undefined });
+    isPointOnVisibleHemisphere,
+  } = useCesiumViewer({ onMapClick, onFeatureClick }); // Pass the real callbacks
 
   const {
     handleZoom,
@@ -59,104 +60,8 @@ export function CesiumMap({
     featuresRef.current = features;
   }, [features]);
 
-  // Temporarily show all markers to test
-  const isPointOnVisibleHemisphere = useCallback(
-    (longitude: number, latitude: number): boolean => {
-      return true; // Show all markers for testing
-    },
-    []
-  );
-
-  // Remove the entire camera change listener since we're not using hemisphere visibility
-  // useEffect(() => { ... camera change logic ... }, [viewerReady, isPointOnVisibleHemisphere, features]);
-
-  // Add click handler for markers - make sure this is the only click handler
-  useEffect(() => {
-    if (!viewerRef.current || !viewerReady) return;
-
-    console.log("Setting up click handler...");
-
-    const handler = new Cesium.ScreenSpaceEventHandler(
-      viewerRef.current.scene.canvas
-    );
-
-    handler.setInputAction((click: any) => {
-      console.log("Click detected at position:", click.position);
-      const pickedObject = viewerRef.current?.scene.pick(click.position);
-      console.log("Picked object:", pickedObject);
-
-      if (pickedObject && pickedObject.id) {
-        const entity = pickedObject.id;
-        console.log("Entity:", entity);
-        console.log("Entity ID property:", entity.id);
-
-        // Check if this entity has an ID that starts with "feature-"
-        if (
-          entity.id &&
-          typeof entity.id === "string" &&
-          entity.id.startsWith("feature-")
-        ) {
-          console.log("Feature clicked!");
-          const featureIndex = parseInt(entity.id.replace("feature-", ""));
-          console.log("Feature index:", featureIndex);
-
-          const feature = featuresRef.current[featureIndex];
-          console.log("Feature data:", feature);
-
-          if (feature?.properties?.id) {
-            console.log(
-              "Calling onFeatureClick with ID:",
-              feature.properties.id
-            );
-            onFeatureClick?.(feature.properties.id);
-
-            // Zoom to clicked feature
-            if (feature.geometry?.type === "Point") {
-              const [longitude, latitude] = feature.geometry.coordinates;
-              console.log(`Zooming to ${longitude}, ${latitude}`);
-
-              viewerRef.current?.camera.flyTo({
-                destination: Cesium.Cartesian3.fromDegrees(
-                  longitude,
-                  latitude,
-                  50000
-                ),
-                orientation: {
-                  heading: viewerRef.current.scene.camera.heading,
-                  pitch: viewerRef.current.scene.camera.pitch,
-                  roll: viewerRef.current.scene.camera.roll,
-                },
-                duration: 1.5,
-                easingFunction: Cesium.EasingFunction.CUBIC_IN_OUT,
-              });
-            }
-          }
-        } else {
-          console.log("Non-feature entity clicked, entity ID:", entity.id);
-        }
-      } else {
-        console.log("No entity picked, clicking on globe");
-
-        if (onMapClick) {
-          const cartesian = viewerRef.current?.camera.pickEllipsoid(
-            click.position,
-            viewerRef.current.scene.globe.ellipsoid
-          );
-          if (cartesian) {
-            const cartographic = Cesium.Cartographic.fromCartesian(cartesian);
-            const longitude = Cesium.Math.toDegrees(cartographic.longitude);
-            const latitude = Cesium.Math.toDegrees(cartographic.latitude);
-            onMapClick([longitude, latitude]);
-          }
-        }
-      }
-    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
-
-    return () => {
-      console.log("Removing click handler...");
-      handler.destroy();
-    };
-  }, [viewerReady, onMapClick, onFeatureClick]);
+  // Remove the duplicate click handler - the hook already handles this
+  // useEffect(() => { ... click handler ... }, [viewerReady, onMapClick, onFeatureClick]);
 
   // Update features on viewer - ensure all markers are added but with correct visibility
   useEffect(() => {
@@ -165,7 +70,10 @@ export function CesiumMap({
     try {
       // Remove existing feature entities
       const entitiesToRemove = viewerRef.current.entities.values.filter(
-        (entity) => entity.id?.toString().startsWith("feature-")
+        (entity) =>
+          entity.id &&
+          typeof entity.id === "string" &&
+          entity.id.startsWith("feature-")
       );
       entitiesToRemove.forEach((entity) =>
         viewerRef.current?.entities.remove(entity)
