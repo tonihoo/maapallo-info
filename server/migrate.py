@@ -7,7 +7,7 @@ import logging
 from pathlib import Path
 
 from config import settings
-from sqlalchemy import text
+from sqlalchemy import create_engine, text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 logger = logging.getLogger(__name__)
@@ -71,6 +71,33 @@ async def reset_database():
     """Reset database by running all migrations from scratch"""
     logger.info("Resetting database...")
     return await run_all_migrations()
+
+
+async def drop_all_tables():
+    """Drop all tables and extensions in the database"""
+    try:
+        logger.info("🔥 Dropping all tables and extensions...")
+
+        async with engine.begin() as conn:
+            # Drop tables in correct order (features first, then spatial tables)
+            await conn.execute(text("DROP TABLE IF EXISTS feature CASCADE;"))
+            await conn.execute(text("DROP TABLE IF EXISTS spatial_ref_sys CASCADE;"))
+            await conn.execute(text("DROP EXTENSION IF EXISTS postgis CASCADE;"))
+
+        logger.info("✅ Successfully dropped all tables and extensions")
+        return True
+    except Exception as e:
+        logger.error(f"❌ Failed to drop tables: {e}")
+        return False
+
+
+async def reset_production_database():
+    """Complete database reset for production"""
+    logger.info("🔥 RESETTING PRODUCTION DATABASE...")
+    if await drop_all_tables():
+        logger.info("✅ Tables dropped, running migrations...")
+        return await run_all_migrations()
+    return False
 
 
 if __name__ == "__main__":
