@@ -5,7 +5,7 @@ Location database for Maapallo magazine articles. The application allows you to 
 ## 🚀 Live Application
 
 ✅ **Successfully deployed on Azure!**
-👉 **Visit**: https://maapallo-info-app.azurewebsites.net/
+👉 **Visit**: https://maapallo.info
 
 ## Technical Implementation
 
