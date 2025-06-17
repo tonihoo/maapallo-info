@@ -30,7 +30,14 @@ async def get_all_features(db: AsyncSession) -> List[FeatureResponse]:
 
         feature_list = []
         for feature in features:
-            location_data = json.loads(feature.location) if feature.location else None
+            if feature.location:
+                location_data = (
+                    feature.location
+                    if isinstance(feature.location, dict)
+                    else json.loads(feature.location)
+                )
+            else:
+                location_data = None
             feature_dict = {
                 "id": feature.id,
                 "title": feature.title,
@@ -183,7 +190,9 @@ async def update_feature(
         if feature_update.thumbnail is not None:
             update_fields.append("thumbnail = :thumbnail")
             params["thumbnail"] = (
-                str(feature_update.thumbnail) if feature_update.thumbnail else None
+                str(feature_update.thumbnail)
+                if feature_update.thumbnail is not None
+                else None
             )
         if feature_update.excerpt is not None:
             update_fields.append("excerpt = :excerpt")

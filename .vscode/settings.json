@@ -1,19 +1,7 @@
 {
   // Python interpreter and environment
-  "python.defaultInterpreterPath": "./venv/bin/python",
+  "python.defaultInterpreterPath": "./server/venv/bin/python",
   "python.terminal.activateEnvironment": false,
-
-  // Linting and formatting
-  "python.linting.enabled": true,
-  "python.linting.flake8Enabled": true,
-  "python.linting.flake8Args": ["--max-line-length=88"],
-
-  // Formatting
-  "python.formatting.provider": "black",
-  "python.formatting.blackArgs": ["--line-length=88"],
-
-  // Import sorting
-  "python.sortImports.args": ["--profile", "black"],
 
   // Auto-format on save
   "editor.formatOnSave": true,
@@ -29,9 +17,10 @@
     "editor.rulers": [88]
   },
 
-  // Disable certain error checking for Docker development
+  // Python analysis settings
   "python.analysis.diagnosticMode": "workspace",
   "python.analysis.typeCheckingMode": "basic",
+  "python.analysis.extraPaths": ["./server"],
 
   // Hide __pycache__ folders
   "files.exclude": {
