@@ -11,7 +11,6 @@ import Stroke from "ol/style/Stroke";
 import Style from "ol/style/Style";
 import { ReactNode, useEffect, useRef, useState, useCallback } from "react";
 import { FeatureLike } from "ol/Feature";
-import { Zoom } from "ol/control";
 import { toLonLat, fromLonLat } from "ol/proj";
 import {
   Feature as GeoJSONFeature,
@@ -119,11 +118,7 @@ export function Map({
   const [olMap] = useState(() => {
     return new OlMap({
       target: "",
-      controls: [
-        // new Zoom({
-        //   className: "ol-zoom",
-        // }),
-      ],
+      controls: [],
       view: olView,
       keyboardEventTarget: document,
       layers: [

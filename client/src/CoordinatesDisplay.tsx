@@ -5,7 +5,6 @@ interface CoordinatesDisplayProps {
 }
 
 export function CoordinatesDisplay({ coordinates }: CoordinatesDisplayProps) {
-  if (!coordinates) return null;
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -26,10 +25,19 @@ export function CoordinatesDisplay({ coordinates }: CoordinatesDisplayProps) {
         border: "1px solid rgba(255, 255, 255, 0.3)",
         zIndex: 1000,
         pointerEvents: "none",
+        visibility: coordinates ? "visible" : "hidden",
       }}
     >
-      {coordinates.lat > 0 ? "N" : "S"} {Math.abs(coordinates.lat).toFixed(3)}°,{" "}
-      {coordinates.lon > 0 ? "E" : "W"} {Math.abs(coordinates.lon).toFixed(3)}°
+      {coordinates ? (
+        <>
+          {coordinates.lat > 0 ? "N" : "S"}{" "}
+          {Math.abs(coordinates.lat).toFixed(3)}°,{" "}
+          {coordinates.lon > 0 ? "E" : "W"}{" "}
+          {Math.abs(coordinates.lon).toFixed(3)}°
+        </>
+      ) : (
+        "\u00A0" // Non-breaking space to maintain layout
+      )}
     </div>
   );
 }
