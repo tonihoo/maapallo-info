@@ -43,13 +43,17 @@ async def get_all_features(db: AsyncSession) -> List[FeatureResponse]:
             }
             # Debug logging for link and thumbnail
             logger.debug(
-                f"Feature ID {feature.id}: link={feature.link}, thumbnail={feature.thumbnail}"
+                "Feature ID %s: link=%s, thumbnail=%s",
+                feature.id,
+                feature.link,
+                feature.thumbnail,
             )
             try:
                 feature_list.append(FeatureResponse(**feature_dict))
             except Exception as e:
                 logger.error(
-                    f"Validation error for feature ID {feature.id}: {e}\nData: {feature_dict}"
+                    f"Validation error for feature ID {feature.id}: {e}\n"
+                    f"Data: {feature_dict}"
                 )
                 raise
 
@@ -109,12 +113,16 @@ async def create_feature(
         # Use raw SQL for spatial operations
         query = text(
             """
-            INSERT INTO feature (title, author, thumbnail, excerpt, publication, link, location)
-            VALUES (:title, :author, :thumbnail, :excerpt, :publication, :link,
-                    ST_SetSRID(ST_GeomFromGeoJSON(:location), 3067))
+            INSERT INTO feature (
+                title, author, thumbnail, excerpt, publication, link, location
+            )
+            VALUES (
+                :title, :author, :thumbnail, :excerpt, :publication, :link,
+                ST_SetSRID(ST_GeomFromGeoJSON(:location), 3067)
+            )
             RETURNING id, title, author, thumbnail, excerpt, publication, link,
                       ST_AsGeoJSON(location) as location
-        """
+            """
         )
 
         result = await db.execute(
@@ -164,7 +172,7 @@ async def update_feature(
     try:
         # Build dynamic update query based on provided fields
         update_fields = []
-        params = {"feature_id": feature_id}
+        params: dict[str, str | int | None] = {"feature_id": feature_id}
 
         if feature_update.title is not None:
             update_fields.append("title = :title")
@@ -235,11 +243,12 @@ async def update_feature(
 async def delete_feature(db: AsyncSession, feature_id: int) -> bool:
     """Delete a feature"""
     try:
-        query = text("DELETE FROM feature WHERE id = :feature_id")
+        query = text("DELETE FROM feature WHERE id = :feature_id RETURNING id")
         result = await db.execute(query, {"feature_id": feature_id})
+        deleted_row = result.fetchone()
         await db.commit()
 
-        return result.rowcount > 0
+        return deleted_row is not None
     except Exception as e:
         logger.error(f"Failed to delete feature with ID {feature_id}: {e}")
         await db.rollback()

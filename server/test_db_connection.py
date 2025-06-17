@@ -29,8 +29,10 @@ async def test_database_connection():
         print("Testing async connection...")
         engine = create_async_engine(settings.database_url, echo=True)
 
+        from sqlalchemy import text
+
         async with engine.begin() as conn:
-            result = await conn.execute("SELECT 1 as test")
+            result = await conn.execute(text("SELECT 1 as test"))
             row = result.fetchone()
             print(f"✅ Async connection successful: {row}")
 
@@ -46,8 +48,10 @@ async def test_database_connection():
         print("Testing sync connection...")
         sync_engine = create_engine(settings.database_url_sync, echo=True)
 
+        from sqlalchemy import text
+
         with sync_engine.begin() as conn:
-            result = conn.execute("SELECT 1 as test")
+            result = conn.execute(text("SELECT 1 as test"))
             row = result.fetchone()
             print(f"✅ Sync connection successful: {row}")
 

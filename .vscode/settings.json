@@ -1,15 +1,12 @@
 {
   // Python interpreter and environment
-  "python.defaultInterpreterPath": "/usr/local/bin/python",
+  "python.defaultInterpreterPath": "./venv/bin/python",
   "python.terminal.activateEnvironment": false,
 
   // Linting and formatting
   "python.linting.enabled": true,
   "python.linting.flake8Enabled": true,
-  "python.linting.flake8Args": [
-    "--max-line-length=88",
-    "--extend-ignore=E203,W503,E501"
-  ],
+  "python.linting.flake8Args": ["--max-line-length=88"],
 
   // Formatting
   "python.formatting.provider": "black",

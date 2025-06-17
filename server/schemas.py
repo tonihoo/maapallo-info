@@ -1,7 +1,6 @@
 from typing import Any, List, Optional, Union
 
-from pydantic import BaseModel, HttpUrl, ValidationError, field_validator
-from pydantic_core import core_schema
+from pydantic import BaseModel, HttpUrl, field_validator
 
 
 class GeoJSONGeometry(BaseModel):

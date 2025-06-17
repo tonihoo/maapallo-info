@@ -7,8 +7,8 @@ import logging
 from pathlib import Path
 
 from config import settings
-from sqlalchemy import create_engine, text
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import create_async_engine
 
 logger = logging.getLogger(__name__)
 
@@ -78,12 +78,17 @@ async def drop_all_tables():
     try:
         logger.info("🔥 Dropping all tables and extensions...")
 
+        database_url = settings.database_url
+        engine = create_async_engine(database_url, echo=True)
+
         async with engine.begin() as conn:
-            # Drop tables in correct order (features first, then spatial tables)
+            # Drop tables in correct order (features first,
+            # then spatial tables)
             await conn.execute(text("DROP TABLE IF EXISTS feature CASCADE;"))
             await conn.execute(text("DROP TABLE IF EXISTS spatial_ref_sys CASCADE;"))
             await conn.execute(text("DROP EXTENSION IF EXISTS postgis CASCADE;"))
 
+        await engine.dispose()
         logger.info("✅ Successfully dropped all tables and extensions")
         return True
     except Exception as e:
