@@ -1,6 +1,7 @@
 from typing import Any, List, Optional, Union
 
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, HttpUrl, ValidationError, field_validator
+from pydantic_core import core_schema
 
 
 class GeoJSONGeometry(BaseModel):
@@ -11,11 +12,18 @@ class GeoJSONGeometry(BaseModel):
 class FeatureBase(BaseModel):
     title: str
     author: str
-    thumbnail: Optional[HttpUrl] = None
+    thumbnail: Optional[Union[HttpUrl, str]] = None
     excerpt: str
     publication: str
-    link: HttpUrl
+    link: Union[HttpUrl, str]
     location: GeoJSONGeometry
+
+    @field_validator('thumbnail', 'link', mode='before')
+    @classmethod
+    def allow_relative_url(cls, v):
+        if isinstance(v, str) and v.startswith('/'):
+            return v
+        return v
 
 
 class FeatureCreate(FeatureBase):

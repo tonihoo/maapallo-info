@@ -2,12 +2,11 @@ import json
 import logging
 from typing import List, Optional
 
+from database import Feature
 from geoalchemy2.functions import ST_AsGeoJSON
+from schemas import FeatureCreate, FeatureResponse, FeatureUpdate
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from database import Feature
-from schemas import FeatureCreate, FeatureResponse, FeatureUpdate
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +41,17 @@ async def get_all_features(db: AsyncSession) -> List[FeatureResponse]:
                 "link": feature.link,
                 "location": location_data,
             }
-            feature_list.append(FeatureResponse(**feature_dict))
+            # Debug logging for link and thumbnail
+            logger.debug(
+                f"Feature ID {feature.id}: link={feature.link}, thumbnail={feature.thumbnail}"
+            )
+            try:
+                feature_list.append(FeatureResponse(**feature_dict))
+            except Exception as e:
+                logger.error(
+                    f"Validation error for feature ID {feature.id}: {e}\nData: {feature_dict}"
+                )
+                raise
 
         return feature_list
     except Exception as e:
