@@ -92,7 +92,9 @@ async def get_feature_by_id(
         if not feature:
             return None
 
-        location_data = json.loads(feature.location) if feature.location else None
+        location_data = (
+            json.loads(feature.location) if feature.location else None
+        )
         feature_dict = {
             "id": feature.id,
             "title": feature.title,
@@ -138,7 +140,9 @@ async def create_feature(
                 "title": feature_data.title,
                 "author": feature_data.author,
                 "thumbnail": (
-                    str(feature_data.thumbnail) if feature_data.thumbnail else None
+                    str(feature_data.thumbnail)
+                    if feature_data.thumbnail
+                    else None
                 ),
                 "excerpt": feature_data.excerpt,
                 "publication": feature_data.publication,
@@ -153,7 +157,9 @@ async def create_feature(
         if not feature:
             raise Exception("Failed to create feature")
 
-        location_data = json.loads(feature.location) if feature.location else None
+        location_data = (
+            json.loads(feature.location) if feature.location else None
+        )
         feature_dict = {
             "id": feature.id,
             "title": feature.title,
@@ -230,7 +236,9 @@ async def update_feature(
         if not feature:
             return None
 
-        location_data = json.loads(feature.location) if feature.location else None
+        location_data = (
+            json.loads(feature.location) if feature.location else None
+        )
         feature_dict = {
             "id": feature.id,
             "title": feature.title,

@@ -47,7 +47,9 @@ app.include_router(feature.router, prefix="/api/v1/feature", tags=["features"])
 if settings.is_production:
     static_dir = os.path.join(os.path.dirname(__file__), "static")
     if os.path.exists(static_dir):
-        app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
+        app.mount(
+            "/", StaticFiles(directory=static_dir, html=True), name="static"
+        )
 
 
 # Simple health check for root path (API only)
@@ -59,7 +61,8 @@ async def root():
 if __name__ == "__main__":
     import os
 
-    # Use PORT environment variable if available (Azure App Service requirement)
+    # Use PORT environment variable if available
+    # (Azure App Service requirement)
     port = int(os.getenv("PORT", settings.server_port))
 
     uvicorn.run(

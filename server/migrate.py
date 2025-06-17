@@ -53,7 +53,10 @@ async def run_migration_file(filepath: str) -> bool:
 
 async def run_all_migrations():
     """Run all migration files in order"""
-    migration_files = ["0001_create_feature_table.sql", "0002_add_test_data.sql"]
+    migration_files = [
+        "0001_create_feature_table.sql",
+        "0002_add_test_data.sql",
+    ]
 
     success_count = 0
     for migration_file in migration_files:
@@ -85,8 +88,12 @@ async def drop_all_tables():
             # Drop tables in correct order (features first,
             # then spatial tables)
             await conn.execute(text("DROP TABLE IF EXISTS feature CASCADE;"))
-            await conn.execute(text("DROP TABLE IF EXISTS spatial_ref_sys CASCADE;"))
-            await conn.execute(text("DROP EXTENSION IF EXISTS postgis CASCADE;"))
+            await conn.execute(
+                text("DROP TABLE IF EXISTS spatial_ref_sys CASCADE;")
+            )
+            await conn.execute(
+                text("DROP EXTENSION IF EXISTS postgis CASCADE;")
+            )
 
         await engine.dispose()
         logger.info("✅ Successfully dropped all tables and extensions")

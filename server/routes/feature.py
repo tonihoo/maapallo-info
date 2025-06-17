@@ -14,7 +14,9 @@ router = APIRouter()
 async def get_features(
     category: Optional[str] = Query(None, description="Filter by category"),
     skip: int = Query(0, ge=0, description="Number of records to skip"),
-    limit: int = Query(100, ge=1, le=1000, description="Number of records to return"),
+    limit: int = Query(
+        100, ge=1, le=1000, description="Number of records to return"
+    ),
     db: AsyncSession = Depends(get_db),
 ):
     """Get all features with optional filtering and pagination"""
@@ -41,11 +43,18 @@ async def get_feature(feature_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/", response_model=dict)
-async def create_feature(feature: FeatureCreate, db: AsyncSession = Depends(get_db)):
+async def create_feature(
+    feature: FeatureCreate, db: AsyncSession = Depends(get_db)
+):
     """Create a new feature"""
     try:
-        created_feature = await crud.create_feature(db=db, feature_data=feature)
-        return {"feature": created_feature, "message": "Feature created successfully"}
+        created_feature = await crud.create_feature(
+            db=db, feature_data=feature
+        )
+        return {
+            "feature": created_feature,
+            "message": "Feature created successfully",
+        }
     except IntegrityError as e:
         await db.rollback()
         raise HTTPException(
@@ -53,12 +62,16 @@ async def create_feature(feature: FeatureCreate, db: AsyncSession = Depends(get_
         )
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"Error creating feature: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error creating feature: {str(e)}"
+        )
 
 
 @router.put("/{feature_id}", response_model=FeatureResponse)
 async def update_feature(
-    feature_id: int, feature_update: FeatureUpdate, db: AsyncSession = Depends(get_db)
+    feature_id: int,
+    feature_update: FeatureUpdate,
+    db: AsyncSession = Depends(get_db),
 ):
     """Update an existing feature"""
     try:
@@ -75,7 +88,9 @@ async def update_feature(
         )
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"Error updating feature: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error updating feature: {str(e)}"
+        )
 
 
 @router.delete("/{feature_id}")
@@ -88,4 +103,6 @@ async def delete_feature(feature_id: int, db: AsyncSession = Depends(get_db)):
         return {"message": "Feature deleted successfully"}
     except Exception as e:
         await db.rollback()
-        raise HTTPException(status_code=500, detail=f"Error deleting feature: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Error deleting feature: {str(e)}"
+        )
