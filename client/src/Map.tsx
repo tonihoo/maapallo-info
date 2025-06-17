@@ -120,9 +120,9 @@ export function Map({
     return new OlMap({
       target: "",
       controls: [
-        new Zoom({
-          className: "ol-zoom",
-        }),
+        // new Zoom({
+        //   className: "ol-zoom",
+        // }),
       ],
       view: olView,
       keyboardEventTarget: document,
