@@ -19,6 +19,16 @@ echo "PG_SSLMODE: $PG_SSLMODE"
 echo "🔬 Testing database connection..."
 python test_db_connection.py
 
+# Check if RESET_DATABASE flag is set
+if [ "$RESET_DATABASE" = "true" ]; then
+    echo "🔥 RESET_DATABASE flag detected - dropping all tables..."
+    python -c "
+import asyncio
+from migrate import drop_all_tables
+asyncio.run(drop_all_tables())
+"
+fi
+
 # Run database migrations
 echo "📊 Running database migrations..."
 python run_migrations.py
