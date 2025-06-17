@@ -18,10 +18,10 @@ class FeatureBase(BaseModel):
     link: Union[HttpUrl, str]
     location: GeoJSONGeometry
 
-    @field_validator('thumbnail', 'link', mode='before')
+    @field_validator("thumbnail", "link", mode="before")
     @classmethod
     def allow_relative_url(cls, v):
-        if isinstance(v, str) and v.startswith('/'):
+        if isinstance(v, str) and v.startswith("/"):
             return v
         return v
 

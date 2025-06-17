@@ -1,4 +1,4 @@
-import { Paper, Typography, Link, Avatar, IconButton } from "@mui/material";
+import { Paper, Typography, Link, IconButton } from "@mui/material";
 import { Close } from "@mui/icons-material";
 import { useState, useEffect } from "react";
 
@@ -78,9 +78,19 @@ export function FeatureInfo({ featureId, onClose }: Props) {
     <Paper
       elevation={3}
       sx={{
-        margin: "1em 0em 1em 0em",
+        position: "absolute",
+        top: { xs: 16, sm: 32 },
+        right: { xs: 0, sm: 32 },
+        left: { xs: 0, sm: "auto" },
+        margin: { xs: "0 auto", sm: 0 },
+        maxWidth: { xs: "95vw", sm: 400, md: 500 },
+        width: { xs: "95vw", sm: "auto" },
+        zIndex: 1200,
         padding: "1em",
-        position: "relative",
+        boxSizing: "border-box",
+        maxHeight: "90vh",
+        overflow: "auto",
+        borderRadius: 3,
       }}
       data-cy="feature-detail"
     >
@@ -109,11 +119,19 @@ export function FeatureInfo({ featureId, onClose }: Props) {
       ) : feature ? (
         <>
           {feature.thumbnail && (
-            <Avatar
+            <img
               src={feature.thumbnail}
               alt={feature.title}
-              sx={{ width: 64, height: 64, mb: 1 }}
-              variant="square"
+              style={{
+                width: "100%",
+                maxWidth: 200,
+                height: "auto",
+                display: "block",
+                marginBottom: 16,
+                borderRadius: 8,
+                objectFit: "cover",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+              }}
             />
           )}
           <Typography variant="h6">{feature.title}</Typography>
