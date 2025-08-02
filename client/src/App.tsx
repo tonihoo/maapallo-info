@@ -25,7 +25,7 @@ export function App() {
   );
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [allFeatures, setAllFeatures] = useState<FeatureTypes[]>([]);
-  const [is3DMode, setIs3DMode] = useState(true);
+  const [is3DMode, setIs3DMode] = useState(false);
 
   const handleMapClick = useCallback(() => {
     setSelectedFeatureId(null);
