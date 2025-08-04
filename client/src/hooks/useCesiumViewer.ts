@@ -73,8 +73,8 @@ export function useCesiumViewer({
             const [longitude, latitude] = feature.geometry.coordinates;
             const isVisible = isPointOnVisibleHemisphere(longitude, latitude);
 
-            if (entity.point) entity.point.show = isVisible;
-            if (entity.label) entity.label.show = isVisible;
+            if (entity.point) entity.point.show = new Cesium.ConstantProperty(isVisible);
+            if (entity.label) entity.label.show = new Cesium.ConstantProperty(isVisible);
           }
         }
       });
@@ -99,16 +99,16 @@ export function useCesiumViewer({
       entities.forEach((entity, index) => {
         // Style country boundaries
         if (entity.polygon) {
-          entity.polygon.material = Cesium.Color.TRANSPARENT;
-          entity.polygon.outline = true;
-          entity.polygon.outlineColor = Cesium.Color.WHITE.withAlpha(0.5);
-          entity.polygon.outlineWidth = 1;
-          entity.polygon.height = 0;
-          entity.polygon.extrudedHeight = 0;
+          entity.polygon.material = new Cesium.ColorMaterialProperty(Cesium.Color.TRANSPARENT);
+          entity.polygon.outline = new Cesium.ConstantProperty(true);
+          entity.polygon.outlineColor = new Cesium.ConstantProperty(Cesium.Color.WHITE.withAlpha(0.5));
+          entity.polygon.outlineWidth = new Cesium.ConstantProperty(1);
+          entity.polygon.height = new Cesium.ConstantProperty(0);
+          entity.polygon.extrudedHeight = new Cesium.ConstantProperty(0);
         }
 
         // Add country labels
-        if (entity.properties?.name_fi && entity.polygon) {
+        if (entity.properties?.name_fi && entity.polygon && entity.polygon.hierarchy) {
           const name = entity.properties.name_fi.getValue();
           const hierarchy = entity.polygon.hierarchy.getValue(
             Cesium.JulianDate.now()
@@ -290,6 +290,15 @@ export function useCesiumViewer({
         viewer.scene.globe.enableLighting = false;
         viewer.scene.fog.enabled = false;
         viewer.scene.skyAtmosphere.show = false;
+
+        // Additional performance optimizations
+        viewer.scene.globe.maximumScreenSpaceError = 2; // Reduce terrain detail
+        viewer.scene.globe.tileCacheSize = 100; // Limit tile cache
+        viewer.scene.globe.loadingDescendantLimit = 20; // Limit concurrent tile loads
+
+        // Optimize imagery loading to reduce WebGL warnings
+        viewer.scene.globe.preloadAncestors = false;
+        viewer.scene.globe.preloadSiblings = false;
 
         setupCameraControls(viewer);
         await loadCountryBoundaries(viewer);

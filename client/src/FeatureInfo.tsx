@@ -56,17 +56,20 @@ export function FeatureInfo({ featureId, onClose }: Props) {
   const renderLocation = (location: Feature["location"]) => {
     if (!location) return null;
     if (location.type === "Point") {
-      const [lon, lat] = location.coordinates;
+      const coordinates = location.coordinates as [number, number];
+      const [lon, lat] = coordinates;
       return (
         <Typography>
-          Sijainti: E {lon?.toFixed(0)}, N {lat?.toFixed(0)}
+          Sijainti: E {lon.toFixed(0)}, N {lat.toFixed(0)}
         </Typography>
       );
     }
     if (location.type === "Polygon") {
+      const coordinates = location.coordinates;
+      const firstRing = Array.isArray(coordinates[0]) ? coordinates[0] : [];
       return (
         <Typography>
-          Sijainti: Alue (Polygon, {location.coordinates[0]?.length || 0}{" "}
+          Sijainti: Alue (Polygon, {firstRing.length || 0}{" "}
           pistettä)
         </Typography>
       );

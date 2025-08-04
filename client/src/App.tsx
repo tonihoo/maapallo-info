@@ -8,13 +8,20 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-import { CesiumMap } from "./CesiumMap";
 import { Map } from "./Map";
 import FeatureList from "./FeatureList";
 import { FeatureInfo } from "./FeatureInfo";
 import { MobileMenu } from "./MobileMenu";
 import { FeatureTypes } from "./types/featureTypes";
 import { Feature, Geometry, GeoJsonProperties } from "geojson";
+
+// Define the CesiumMap props interface to match what we're passing
+interface CesiumMapProps {
+  features: Feature<Geometry, GeoJsonProperties>[];
+  selectedFeatureId?: number | null;
+  onMapClick?: (coordinates: number[]) => void;
+  onFeatureClick?: (featureId: number) => void;
+}
 
 export function App() {
   const theme = useTheme();
@@ -23,10 +30,11 @@ export function App() {
   const [selectedFeatureId, setSelectedFeatureId] = useState<number | null>(
     null
   );
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [refreshTrigger] = useState(0);
   const [allFeatures, setAllFeatures] = useState<FeatureTypes[]>([]);
   const [is3DMode, setIs3DMode] = useState(false);
   const [cesiumPreloaded, setCesiumPreloaded] = useState(false);
+  const [CesiumMapComponent, setCesiumMapComponent] = useState<React.ComponentType<CesiumMapProps> | null>(null);
 
   // Background preload Cesium after initial render
   useEffect(() => {
@@ -34,8 +42,9 @@ export function App() {
       try {
         console.log("🔄 Background preloading Cesium...");
         // Preload Cesium module in the background
-        await import("./CesiumMap");
+        const cesiumModule = await import("./CesiumMap");
         console.log("✅ Cesium preloaded successfully");
+        setCesiumMapComponent(() => cesiumModule.CesiumMap);
         setCesiumPreloaded(true);
       } catch (error) {
         console.warn("⚠️ Cesium preload failed (will load on demand):", error);
@@ -45,10 +54,6 @@ export function App() {
     // Start preloading after a short delay to not interfere with initial page load
     const timer = setTimeout(preloadCesium, 2000);
     return () => clearTimeout(timer);
-  }, []);
-
-  const triggerRefresh = useCallback(() => {
-    setRefreshTrigger((prev) => prev + 1);
   }, []);
 
   const handleMapClick = useCallback(() => {
@@ -63,10 +68,25 @@ export function App() {
     setSelectedFeatureId(null);
   }, []);
 
-  const toggleMapMode = useCallback(() => {
+  const toggleMapMode = useCallback(async () => {
     console.log("🔄 Toggling to 3D mode, preloaded:", cesiumPreloaded);
+    
+    // If switching to 3D mode and Cesium isn't loaded yet, load it now
+    if (!cesiumPreloaded && !CesiumMapComponent) {
+      try {
+        console.log("🔄 Loading Cesium on demand...");
+        const cesiumModule = await import("./CesiumMap");
+        setCesiumMapComponent(() => cesiumModule.CesiumMap);
+        setCesiumPreloaded(true);
+        console.log("✅ Cesium loaded on demand");
+      } catch (error) {
+        console.error("❌ Failed to load Cesium:", error);
+        return; // Don't switch to 3D mode if loading failed
+      }
+    }
+    
     setIs3DMode((prev) => !prev);
-  }, [cesiumPreloaded]);
+  }, [cesiumPreloaded, CesiumMapComponent]);
 
   useEffect(() => {
     const fetchAllFeatures = async () => {
@@ -188,12 +208,18 @@ export function App() {
           }}
         >
           {is3DMode ? (
-            <CesiumMap
-              features={createMapFeatures()}
-              selectedFeatureId={selectedFeatureId}
-              onMapClick={handleMapClick}
-              onFeatureClick={handleFeatureSelect}
-            />
+            CesiumMapComponent ? (
+              <CesiumMapComponent
+                features={createMapFeatures()}
+                selectedFeatureId={selectedFeatureId}
+                onMapClick={handleMapClick}
+                onFeatureClick={handleFeatureSelect}
+              />
+            ) : (
+              <div style={{ padding: "20px", textAlign: "center" }}>
+                Loading 3D map...
+              </div>
+            )
           ) : (
             <Map
               features={createMapFeatures()}

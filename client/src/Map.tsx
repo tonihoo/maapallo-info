@@ -117,7 +117,7 @@ export function Map({
    */
   const [olMap] = useState(() => {
     return new OlMap({
-      target: "",
+      target: undefined, // Don't set target initially - will be set in useEffect
       controls: [],
       view: olView,
       keyboardEventTarget: document,
