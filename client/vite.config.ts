@@ -21,18 +21,48 @@ export default defineConfig(({ mode }) => {
       CESIUM_BASE_URL: JSON.stringify(
         isProduction ? "/cesium/" : "/node_modules/cesium/Build/Cesium/"
       ),
+      global: "globalThis",
     },
     optimizeDeps: {
-      include: ["cesium"],
+      include: [
+        "cesium",
+        "ol/Map",
+        "ol/View",
+        "ol/layer/Tile",
+        "ol/source/OSM",
+      ],
+      esbuildOptions: {
+        target: "es2020",
+      },
     },
     build: {
-      minify: false,
-      sourcemap: true,
+      minify: isProduction,
+      sourcemap: !isProduction,
+      target: "es2020",
+      rollupOptions: {
+        output: {
+          manualChunks: (id) => {
+            // Simple chunk splitting for better caching
+            if (id.includes("node_modules")) {
+              if (id.includes("cesium")) {
+                return "vendor-cesium";
+              }
+              if (id.includes("ol")) {
+                return "vendor-ol";
+              }
+              if (id.includes("react")) {
+                return "vendor-react";
+              }
+              if (id.includes("@mui")) {
+                return "vendor-mui";
+              }
+              return "vendor-other";
+            }
+          },
+        },
+      },
+      chunkSizeWarningLimit: 1000,
     },
-    esbuild: {
-      minify: false,
-    },
-    // Force cache invalidation
     clearScreen: false,
   };
 });

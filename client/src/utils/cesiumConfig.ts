@@ -43,6 +43,25 @@ export const initializeCesiumConfig = () => {
   }
 };
 
+// Performance-optimized Cesium viewer options
+export const OPTIMIZED_CESIUM_OPTIONS = {
+  animation: false,
+  baseLayerPicker: false,
+  fullscreenButton: false,
+  vrButton: false,
+  geocoder: false,
+  homeButton: false,
+  infoBox: false,
+  sceneModePicker: false,
+  selectionIndicator: false,
+  timeline: false,
+  navigationHelpButton: false,
+  navigationInstructionsInitiallyVisible: false,
+  scene3DOnly: true, // Disable 2D/Columbus view to save memory
+  requestRenderMode: true, // Only render when needed
+  maximumRenderTimeChange: Infinity, // Disable automatic LOD adjustment
+};
+
 export const INITIAL_CAMERA = {
   position: { longitude: 44.0, latitude: 10.0, height: 16000000 },
   orientation: { heading: 0.0, pitch: -Cesium.Math.PI_OVER_TWO, roll: 0.0 },

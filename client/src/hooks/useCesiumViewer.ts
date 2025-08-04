@@ -1,7 +1,11 @@
 import { useCallback, useRef, useState, useEffect } from "react";
 import * as Cesium from "cesium";
 import { Feature, Geometry, GeoJsonProperties } from "geojson";
-import { INITIAL_CAMERA, LIMITS_AND_DURATIONS } from "../utils/cesiumConfig";
+import {
+  INITIAL_CAMERA,
+  LIMITS_AND_DURATIONS,
+  OPTIMIZED_CESIUM_OPTIONS,
+} from "../utils/cesiumConfig";
 
 interface UseCesiumViewerProps {
   onMapClick?: (coordinates: number[]) => void;
@@ -264,15 +268,8 @@ export function useCesiumViewer({
     ) => {
       try {
         const viewer = new Cesium.Viewer(containerElement, {
-          baseLayerPicker: true,
-          geocoder: false,
-          homeButton: false,
-          infoBox: false,
-          navigationHelpButton: false,
-          sceneModePicker: false,
-          timeline: false,
-          animation: false,
-          requestRenderMode: true,
+          ...OPTIMIZED_CESIUM_OPTIONS,
+          baseLayerPicker: true, // Keep this enabled for imagery options
         });
 
         createEventHandlers(viewer, featuresRef);
