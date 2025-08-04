@@ -17,17 +17,6 @@ export const initializeCesiumConfig = () => {
       console.warn("Could not set CESIUM_BASE_URL:", error);
       (window as any).CESIUM_BASE_URL = "/node_modules/cesium/Build/Cesium/";
     }
-
-    // Suppress common WebGL warnings that are expected during initialization
-    const originalWarn = console.warn;
-    console.warn = function(...args) {
-      const message = args.join(' ');
-      // Filter out WebGL mipmap warnings which are expected during texture initialization
-      if (message.includes('generateMipmap') && message.includes('lazy initialization')) {
-        return; // Suppress this specific warning
-      }
-      originalWarn.apply(console, args);
-    };
   }
 
   // Get Cesium Ion token from environment variable
@@ -41,7 +30,7 @@ export const initializeCesiumConfig = () => {
       "Warning: Cesium Ion token not set in .env file. Satellite imagery may not load properly."
     );
     console.warn(
-      "Please add VITE_CESIUM_ION_TOKEN to your .env file with your token from https://cesium.com/ion/tokens"
+      "Please add CESIUM_ION_TOKEN to your .env file with your token from https://cesium.com/ion/tokens"
     );
   }
 
@@ -68,9 +57,11 @@ export const OPTIMIZED_CESIUM_OPTIONS = {
   timeline: false,
   navigationHelpButton: false,
   navigationInstructionsInitiallyVisible: false,
-  scene3DOnly: true, // Disable 2D/Columbus view to save memory
+  scene3DOnly: false, // Allow 2D/3D switching to manage memory usage
   requestRenderMode: true, // Only render when needed
   maximumRenderTimeChange: Infinity, // Disable automatic LOD adjustment
+  // Conservative memory settings to prevent out-of-memory errors
+  resolutionScale: 0.5, // Reduce rendering resolution significantly
   // WebGL context optimization
   contextOptions: {
     webgl: {

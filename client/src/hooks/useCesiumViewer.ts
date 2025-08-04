@@ -283,20 +283,20 @@ export function useCesiumViewer({
           orientation: INITIAL_CAMERA.orientation,
         });
 
-        // Scene optimizations
+        // Scene optimizations for memory efficiency
         viewer.scene.postProcessStages.fxaa.enabled = false;
-        viewer.resolutionScale = 2.0;
+        viewer.resolutionScale = 0.5; // Significantly reduce resolution to save memory
         viewer.scene.highDynamicRange = false;
         viewer.scene.globe.enableLighting = false;
         viewer.scene.fog.enabled = false;
         viewer.scene.skyAtmosphere.show = false;
 
-        // Additional performance optimizations
-        viewer.scene.globe.maximumScreenSpaceError = 2; // Reduce terrain detail
-        viewer.scene.globe.tileCacheSize = 100; // Limit tile cache
-        viewer.scene.globe.loadingDescendantLimit = 20; // Limit concurrent tile loads
+        // Very conservative memory settings to prevent out-of-memory errors
+        viewer.scene.globe.maximumScreenSpaceError = 32; // Much higher = lower detail, less memory
+        viewer.scene.globe.tileCacheSize = 20; // Very small cache to save memory
+        viewer.scene.globe.loadingDescendantLimit = 2; // Minimal concurrent loads
 
-        // Optimize imagery loading to reduce WebGL warnings
+        // Disable preloading to reduce memory usage
         viewer.scene.globe.preloadAncestors = false;
         viewer.scene.globe.preloadSiblings = false;
 
