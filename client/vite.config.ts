@@ -24,13 +24,8 @@ export default defineConfig(({ mode }) => {
       global: "globalThis",
     },
     optimizeDeps: {
-      include: [
-        "cesium",
-        "ol/Map",
-        "ol/View",
-        "ol/layer/Tile",
-        "ol/source/OSM",
-      ],
+      include: ["ol/Map", "ol/View", "ol/layer/Tile", "ol/source/OSM"],
+      exclude: ["cesium"], // Exclude Cesium to prevent circular dependency issues
       esbuildOptions: {
         target: "es2020",
       },
