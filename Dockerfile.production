@@ -13,8 +13,8 @@ RUN npm ci
 COPY client/ ./
 
 # Build argument for Cesium Ion token
-ARG VITE_CESIUM_ION_TOKEN
-ENV VITE_CESIUM_ION_TOKEN=${VITE_CESIUM_ION_TOKEN}
+ARG CESIUM_ION_TOKEN
+ENV CESIUM_ION_TOKEN=${CESIUM_ION_TOKEN}
 
 # Build the client application
 RUN npm run build
