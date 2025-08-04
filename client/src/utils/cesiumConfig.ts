@@ -60,13 +60,13 @@ export const OPTIMIZED_CESIUM_OPTIONS = {
   scene3DOnly: false, // Allow 2D/3D switching to manage memory usage
   requestRenderMode: true, // Only render when needed
   maximumRenderTimeChange: Infinity, // Disable automatic LOD adjustment
-  // Conservative memory settings to prevent out-of-memory errors
-  resolutionScale: 0.5, // Reduce rendering resolution significantly
+  // High quality settings for crisp rendering
+  resolutionScale: 1.0, // Full resolution for best quality
   // WebGL context optimization
   contextOptions: {
     webgl: {
       alpha: false, // Disable alpha channel to improve performance
-      antialias: false, // Disable antialiasing for better performance
+      antialias: true, // Enable antialiasing for smoother edges
       premultipliedAlpha: false,
       preserveDrawingBuffer: false,
       failIfMajorPerformanceCaveat: false,
