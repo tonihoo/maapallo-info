@@ -48,28 +48,6 @@ const ANIMATION_DURATIONS = {
 };
 
 const BASE_MAPS = {
-  satellite: {
-    name: "Satellite",
-    icon: "🌍",
-    layer: () =>
-      new TileLayer({
-        source: new XYZ({
-          url: "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
-          attributions: "© Google",
-          maxZoom: 20,
-        }),
-        properties: { name: "satellite" },
-      }),
-  },
-  osm: {
-    name: "OpenStreetMap",
-    icon: "🗺️",
-    layer: () =>
-      new TileLayer({
-        source: new OSM(),
-        properties: { name: "osm" },
-      }),
-  },
   topo: {
     name: "Topographic",
     icon: "🏔️",
@@ -83,6 +61,29 @@ const BASE_MAPS = {
         properties: { name: "topo" },
       }),
   },
+  osm: {
+    name: "OpenStreetMap",
+    icon: "🗺️",
+    layer: () =>
+      new TileLayer({
+        source: new OSM(),
+        properties: { name: "osm" },
+      }),
+  },
+  satellite: {
+    name: "Satellite",
+    icon: "🌍",
+    layer: () =>
+      new TileLayer({
+        source: new XYZ({
+          url: "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+          attributions: "© Google",
+          maxZoom: 20,
+        }),
+        properties: { name: "satellite" },
+      }),
+  },
+
   humanitarian: {
     name: "Humanitarian",
     icon: "🏥",
@@ -200,7 +201,7 @@ export function Map({
       view: olView,
       keyboardEventTarget: document,
       layers: [
-        BASE_MAPS.satellite.layer(),
+        BASE_MAPS.topo.layer(),
         new VectorLayer({
           source: new VectorSource(),
           style: styleFunction,
@@ -210,7 +211,7 @@ export function Map({
   });
 
   const [currentBaseMap, setCurrentBaseMap] =
-    useState<keyof typeof BASE_MAPS>("satellite");
+    useState<keyof typeof BASE_MAPS>("topo");
 
   // Handle location search selection
   const handleLocationSelect = useCallback(
