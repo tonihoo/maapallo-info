@@ -1,16 +1,18 @@
 FROM node:20-alpine
 
-# Copy everything from the build context
-COPY . /app/
-
-# Set working directory to the client subfolder
 WORKDIR /app/client
 
-# Install dependencies
-RUN npm install
+# Copy package files
+COPY client/package*.json ./
 
-# Expose port (Webpack dev server uses 8080)
+# Install dependencies
+RUN npm ci
+
+# Copy source code
+COPY client/ .
+
+# Expose port for webpack dev server
 EXPOSE 8080
 
-# Start Webpack development server with host binding for Docker
+# Start webpack dev server with proper configuration
 CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
