@@ -116,6 +116,11 @@ module.exports = (env, argv) => {
             from: path.join(__dirname, 'node_modules/cesium/Build/Cesium/Widgets'),
             to: 'cesium/Widgets',
           },
+          {
+            from: path.join(__dirname, 'public/images'),
+            to: 'images',
+            noErrorOnMissing: true,
+          },
         ],
       }),
     ],
