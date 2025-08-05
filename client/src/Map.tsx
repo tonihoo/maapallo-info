@@ -50,11 +50,13 @@ const ANIMATION_DURATIONS = {
 const BASE_MAPS = {
   satellite: {
     name: "Satellite",
-    icon: "🛰️",
+    icon: "🌍",
     layer: () =>
       new TileLayer({
         source: new XYZ({
-          url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+          url: "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
+          attributions: "© Google",
+          maxZoom: 20,
         }),
         properties: { name: "satellite" },
       }),
