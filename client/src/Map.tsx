@@ -48,6 +48,17 @@ const ANIMATION_DURATIONS = {
 };
 
 const BASE_MAPS = {
+  satellite: {
+    name: "Satellite",
+    icon: "🛰️",
+    layer: () =>
+      new TileLayer({
+        source: new XYZ({
+          url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+        }),
+        properties: { name: "satellite" },
+      }),
+  },
   osm: {
     name: "OpenStreetMap",
     icon: "🗺️",
@@ -182,12 +193,12 @@ export function Map({
    */
   const [olMap] = useState(() => {
     return new OlMap({
-      target: undefined, // Don't set target initially - will be set in useEffect
+      target: undefined,
       controls: [],
       view: olView,
       keyboardEventTarget: document,
       layers: [
-        BASE_MAPS.osm.layer(), // Start with OSM
+        BASE_MAPS.satellite.layer(),
         new VectorLayer({
           source: new VectorSource(),
           style: styleFunction,
@@ -197,7 +208,7 @@ export function Map({
   });
 
   const [currentBaseMap, setCurrentBaseMap] =
-    useState<keyof typeof BASE_MAPS>("osm");
+    useState<keyof typeof BASE_MAPS>("satellite");
 
   // Handle location search selection
   const handleLocationSelect = useCallback(
