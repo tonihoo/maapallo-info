@@ -92,8 +92,11 @@ export function useCameraOperations(
   const handleLocationSelect = useCallback((lat: number, lon: number) => {
     if (!viewerRef.current) return;
 
+    // Use a much closer zoom level for location search results
+    const zoomHeight = 50000; // 50 km height for a good overview of the area
+
     viewerRef.current.camera.flyTo({
-      destination: Cesium.Cartesian3.fromDegrees(lon, lat, 1000000),
+      destination: Cesium.Cartesian3.fromDegrees(lon, lat, zoomHeight),
       duration: 2.0,
       easingFunction: Cesium.EasingFunction.CUBIC_IN_OUT,
     });

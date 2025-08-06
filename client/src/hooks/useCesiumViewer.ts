@@ -73,8 +73,10 @@ export function useCesiumViewer({
             const [longitude, latitude] = feature.geometry.coordinates;
             const isVisible = isPointOnVisibleHemisphere(longitude, latitude);
 
-            if (entity.point) entity.point.show = new Cesium.ConstantProperty(isVisible);
-            if (entity.label) entity.label.show = new Cesium.ConstantProperty(isVisible);
+            if (entity.point)
+              entity.point.show = new Cesium.ConstantProperty(isVisible);
+            if (entity.label)
+              entity.label.show = new Cesium.ConstantProperty(isVisible);
           }
         }
       });
@@ -99,16 +101,24 @@ export function useCesiumViewer({
       entities.forEach((entity, index) => {
         // Style country boundaries
         if (entity.polygon) {
-          entity.polygon.material = new Cesium.ColorMaterialProperty(Cesium.Color.TRANSPARENT);
+          entity.polygon.material = new Cesium.ColorMaterialProperty(
+            Cesium.Color.TRANSPARENT
+          );
           entity.polygon.outline = new Cesium.ConstantProperty(true);
-          entity.polygon.outlineColor = new Cesium.ConstantProperty(Cesium.Color.WHITE.withAlpha(0.5));
+          entity.polygon.outlineColor = new Cesium.ConstantProperty(
+            Cesium.Color.WHITE.withAlpha(0.5)
+          );
           entity.polygon.outlineWidth = new Cesium.ConstantProperty(1);
           entity.polygon.height = new Cesium.ConstantProperty(0);
           entity.polygon.extrudedHeight = new Cesium.ConstantProperty(0);
         }
 
         // Add country labels
-        if (entity.properties?.name_fi && entity.polygon && entity.polygon.hierarchy) {
+        if (
+          entity.properties?.name_fi &&
+          entity.polygon &&
+          entity.polygon.hierarchy
+        ) {
           const name = entity.properties.name_fi.getValue();
           const hierarchy = entity.polygon.hierarchy.getValue(
             Cesium.JulianDate.now()
@@ -272,8 +282,8 @@ export function useCesiumViewer({
           baseLayerPicker: true, // Keep this enabled for imagery options
           terrainProvider: Cesium.createWorldTerrain({
             requestWaterMask: true,
-            requestVertexNormals: true
-          })
+            requestVertexNormals: true,
+          }),
         });
 
         // Enable terrain exaggeration for better 3D effect
