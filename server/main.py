@@ -33,86 +33,66 @@ def verify_basic_auth(credentials: str) -> bool:
         return False
 
 
-async def basic_auth_middleware(request: Request, call_next):
-    """Basic auth middleware that protects main routes in production."""
+async def simple_auth_middleware(request: Request, call_next):
+    """Lightweight auth middleware to prevent search engine indexing."""
 
     # Skip auth in development
     if settings.environment == "development":
         return await call_next(request)
 
-    # Skip auth for health check
-    if request.url.path == "/api/v1/health":
+    # Only protect the main page and HTML routes
+    path = request.url.path
+    
+    # Skip auth for all API routes, static assets, and health checks
+    if (path.startswith("/api/") or
+        path.startswith("/images/") or
+        path.startswith("/cesium/") or
+        path.startswith("/data/") or
+        path.startswith("/static/") or
+        "." in path.split("/")[-1]):  # Has file extension
         return await call_next(request)
 
-    # Skip auth for static assets to improve performance
-    static_paths = [
-        "/images/",
-        "/cesium/",
-        "/data/",
-        "/_app/",
-        "/assets/",
-        "/static/",
-        "favicon.ico",
-        "robots.txt",
-    ]
-    
-    # Skip auth for static files with common extensions
-    static_extensions = [
-        ".js", ".css", ".png", ".jpg", ".jpeg", ".gif", ".svg",
-        ".ico", ".woff", ".woff2", ".ttf", ".eot", ".map",
-        ".json", ".xml", ".txt", ".html", ".htm", ".webp",
-        ".wasm", ".glb", ".gltf"
-    ]
-    
-    path = request.url.path.lower()
-    
-    # Skip auth for static paths
-    if any(path.startswith(static_path) for static_path in static_paths):
-        return await call_next(request)
-    
-    # Skip auth for files with static extensions
-    if any(path.endswith(ext) for ext in static_extensions):
-        return await call_next(request)
+    # Only authenticate for main HTML page requests
+    if request.headers.get("accept", "").startswith("text/html"):
+        auth_header = request.headers.get("authorization")
+        
+        if not auth_header or not auth_header.startswith("Basic "):
+            return HTMLResponse(
+                content="""<!DOCTYPE html>
+<html><head><title>Authentication Required</title></head>
+<body><h1>Authentication Required</h1>
+<p>Please provide credentials to access this site.</p></body></html>""",
+                status_code=401,
+                headers={"WWW-Authenticate": 'Basic realm="Maapallo Info"'}
+            )
+        
+        # Quick credential check
+        try:
+            credentials = auth_header[6:]
+            decoded = base64.b64decode(credentials).decode("utf-8")
+            username, password = decoded.split(":", 1)
+            
+            valid_username = os.getenv("BASIC_AUTH_USERNAME")
+            valid_password = os.getenv("BASIC_AUTH_PASSWORD")
+            
+            if username != valid_username or password != valid_password:
+                return HTMLResponse(
+                    content="""<!DOCTYPE html>
+<html><head><title>Invalid Credentials</title></head>
+<body><h1>Invalid Credentials</h1></body></html>""",
+                    status_code=401,
+                    headers={"WWW-Authenticate": 'Basic realm="Maapallo Info"'}
+                )
+        except Exception:
+            return HTMLResponse(
+                content="""<!DOCTYPE html>
+<html><head><title>Authentication Error</title></head>
+<body><h1>Authentication Error</h1></body></html>""",
+                status_code=401,
+                headers={"WWW-Authenticate": 'Basic realm="Maapallo Info"'}
+            )
 
-    # Only authenticate for main content requests
-    # Check for authorization header
-    auth_header = request.headers.get("authorization")
-
-    if not auth_header or not auth_header.startswith("Basic "):
-        return HTMLResponse(
-            content="""
-            <!DOCTYPE html>
-            <html>
-                <head><title>Authentication Required</title></head>
-                <body>
-                    <h1>Authentication Required</h1>
-                    <p>Please provide valid credentials to access site.</p>
-                </body>
-            </html>
-            """,
-            status_code=401,
-            headers={"WWW-Authenticate": 'Basic realm="Maapallo Info"'},
-        )
-
-    # Verify credentials
-    credentials = auth_header[6:]  # Remove "Basic " prefix
-    if not verify_basic_auth(credentials):
-        return HTMLResponse(
-            content="""
-            <!DOCTYPE html>
-            <html>
-                <head><title>Authentication Failed</title></head>
-                <body>
-                    <h1>Authentication Failed</h1>
-                    <p>Invalid credentials. Please try again.</p>
-                </body>
-            </html>
-            """,
-            status_code=401,
-            headers={"WWW-Authenticate": 'Basic realm="Maapallo Info"'},
-        )
-
-    # Authentication successful, proceed with request
+    # Authentication successful or not needed, proceed
     return await call_next(request)
 
 
@@ -136,8 +116,8 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Add basic auth middleware (MUST BE FIRST)
-app.middleware("http")(basic_auth_middleware)
+# Add simple auth middleware (MUST BE FIRST)
+app.middleware("http")(simple_auth_middleware)
 
 # Add CORS middleware
 app.add_middleware(
@@ -165,6 +145,15 @@ if settings.is_production:
 @app.get("/api")
 async def root():
     return {"message": "Maapallo Info API is running", "version": "1.0.0"}
+
+
+# Robots.txt to prevent search engine indexing
+@app.get("/robots.txt")
+async def robots_txt():
+    return HTMLResponse(
+        content="User-agent: *\nDisallow: /\n",
+        media_type="text/plain"
+    )
 
 
 if __name__ == "__main__":
