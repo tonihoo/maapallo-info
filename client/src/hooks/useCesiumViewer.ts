@@ -270,7 +270,15 @@ export function useCesiumViewer({
         const viewer = new Cesium.Viewer(containerElement, {
           ...OPTIMIZED_CESIUM_OPTIONS,
           baseLayerPicker: true, // Keep this enabled for imagery options
+          terrainProvider: Cesium.createWorldTerrain({
+            requestWaterMask: true,
+            requestVertexNormals: true
+          })
         });
+
+        // Enable terrain exaggeration for better 3D effect
+        viewer.scene.globe.terrainExaggeration = 1.0;
+        viewer.scene.globe.terrainExaggerationRelativeHeight = 0.0;
 
         createEventHandlers(viewer, featuresRef);
 
@@ -283,13 +291,13 @@ export function useCesiumViewer({
           orientation: INITIAL_CAMERA.orientation,
         });
 
-        // Scene optimizations for better quality
+        // Scene optimizations for better quality and 3D terrain visibility
         viewer.scene.postProcessStages.fxaa.enabled = true; // Enable anti-aliasing for smoother edges
         viewer.resolutionScale = 1.0; // Full resolution for crisp rendering
         viewer.scene.highDynamicRange = false;
-        viewer.scene.globe.enableLighting = false;
-        viewer.scene.fog.enabled = false;
-        viewer.scene.skyAtmosphere.show = false;
+        viewer.scene.globe.enableLighting = true; // Enable lighting to show terrain relief
+        viewer.scene.fog.enabled = true; // Enable fog for depth perception
+        viewer.scene.skyAtmosphere.show = true; // Show atmosphere for better visual context
 
         // Better quality settings while maintaining reasonable memory usage
         viewer.scene.globe.maximumScreenSpaceError = 2; // Lower value for higher detail
