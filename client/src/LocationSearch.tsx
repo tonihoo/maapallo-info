@@ -165,7 +165,7 @@ export function LocationSearch({
             border: "1px solid rgba(255, 255, 255, 0.3)",
             borderRadius: "8px",
             backgroundColor: "#ffffff",
-            color: "white",
+            color: "black",
             fontSize: "14px",
             fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
             outline: "none",
