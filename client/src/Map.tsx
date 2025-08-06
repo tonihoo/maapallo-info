@@ -143,9 +143,20 @@ export function Map({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
+  // Store selectedFeatureId in a ref so it's always current
+  const selectedFeatureIdRef = useRef<number | null>(selectedFeatureId);
+
+  // Update the ref whenever selectedFeatureId changes
+  useEffect(() => {
+    selectedFeatureIdRef.current = selectedFeatureId;
+  }, [selectedFeatureId]);
+
+  // Create a styleFunction that uses the ref for the current value
   const styleFunction = (feature: FeatureLike) => {
     const featureType = feature.get("featureType");
-    const isSelected = feature.get("id") === selectedFeatureId;
+    const featureId = feature.get("id");
+    const currentSelectedId = selectedFeatureIdRef.current;
+    const isSelected = featureId === currentSelectedId;
 
     if (featureType === "feature") {
       return new Style({
@@ -433,6 +444,18 @@ export function Map({
       console.error("Error zooming to feature:", error);
     }
   }, [selectedFeatureId, features, olView]);
+
+  // Force re-render of feature styles when selection changes
+  useEffect(() => {
+    if (!olMap?.current) return;
+
+    const layers = olMap.current.getLayers().getArray();
+    const vectorLayer = layers[1] as VectorLayer<VectorSource>;
+    if (vectorLayer) {
+      // Force the vector layer to redraw with updated styles using the ref-based styleFunction
+      vectorLayer.setStyle(styleFunction);
+    }
+  }, [selectedFeatureId]);
 
   const buttonStyle = {
     width: "40px",

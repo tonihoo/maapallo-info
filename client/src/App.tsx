@@ -34,7 +34,8 @@ export function App() {
   const [allFeatures, setAllFeatures] = useState<FeatureTypes[]>([]);
   const [is3DMode, setIs3DMode] = useState(false);
   const [cesiumPreloaded, setCesiumPreloaded] = useState(false);
-  const [CesiumMapComponent, setCesiumMapComponent] = useState<React.ComponentType<CesiumMapProps> | null>(null);
+  const [CesiumMapComponent, setCesiumMapComponent] =
+    useState<React.ComponentType<CesiumMapProps> | null>(null);
 
   // Background preload Cesium after initial render
   useEffect(() => {
@@ -70,7 +71,7 @@ export function App() {
 
   const toggleMapMode = useCallback(async () => {
     console.log("🔄 Toggling to 3D mode, preloaded:", cesiumPreloaded);
-    
+
     // If switching to 3D mode and Cesium isn't loaded yet, load it now
     if (!cesiumPreloaded && !CesiumMapComponent) {
       try {
@@ -84,7 +85,7 @@ export function App() {
         return; // Don't switch to 3D mode if loading failed
       }
     }
-    
+
     setIs3DMode((prev) => !prev);
   }, [cesiumPreloaded, CesiumMapComponent]);
 
@@ -112,6 +113,7 @@ export function App() {
         geometry: feature.location,
         properties: {
           id: feature.id,
+          title: feature.title,
           featureType: "feature",
           isSelected: feature.id === selectedFeatureId,
         },
