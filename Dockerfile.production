@@ -16,11 +16,19 @@ COPY client/ ./
 ARG CESIUM_ION_TOKEN
 ENV CESIUM_ION_TOKEN=${CESIUM_ION_TOKEN}
 
+# Build arguments for basic auth
+ARG BASIC_AUTH_USERNAME
+ARG BASIC_AUTH_PASSWORD
+
 # Build the client application
 RUN npm run build
 
 # Production stage
 FROM python:3.11-alpine AS production
+
+# Build arguments for sensitive data (used only during build)
+ARG BASIC_AUTH_USERNAME
+ARG BASIC_AUTH_PASSWORD
 
 # Set working directory
 WORKDIR /app
@@ -54,6 +62,8 @@ RUN chmod +x start.sh
 ENV PYTHONPATH=/app
 ENV PORT=8080
 ENV ENVIRONMENT=production
+ENV BASIC_AUTH_USERNAME=${BASIC_AUTH_USERNAME}
+ENV BASIC_AUTH_PASSWORD=${BASIC_AUTH_PASSWORD}
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S appgroup && \

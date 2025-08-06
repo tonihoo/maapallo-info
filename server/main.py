@@ -1,13 +1,88 @@
+import base64
 import os
+import secrets
 from contextlib import asynccontextmanager
+from typing import Tuple
 
 import uvicorn
 from config import settings
 from database import init_db
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from routes import feature, health
+
+
+def verify_basic_auth(credentials: str) -> bool:
+    """Verify basic auth credentials."""
+    try:
+        # Decode base64 credentials
+        decoded = base64.b64decode(credentials).decode("utf-8")
+        username, password = decoded.split(":", 1)
+
+        # Get credentials from environment
+        valid_username = os.getenv("BASIC_AUTH_USERNAME")
+        valid_password = os.getenv("BASIC_AUTH_PASSWORD")
+
+        if not valid_username or not valid_password:
+            return False
+
+        return username == valid_username and password == valid_password
+    except Exception:
+        return False
+
+
+async def basic_auth_middleware(request: Request, call_next):
+    """Basic auth middleware that protects all routes in production."""
+
+    # Skip auth in development
+    if settings.environment == "development":
+        return await call_next(request)
+
+    # Skip auth for health check
+    if request.url.path == "/api/v1/health":
+        return await call_next(request)
+
+    # Check for authorization header
+    auth_header = request.headers.get("authorization")
+
+    if not auth_header or not auth_header.startswith("Basic "):
+        return HTMLResponse(
+            content="""
+            <!DOCTYPE html>
+            <html>
+                <head><title>Authentication Required</title></head>
+                <body>
+                    <h1>Authentication Required</h1>
+                    <p>Please provide valid credentials to access this site.</p>
+                </body>
+            </html>
+            """,
+            status_code=401,
+            headers={"WWW-Authenticate": 'Basic realm="Maapallo Info"'},
+        )
+
+    # Verify credentials
+    credentials = auth_header[6:]  # Remove "Basic " prefix
+    if not verify_basic_auth(credentials):
+        return HTMLResponse(
+            content="""
+            <!DOCTYPE html>
+            <html>
+                <head><title>Authentication Failed</title></head>
+                <body>
+                    <h1>Authentication Failed</h1>
+                    <p>Invalid credentials. Please try again.</p>
+                </body>
+            </html>
+            """,
+            status_code=401,
+            headers={"WWW-Authenticate": 'Basic realm="Maapallo Info"'},
+        )
+
+    # Authentication successful, proceed with request
+    return await call_next(request)
 
 
 @asynccontextmanager
@@ -29,6 +104,9 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+# Add basic auth middleware (MUST BE FIRST)
+app.middleware("http")(basic_auth_middleware)
 
 # Add CORS middleware
 app.add_middleware(

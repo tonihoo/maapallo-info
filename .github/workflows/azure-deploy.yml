@@ -105,6 +105,8 @@ jobs:
           tags: ${{ env.ACR_REGISTRY }}/${{ env.APP_NAME }}:${{ github.sha }}, ${{ env.ACR_REGISTRY }}/${{ env.APP_NAME }}:latest
           build-args: |
             CESIUM_ION_TOKEN=${{ secrets.CESIUM_ION_TOKEN }}
+            BASIC_AUTH_USERNAME=${{ secrets.BASIC_AUTH_USERNAME }}
+            BASIC_AUTH_PASSWORD=${{ secrets.BASIC_AUTH_PASSWORD }}
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3

@@ -157,7 +157,6 @@ export function Map({
             width: isSelected ? 3 : 2,
           }),
         }),
-        // Completely remove any text rendering
       });
     } else if (featureType === "clickLocation") {
       return new Style({
