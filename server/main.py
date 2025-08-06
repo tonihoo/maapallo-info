@@ -42,20 +42,22 @@ async def simple_auth_middleware(request: Request, call_next):
 
     # Only protect the main page and HTML routes
     path = request.url.path
-    
+
     # Skip auth for all API routes, static assets, and health checks
-    if (path.startswith("/api/") or
-        path.startswith("/images/") or
-        path.startswith("/cesium/") or
-        path.startswith("/data/") or
-        path.startswith("/static/") or
-        "." in path.split("/")[-1]):  # Has file extension
+    if (
+        path.startswith("/api/")
+        or path.startswith("/images/")
+        or path.startswith("/cesium/")
+        or path.startswith("/data/")
+        or path.startswith("/static/")
+        or "." in path.split("/")[-1]
+    ):  # Has file extension
         return await call_next(request)
 
     # Only authenticate for main HTML page requests
     if request.headers.get("accept", "").startswith("text/html"):
         auth_header = request.headers.get("authorization")
-        
+
         if not auth_header or not auth_header.startswith("Basic "):
             return HTMLResponse(
                 content="""<!DOCTYPE html>
@@ -63,25 +65,27 @@ async def simple_auth_middleware(request: Request, call_next):
 <body><h1>Authentication Required</h1>
 <p>Please provide credentials to access this site.</p></body></html>""",
                 status_code=401,
-                headers={"WWW-Authenticate": 'Basic realm="Maapallo Info"'}
+                headers={"WWW-Authenticate": 'Basic realm="Maapallo Info"'},
             )
-        
+
         # Quick credential check
         try:
             credentials = auth_header[6:]
             decoded = base64.b64decode(credentials).decode("utf-8")
             username, password = decoded.split(":", 1)
-            
+
             valid_username = os.getenv("BASIC_AUTH_USERNAME")
             valid_password = os.getenv("BASIC_AUTH_PASSWORD")
-            
+
             if username != valid_username or password != valid_password:
                 return HTMLResponse(
                     content="""<!DOCTYPE html>
 <html><head><title>Invalid Credentials</title></head>
 <body><h1>Invalid Credentials</h1></body></html>""",
                     status_code=401,
-                    headers={"WWW-Authenticate": 'Basic realm="Maapallo Info"'}
+                    headers={
+                        "WWW-Authenticate": 'Basic realm="Maapallo Info"'
+                    },
                 )
         except Exception:
             return HTMLResponse(
@@ -89,7 +93,7 @@ async def simple_auth_middleware(request: Request, call_next):
 <html><head><title>Authentication Error</title></head>
 <body><h1>Authentication Error</h1></body></html>""",
                 status_code=401,
-                headers={"WWW-Authenticate": 'Basic realm="Maapallo Info"'}
+                headers={"WWW-Authenticate": 'Basic realm="Maapallo Info"'},
             )
 
     # Authentication successful or not needed, proceed
@@ -151,8 +155,7 @@ async def root():
 @app.get("/robots.txt")
 async def robots_txt():
     return HTMLResponse(
-        content="User-agent: *\nDisallow: /\n",
-        media_type="text/plain"
+        content="User-agent: *\nDisallow: /\n", media_type="text/plain"
     )
 
 
