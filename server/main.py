@@ -34,7 +34,7 @@ def verify_basic_auth(credentials: str) -> bool:
 
 
 async def basic_auth_middleware(request: Request, call_next):
-    """Basic auth middleware that protects all routes in production."""
+    """Basic auth middleware that protects main routes in production."""
 
     # Skip auth in development
     if settings.environment == "development":
@@ -44,6 +44,37 @@ async def basic_auth_middleware(request: Request, call_next):
     if request.url.path == "/api/v1/health":
         return await call_next(request)
 
+    # Skip auth for static assets to improve performance
+    static_paths = [
+        "/images/",
+        "/cesium/",
+        "/data/",
+        "/_app/",
+        "/assets/",
+        "/static/",
+        "favicon.ico",
+        "robots.txt",
+    ]
+    
+    # Skip auth for static files with common extensions
+    static_extensions = [
+        ".js", ".css", ".png", ".jpg", ".jpeg", ".gif", ".svg",
+        ".ico", ".woff", ".woff2", ".ttf", ".eot", ".map",
+        ".json", ".xml", ".txt", ".html", ".htm", ".webp",
+        ".wasm", ".glb", ".gltf"
+    ]
+    
+    path = request.url.path.lower()
+    
+    # Skip auth for static paths
+    if any(path.startswith(static_path) for static_path in static_paths):
+        return await call_next(request)
+    
+    # Skip auth for files with static extensions
+    if any(path.endswith(ext) for ext in static_extensions):
+        return await call_next(request)
+
+    # Only authenticate for main content requests
     # Check for authorization header
     auth_header = request.headers.get("authorization")
 
@@ -55,7 +86,7 @@ async def basic_auth_middleware(request: Request, call_next):
                 <head><title>Authentication Required</title></head>
                 <body>
                     <h1>Authentication Required</h1>
-                    <p>Please provide valid credentials to access this site.</p>
+                    <p>Please provide valid credentials to access site.</p>
                 </body>
             </html>
             """,
