@@ -1,17 +1,5 @@
-import { GlobalStyles, useMediaQuery, useTheme } from "@mui/material";
-import { View, Map as OlMap, Feature } from "ol";
-import { GeoJSON } from "ol/format";
-import TileLayer from "ol/layer/Tile";
-import VectorLayer from "ol/layer/Vector";
-import OSM from "ol/source/OSM.js";
-import VectorSource from "ol/source/Vector";
-import { Circle } from "ol/style";
-import Fill from "ol/style/Fill";
-import Stroke from "ol/style/Stroke";
-import Style from "ol/style/Style";
-import { ReactNode, useEffect, useRef, useState, useCallback } from "react";
-import { FeatureLike } from "ol/Feature";
-import { toLonLat, fromLonLat } from "ol/proj";
+import { GlobalStyles } from "@mui/material";
+import { ReactNode } from "react";
 import {
   Feature as GeoJSONFeature,
   Geometry,
@@ -19,7 +7,9 @@ import {
 } from "geojson";
 import { CoordinatesDisplay } from "./CoordinatesDisplay";
 import { LocationSearch } from "./LocationSearch";
-import XYZ from "ol/source/XYZ";
+import { BaseMapSelector } from "./BaseMapSelector";
+import { MapControls } from "./MapControls";
+import { useOpenLayersMap } from "./hooks/useOpenLayersMap";
 
 interface Props {
   children?: ReactNode;
@@ -30,101 +20,6 @@ interface Props {
   selectedFeatureId?: number | null;
 }
 
-// Constants for 2D map controls
-const INITIAL_VIEW = {
-  center: [-13, 18], // Horn of Africa in lon/lat
-  zoom: 3,
-};
-
-const ZOOM_LIMITS = {
-  min: 1,
-  max: 18,
-};
-
-const ANIMATION_DURATIONS = {
-  zoom: 500,
-  rotate: 300,
-  home: 1500,
-};
-
-const BASE_MAPS = {
-  topo: {
-    name: "Topographic",
-    icon: "🏔️",
-    layer: () =>
-      new TileLayer({
-        source: new XYZ({
-          url: "https://{a-c}.tile.opentopomap.org/{z}/{x}/{y}.png",
-          attributions:
-            'Map data: © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, <a href="http://viewfinderpanoramas.org">SRTM</a> | Map style: © <a href="https://opentopomap.org">OpenTopoMap</a>',
-        }),
-        properties: { name: "topo" },
-      }),
-  },
-  osm: {
-    name: "OpenStreetMap",
-    icon: "🗺️",
-    layer: () =>
-      new TileLayer({
-        source: new OSM(),
-        properties: { name: "osm" },
-      }),
-  },
-  satellite: {
-    name: "Satellite",
-    icon: "🌍",
-    layer: () =>
-      new TileLayer({
-        source: new XYZ({
-          url: "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
-          attributions: "© Google",
-          maxZoom: 20,
-        }),
-        properties: { name: "satellite" },
-      }),
-  },
-
-  humanitarian: {
-    name: "Humanitarian",
-    icon: "🏥",
-    layer: () =>
-      new TileLayer({
-        source: new XYZ({
-          url: "https://tile-{a-c}.openstreetmap.fr/hot/{z}/{x}/{y}.png",
-          attributions:
-            '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Tiles style by <a href="https://www.hotosm.org/" target="_blank">Humanitarian OpenStreetMap Team</a>',
-        }),
-        properties: { name: "humanitarian" },
-      }),
-  },
-  cartoLight: {
-    name: "Light",
-    icon: "🌕",
-    layer: () =>
-      new TileLayer({
-        source: new XYZ({
-          url: "https://{a-d}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-          attributions:
-            '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
-        }),
-        properties: { name: "carto-light" },
-      }),
-  },
-  cartoDark: {
-    name: "Dark",
-    icon: "🌑",
-    layer: () =>
-      new TileLayer({
-        source: new XYZ({
-          url: "https://{a-d}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-          attributions:
-            '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
-        }),
-        properties: { name: "carto-dark" },
-      }),
-  },
-};
-
 export function Map({
   children,
   onMapClick,
@@ -133,350 +28,22 @@ export function Map({
   features = [],
   selectedFeatureId,
 }: Props) {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const [mouseCoordinates, setMouseCoordinates] = useState<{
-    lon: number;
-    lat: number;
-  } | null>(null);
-
-  // Add mobile detection
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-
-  // Store selectedFeatureId in a ref so it's always current
-  const selectedFeatureIdRef = useRef<number | null>(selectedFeatureId);
-
-  // Update the ref whenever selectedFeatureId changes
-  useEffect(() => {
-    selectedFeatureIdRef.current = selectedFeatureId;
-  }, [selectedFeatureId]);
-
-  // Create a styleFunction that uses the ref for the current value
-  const styleFunction = (feature: FeatureLike) => {
-    const featureType = feature.get("featureType");
-    const featureId = feature.get("id");
-    const currentSelectedId = selectedFeatureIdRef.current;
-    const isSelected = featureId === currentSelectedId;
-
-    if (featureType === "feature") {
-      return new Style({
-        image: new Circle({
-          radius: isSelected ? 12 : 8,
-          fill: new Fill({ color: isSelected ? "#ff0000" : "#ff8c00" }),
-          stroke: new Stroke({
-            color: isSelected ? "#ffffff" : "#000080",
-            width: isSelected ? 3 : 2,
-          }),
-        }),
-      });
-    } else if (featureType === "clickLocation") {
-      return new Style({
-        image: new Circle({
-          radius: 8,
-          fill: new Fill({ color: "#FF6B35" }),
-          stroke: new Stroke({ color: "#E55100", width: 3 }),
-        }),
-      });
-    } else {
-      return new Style({
-        image: new Circle({
-          radius: 7,
-          fill: new Fill({ color: "#ffb34c" }),
-          stroke: new Stroke({ color: "darkblue", width: 3 }),
-        }),
-      });
-    }
-  };
-
-  /**
-   * OpenLayers View: @see https://openlayers.org/en/latest/apidoc/module-ol_View-View.html
-   */
-  const [olView] = useState(() => {
-    return new View({
-      center: fromLonLat(INITIAL_VIEW.center), // Center on Horn of Africa in lon/lat
-      zoom: INITIAL_VIEW.zoom,
-      projection: "EPSG:3857", // Web Mercator for global view
-      minZoom: ZOOM_LIMITS.min,
-      maxZoom: ZOOM_LIMITS.max,
-    });
+  const {
+    mapRef,
+    mouseCoordinates,
+    currentBaseMap,
+    handleZoom,
+    handleRotate,
+    handleHome,
+    handleLocationSelect,
+    handleBaseMapChange,
+  } = useOpenLayersMap({
+    features,
+    selectedFeatureId: selectedFeatureId || null,
+    onMapClick,
+    onFeatureClick,
+    onFeatureHover,
   });
-
-  /**
-   * OpenLayers Map: @see https://openlayers.org/en/latest/apidoc/module-ol_Map-Map.html
-   */
-  const [olMap] = useState(() => {
-    return new OlMap({
-      target: undefined,
-      controls: [],
-      view: olView,
-      keyboardEventTarget: document,
-      layers: [
-        BASE_MAPS.topo.layer(),
-        new VectorLayer({
-          source: new VectorSource(),
-          style: styleFunction,
-        }),
-      ],
-    });
-  });
-
-  const [currentBaseMap, setCurrentBaseMap] =
-    useState<keyof typeof BASE_MAPS>("topo");
-
-  // Handle location search selection
-  const handleLocationSelect = useCallback(
-    (lat: number, lon: number) => {
-      // Zoom to the selected location
-      olView.animate({
-        center: fromLonLat([lon, lat]),
-        zoom: 12,
-        duration: 1000,
-      });
-    },
-    [olView]
-  );
-
-  // Control functions
-  const handleZoom = useCallback(
-    (zoomIn: boolean) => {
-      const currentZoom = olView.getZoom() || INITIAL_VIEW.zoom;
-      const newZoom = zoomIn
-        ? Math.min(currentZoom + 1, ZOOM_LIMITS.max)
-        : Math.max(currentZoom - 1, ZOOM_LIMITS.min);
-
-      olView.animate({
-        zoom: newZoom,
-        duration: ANIMATION_DURATIONS.zoom,
-      });
-    },
-    [olView]
-  );
-
-  const handleRotate = useCallback(
-    (direction: "left" | "right") => {
-      const currentRotation = olView.getRotation();
-      const rotationIncrement = Math.PI / 12; // 15 degrees in radians
-      const newRotation =
-        direction === "left"
-          ? currentRotation - rotationIncrement
-          : currentRotation + rotationIncrement;
-
-      olView.animate({
-        rotation: newRotation,
-        duration: ANIMATION_DURATIONS.rotate,
-      });
-    },
-    [olView]
-  );
-
-  const handleHome = useCallback(() => {
-    olView.animate({
-      center: fromLonLat(INITIAL_VIEW.center),
-      zoom: INITIAL_VIEW.zoom,
-      rotation: 0,
-      duration: ANIMATION_DURATIONS.home,
-    });
-  }, [olView]);
-
-  // Add base map change handler
-  const handleBaseMapChange = useCallback(
-    (baseMapKey: keyof typeof BASE_MAPS) => {
-      const layers = olMap.getLayers();
-      const newBaseLayer = BASE_MAPS[baseMapKey].layer();
-      layers.setAt(0, newBaseLayer);
-      setCurrentBaseMap(baseMapKey);
-    },
-    [olMap]
-  );
-
-  /** olMap -object's initialization on startup  */
-  useEffect(() => {
-    if (!mapRef.current) return;
-
-    olMap.setTarget(mapRef.current as HTMLElement);
-
-    // Handle click events
-    const clickHandler = (event: any) => {
-      try {
-        // Check if a feature was clicked
-        const feature = olMap.forEachFeatureAtPixel(
-          event.pixel,
-          (feature) => feature
-        );
-
-        if (feature && feature.get("featureType") === "feature") {
-          // Feature clicked
-          const featureId = feature.get("id");
-          if (featureId && onFeatureClick) {
-            onFeatureClick(featureId);
-
-            // Zoom to feature
-            const geometry = feature.getGeometry();
-            if (geometry) {
-              olView.animate({
-                center: (geometry as any).getCoordinates(),
-                zoom: 8,
-                duration: 1000,
-              });
-            }
-          }
-        } else if (onMapClick && event.coordinate) {
-          // Empty space clicked - convert coordinates to lon/lat
-          const coordinates = toLonLat(event.coordinate);
-          onMapClick(coordinates);
-        }
-      } catch (error) {
-        console.error("Error in click handler:", error);
-      }
-    };
-
-    // Handle hover events and coordinate tracking
-    const pointerMoveHandler = (event: any) => {
-      try {
-        if (!event.coordinate) return;
-
-        const feature = olMap.forEachFeatureAtPixel(
-          event.pixel,
-          (feature) => feature
-        );
-
-        // Update mouse coordinates
-        const coordinates = toLonLat(event.coordinate);
-        setMouseCoordinates({
-          lon: Number(coordinates[0].toFixed(4)),
-          lat: Number(coordinates[1].toFixed(4)),
-        });
-
-        if (feature && feature.get("featureType") === "feature") {
-          const featureId = feature.get("id");
-          if (onFeatureHover) {
-            onFeatureHover(featureId);
-          }
-          // Change cursor to pointer when hovering over features
-          const viewport = olMap.getViewport();
-          if (viewport) {
-            viewport.style.cursor = "pointer";
-          }
-        } else {
-          if (onFeatureHover) {
-            onFeatureHover(null);
-          }
-          // Reset cursor when not hovering over features
-          const viewport = olMap.getViewport();
-          if (viewport) {
-            viewport.style.cursor = "";
-          }
-        }
-      } catch (error) {
-        console.error("Error in pointer move handler:", error);
-      }
-    };
-
-    olMap.on("click", clickHandler);
-    olMap.on("pointermove", pointerMoveHandler);
-
-    // Clean up event listeners on unmount
-    return () => {
-      olMap.un("click", clickHandler);
-      olMap.un("pointermove", pointerMoveHandler);
-    };
-  }, [olMap, onMapClick, onFeatureClick, onFeatureHover, olView]);
-
-  /** Listen for changes in the 'features' property */
-  useEffect(() => {
-    try {
-      const layers = olMap.getLayers().getArray();
-      if (!layers || layers.length < 2) return;
-
-      const vectorLayer = layers[1] as VectorLayer<VectorSource>;
-      const source = vectorLayer.getSource();
-      if (!source) return;
-
-      // Clear existing features
-      source.clear();
-
-      // Skip adding new features if none provided
-      if (!features || !features.length) return;
-
-      // Add new features
-      const olFeatures = features.map((geoJsonFeature) => {
-        const olFeature = new Feature({
-          geometry: new GeoJSON().readGeometry(geoJsonFeature.geometry, {
-            dataProjection: "EPSG:4326",
-            featureProjection: "EPSG:3857",
-          }),
-        });
-
-        // Copy properties to the OpenLayers feature
-        if (geoJsonFeature.properties) {
-          Object.keys(geoJsonFeature.properties).forEach((key) => {
-            olFeature.set(key, geoJsonFeature.properties?.[key]);
-          });
-        }
-
-        return olFeature;
-      });
-
-      source.addFeatures(olFeatures);
-    } catch (error) {
-      console.error("Error updating features:", error);
-    }
-  }, [features, olMap]);
-
-  // Zoom to selected feature
-  useEffect(() => {
-    try {
-      if (!selectedFeatureId) return;
-
-      const selectedFeature = features.find(
-        (feature) => feature.properties?.id === selectedFeatureId
-      );
-
-      if (selectedFeature?.geometry?.type === "Point") {
-        const [lon, lat] = selectedFeature.geometry.coordinates;
-        olView.animate({
-          center: fromLonLat([lon, lat]),
-          zoom: 6,
-          duration: 1500,
-        });
-      }
-    } catch (error) {
-      console.error("Error zooming to feature:", error);
-    }
-  }, [selectedFeatureId, features, olView]);
-
-  // Force re-render of feature styles when selection changes
-  useEffect(() => {
-    if (!olMap?.current) return;
-
-    const layers = olMap.current.getLayers().getArray();
-    const vectorLayer = layers[1] as VectorLayer<VectorSource>;
-    if (vectorLayer) {
-      // Force the vector layer to redraw with updated styles using the ref-based styleFunction
-      vectorLayer.setStyle(styleFunction);
-    }
-  }, [selectedFeatureId]);
-
-  const buttonStyle = {
-    width: "40px",
-    height: "40px",
-    backgroundColor: "rgba(42, 42, 42, 0.8)",
-    color: "white",
-    border: "1px solid rgba(255, 255, 255, 0.3)",
-    borderRadius: "4px",
-    cursor: "pointer",
-    fontSize: "20px",
-    fontWeight: "bold",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  } as const;
-
-  const smallButtonStyle = {
-    ...buttonStyle,
-    fontSize: "16px",
-    fontWeight: "normal",
-  } as const;
 
   return (
     <div style={{ width: "100%", height: "100%", position: "relative" }}>
@@ -498,6 +65,7 @@ export function Map({
           },
         }}
       />
+
       <div
         style={{ width: "100%", height: "100%", position: "relative" }}
         ref={mapRef}
@@ -505,92 +73,18 @@ export function Map({
         {children}
       </div>
 
-      {/* Base Map Selector */}
-      <div
-        style={{
-          position: "absolute",
-          top: "150px",
-          right: "20px",
-          zIndex: 1000,
-        }}
-      >
-        <select
-          value={currentBaseMap}
-          onChange={(e) =>
-            handleBaseMapChange(e.target.value as keyof typeof BASE_MAPS)
-          }
-          style={{
-            padding: "8px 12px",
-            backgroundColor: "rgba(42, 42, 42, 0.9)",
-            color: "white",
-            border: "1px solid rgba(255, 255, 255, 0.3)",
-            borderRadius: "4px",
-            fontSize: "14px",
-            fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-            cursor: "pointer",
-            outline: "none",
-            minWidth: "140px",
-          }}
-        >
-          {Object.entries(BASE_MAPS).map(([key, config]) => (
-            <option
-              key={key}
-              value={key}
-              style={{ backgroundColor: "#2a2a2a", color: "white" }}
-            >
-              {config.icon} {config.name}
-            </option>
-          ))}
-        </select>
-      </div>
+      <BaseMapSelector
+        currentBaseMap={currentBaseMap}
+        onBaseMapChange={handleBaseMapChange}
+      />
 
-      {/* Location Search */}
       <LocationSearch onLocationSelect={handleLocationSelect} />
 
-      {/* Control Panel */}
-      <div
-        style={{
-          position: "absolute",
-          bottom: isMobile ? "100px" : "50px", // Much higher on mobile to avoid search bar overlap
-          right: "20px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "8px",
-          zIndex: 1000,
-        }}
-      >
-        <button onClick={handleHome} style={smallButtonStyle} title="View Home">
-          🏠
-        </button>
-        <button
-          onClick={() => handleZoom(true)}
-          style={buttonStyle}
-          title="Zoom In"
-        >
-          +
-        </button>
-        <button
-          onClick={() => handleZoom(false)}
-          style={buttonStyle}
-          title="Zoom Out"
-        >
-          −
-        </button>
-        <button
-          onClick={() => handleRotate("left")}
-          style={smallButtonStyle}
-          title="Rotate Left"
-        >
-          ↶
-        </button>
-        <button
-          onClick={() => handleRotate("right")}
-          style={smallButtonStyle}
-          title="Rotate Right"
-        >
-          ↷
-        </button>
-      </div>
+      <MapControls
+        onZoom={handleZoom}
+        onRotate={handleRotate}
+        onHome={handleHome}
+      />
 
       <CoordinatesDisplay coordinates={mouseCoordinates} />
     </div>
