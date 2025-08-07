@@ -47,7 +47,7 @@ export function useOpenLayersMap({
     lon: number;
     lat: number;
   } | null>(null);
-  const [currentBaseMap, setCurrentBaseMap] = useState<BaseMapKey>("topo");
+  const [currentBaseMap, setCurrentBaseMap] = useState<BaseMapKey>("satellite"); // Changed to satellite for testing
 
   // Measurement state
   const [isMeasuring, setIsMeasuring] = useState(false);
@@ -59,6 +59,9 @@ export function useOpenLayersMap({
   const worldBoundariesLayerRef = useRef<VectorLayer<VectorSource> | null>(
     null
   );
+
+  // Ocean currents layer reference
+  const oceanCurrentsLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
 
   // Store selectedFeatureId in a ref so it's always current
   const selectedFeatureIdRef = useRef<number | null>(selectedFeatureId);
@@ -183,6 +186,71 @@ export function useOpenLayersMap({
     // Store reference to world boundaries layer
     worldBoundariesLayerRef.current = worldBoundariesLayer;
 
+    // Create ocean currents layer
+    const oceanCurrentsSource = new VectorSource();
+    const oceanCurrentsLayer = new VectorLayer({
+      source: oceanCurrentsSource,
+      style: (feature: FeatureLike, resolution: number) => {
+        const zoom = olView.getZoomForResolution(resolution);
+        const temp = feature.get("TEMP") || "";
+        const name = feature.get("NAME") || "";
+
+        // Show ocean currents at zoom level 1 and above for testing
+        const showCurrent = zoom >= 1; // Lowered from 3 to 1 for easier testing
+
+        if (!showCurrent) {
+          return new Style(); // Empty style when zoomed out
+        }
+
+        // Color based on temperature
+        const strokeColor =
+          temp === "warm"
+            ? "rgba(255, 69, 0, 0.7)" // Red-orange for warm currents
+            : "rgba(0, 191, 255, 0.7)"; // Deep sky blue for cold currents
+
+        const fillColor =
+          temp === "warm"
+            ? "rgba(255, 69, 0, 0.2)" // Semi-transparent red-orange
+            : "rgba(0, 191, 255, 0.2)"; // Semi-transparent blue
+
+        // Show labels at higher zoom levels
+        const showLabels = zoom >= 5 && name.trim();
+
+        return new Style({
+          stroke: new Stroke({
+            color: strokeColor,
+            width: 1.5,
+          }),
+          fill: new Fill({
+            color: fillColor,
+          }),
+          text: showLabels
+            ? new Text({
+                text: name,
+                font: "10px Arial,sans-serif",
+                fill: new Fill({
+                  color:
+                    temp === "warm"
+                      ? "rgba(139, 0, 0, 0.9)"
+                      : "rgba(0, 0, 139, 0.9)",
+                }),
+                stroke: new Stroke({
+                  color: "rgba(255, 255, 255, 0.8)",
+                  width: 1,
+                }),
+                offsetY: 0,
+                placement: "point",
+                overflow: true,
+              })
+            : undefined,
+        });
+      },
+      visible: true, // Initially visible since we start with satellite base map
+    });
+
+    // Store reference to ocean currents layer
+    oceanCurrentsLayerRef.current = oceanCurrentsLayer;
+
     return new OlMap({
       target: undefined,
       controls: [],
@@ -191,6 +259,7 @@ export function useOpenLayersMap({
       layers: [
         BASE_MAPS.topo.layer(),
         worldBoundariesLayer,
+        oceanCurrentsLayer, // Ocean currents layer
         new VectorLayer({
           source: new VectorSource(),
           style: styleFunction,
@@ -348,6 +417,11 @@ export function useOpenLayersMap({
       if (worldBoundariesLayerRef.current) {
         worldBoundariesLayerRef.current.setVisible(baseMapKey === "satellite");
       }
+
+      // Show/hide ocean currents based on satellite base map selection
+      if (oceanCurrentsLayerRef.current) {
+        oceanCurrentsLayerRef.current.setVisible(baseMapKey === "satellite");
+      }
     },
     [olMap]
   );
@@ -421,6 +495,55 @@ export function useOpenLayersMap({
     }
   }, []);
 
+  // Load ocean currents
+  const loadOceanCurrents = useCallback(async () => {
+    try {
+      console.log("🌊 Loading ocean currents...");
+      const response = await fetch("/data/ocean-currents.geojson");
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const geojsonData = await response.json();
+      console.log("📊 Ocean currents data:", {
+        type: geojsonData.type,
+        featuresCount: geojsonData.features?.length,
+      });
+
+      if (oceanCurrentsLayerRef.current) {
+        const source = oceanCurrentsLayerRef.current.getSource();
+
+        if (source) {
+          source.clear();
+
+          const format = new GeoJSON();
+          const features = format.readFeatures(geojsonData, {
+            dataProjection: "EPSG:4326",
+            featureProjection: "EPSG:3857",
+          });
+
+          console.log("🌊 Parsed ocean current features:", features.length);
+          console.log(
+            "🌊 First feature properties:",
+            features[0]?.getProperties()
+          );
+
+          source.addFeatures(features);
+          console.log(
+            `✅ Added ${features.length} ocean current features to 2D map`
+          );
+
+          // Force redraw
+          oceanCurrentsLayerRef.current.changed();
+          console.log("🔄 Forced ocean currents layer redraw");
+        }
+      } else {
+        console.error("❌ Ocean currents layer reference is null!");
+      }
+    } catch (error) {
+      console.warn("❌ Failed to load ocean currents:", error);
+    }
+  }, []);
+
   // Load world boundaries when map is ready
   useEffect(() => {
     if (olMap && worldBoundariesLayerRef.current) {
@@ -443,6 +566,27 @@ export function useOpenLayersMap({
     }
   }, [olMap, loadWorldBoundaries]);
 
+  // Load ocean currents when map is ready
+  useEffect(() => {
+    if (olMap && oceanCurrentsLayerRef.current) {
+      console.log("🌊 Ocean currents useEffect triggered", {
+        mapExists: !!olMap,
+        layerExists: !!oceanCurrentsLayerRef.current,
+      });
+
+      // Small delay to ensure map is fully initialized
+      const timer = setTimeout(() => {
+        loadOceanCurrents();
+      }, 100);
+      return () => clearTimeout(timer);
+    } else {
+      console.log("🌊 Ocean currents useEffect conditions not met", {
+        mapExists: !!olMap,
+        layerExists: !!oceanCurrentsLayerRef.current,
+      });
+    }
+  }, [olMap, loadOceanCurrents]);
+
   // Update world boundaries visibility when base map changes
   useEffect(() => {
     if (worldBoundariesLayerRef.current) {
@@ -450,6 +594,27 @@ export function useOpenLayersMap({
       worldBoundariesLayerRef.current.setVisible(shouldShow);
       console.log(
         `🔍 World boundaries visibility set to: ${shouldShow} (base map: ${currentBaseMap})`
+      );
+    }
+  }, [currentBaseMap]);
+
+  // Update ocean currents visibility when base map changes
+  useEffect(() => {
+    if (oceanCurrentsLayerRef.current) {
+      const shouldShow = currentBaseMap === "satellite";
+      oceanCurrentsLayerRef.current.setVisible(shouldShow);
+      console.log(
+        `🌊 Ocean currents visibility set to: ${shouldShow} (base map: ${currentBaseMap})`
+      );
+
+      // Force a redraw to ensure the layer updates
+      if (shouldShow) {
+        oceanCurrentsLayerRef.current.changed();
+        console.log("🔄 Forced ocean currents layer redraw");
+      }
+    } else {
+      console.log(
+        "❌ Ocean currents layer reference is null in visibility update"
       );
     }
   }, [currentBaseMap]);
@@ -559,9 +724,9 @@ export function useOpenLayersMap({
   useEffect(() => {
     try {
       const layers = olMap.getLayers().getArray();
-      if (!layers || layers.length < 3) return;
+      if (!layers || layers.length < 4) return;
 
-      const vectorLayer = layers[2] as VectorLayer<VectorSource>;
+      const vectorLayer = layers[3] as VectorLayer<VectorSource>; // Updated index for features layer
       const source = vectorLayer.getSource();
       if (!source) return;
 
@@ -617,7 +782,7 @@ export function useOpenLayersMap({
   // Force re-render of feature styles when selection changes
   useEffect(() => {
     const layers = olMap.getLayers().getArray();
-    const vectorLayer = layers[2] as VectorLayer<VectorSource>;
+    const vectorLayer = layers[3] as VectorLayer<VectorSource>; // Updated index for features layer
     if (vectorLayer) {
       vectorLayer.setStyle(styleFunction);
     }

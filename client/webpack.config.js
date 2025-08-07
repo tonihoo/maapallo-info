@@ -121,6 +121,11 @@ module.exports = (env, argv) => {
             to: 'images',
             noErrorOnMissing: true,
           },
+          {
+            from: path.join(__dirname, 'public/data'),
+            to: 'data',
+            noErrorOnMissing: true,
+          },
         ],
       }),
     ],
