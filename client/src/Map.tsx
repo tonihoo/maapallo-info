@@ -9,6 +9,7 @@ import { CoordinatesDisplay } from "./CoordinatesDisplay";
 import { LocationSearch } from "./LocationSearch";
 import { BaseMapSelector } from "./BaseMapSelector";
 import { MapControls } from "./MapControls";
+import { MeasurementTool } from "./components/MeasurementTool";
 import { useOpenLayersMap } from "./hooks/useOpenLayersMap";
 
 interface Props {
@@ -37,6 +38,10 @@ export function Map({
     handleHome,
     handleLocationSelect,
     handleBaseMapChange,
+    isMeasuring,
+    currentMeasurement,
+    toggleMeasurement,
+    clearMeasurements,
   } = useOpenLayersMap({
     features,
     selectedFeatureId: selectedFeatureId || null,
@@ -80,6 +85,13 @@ export function Map({
       />
 
       <LocationSearch onLocationSelect={handleLocationSelect} />
+
+      <MeasurementTool
+        isActive={isMeasuring}
+        onToggle={toggleMeasurement}
+        onClear={clearMeasurements}
+        currentMeasurement={currentMeasurement}
+      />
 
       <MapControls onZoom={handleZoom} onRotate={handleRotate} />
 

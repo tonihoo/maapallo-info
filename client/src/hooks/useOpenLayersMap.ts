@@ -10,7 +10,10 @@ import Style from "ol/style/Style";
 import { FeatureLike } from "ol/Feature";
 import { toLonLat, fromLonLat } from "ol/proj";
 import type { MapBrowserEvent } from "ol";
-import { Point } from "ol/geom";
+import { Point, LineString } from "ol/geom";
+import { Draw } from "ol/interaction";
+import { getLength } from "ol/sphere";
+import { unByKey } from "ol/Observable";
 import {
   Feature as GeoJSONFeature,
   Geometry,
@@ -44,6 +47,12 @@ export function useOpenLayersMap({
     lat: number;
   } | null>(null);
   const [currentBaseMap, setCurrentBaseMap] = useState<BaseMapKey>("topo");
+
+  // Measurement state
+  const [isMeasuring, setIsMeasuring] = useState(false);
+  const [currentMeasurement, setCurrentMeasurement] = useState<string>("");
+  const measureDrawRef = useRef<Draw | null>(null);
+  const measureSourceRef = useRef<VectorSource | null>(null);
 
   // Store selectedFeatureId in a ref so it's always current
   const selectedFeatureIdRef = useRef<number | null>(selectedFeatureId);
@@ -103,6 +112,25 @@ export function useOpenLayersMap({
 
   // OpenLayers Map
   const [olMap] = useState(() => {
+    // Create measurement source and layer
+    const measureSource = new VectorSource();
+    measureSourceRef.current = measureSource;
+
+    const measureLayer = new VectorLayer({
+      source: measureSource,
+      style: new Style({
+        stroke: new Stroke({
+          color: "#ffcc33",
+          width: 3,
+        }),
+        image: new Circle({
+          radius: 5,
+          fill: new Fill({ color: "#ffcc33" }),
+          stroke: new Stroke({ color: "#ff9900", width: 2 }),
+        }),
+      }),
+    });
+
     return new OlMap({
       target: undefined,
       controls: [],
@@ -114,6 +142,7 @@ export function useOpenLayersMap({
           source: new VectorSource(),
           style: styleFunction,
         }),
+        measureLayer, // Add measurement layer on top
       ],
     });
   });
@@ -170,6 +199,90 @@ export function useOpenLayersMap({
     },
     [olView]
   );
+
+  // Measurement functions
+  const formatLength = useCallback((length: number) => {
+    if (length > 100) {
+      return Math.round((length / 1000) * 100) / 100 + " km";
+    } else {
+      return Math.round(length * 100) / 100 + " m";
+    }
+  }, []);
+
+  const toggleMeasurement = useCallback(() => {
+    if (isMeasuring) {
+      // Stop measuring
+      if (measureDrawRef.current) {
+        olMap.removeInteraction(measureDrawRef.current);
+        measureDrawRef.current = null;
+      }
+      setIsMeasuring(false);
+    } else {
+      // Start measuring - clear previous measurements
+      if (measureSourceRef.current) {
+        measureSourceRef.current.clear();
+      }
+      setCurrentMeasurement("");
+
+      const draw = new Draw({
+        source: measureSourceRef.current || new VectorSource(),
+        type: "LineString",
+        style: new Style({
+          stroke: new Stroke({
+            color: "#ffcc33",
+            width: 3,
+            lineDash: [10, 10],
+          }),
+          image: new Circle({
+            radius: 5,
+            fill: new Fill({ color: "#ffcc33" }),
+            stroke: new Stroke({ color: "#ff9900", width: 2 }),
+          }),
+        }),
+      });
+
+      measureDrawRef.current = draw;
+      olMap.addInteraction(draw);
+
+      let listener: ReturnType<typeof unByKey> | null = null;
+      draw.on("drawstart", (evt) => {
+        const sketch = evt.feature;
+        const geometry = sketch.getGeometry();
+        if (geometry) {
+          listener = geometry.on("change", (evt) => {
+            const geom = evt.target as LineString;
+            const length = getLength(geom);
+            setCurrentMeasurement(formatLength(length));
+          });
+        }
+      });
+
+      draw.on("drawend", () => {
+        if (listener) {
+          unByKey(listener);
+        }
+        // Keep the measurement active but remove the draw interaction
+        olMap.removeInteraction(draw);
+        measureDrawRef.current = null;
+        setIsMeasuring(false);
+      });
+
+      setIsMeasuring(true);
+    }
+  }, [isMeasuring, olMap, formatLength]);
+
+  // Function to clear measurements
+  const clearMeasurements = useCallback(() => {
+    if (measureSourceRef.current) {
+      measureSourceRef.current.clear();
+    }
+    setCurrentMeasurement("");
+    if (measureDrawRef.current) {
+      olMap.removeInteraction(measureDrawRef.current);
+      measureDrawRef.current = null;
+    }
+    setIsMeasuring(false);
+  }, [olMap]);
 
   const handleBaseMapChange = useCallback(
     (baseMapKey: BaseMapKey) => {
@@ -343,5 +456,10 @@ export function useOpenLayersMap({
     handleHome,
     handleLocationSelect,
     handleBaseMapChange,
+    // Measurement functionality
+    isMeasuring,
+    currentMeasurement,
+    toggleMeasurement,
+    clearMeasurements,
   };
 }
