@@ -3,11 +3,11 @@ import * as Cesium from "cesium";
 import { GlobalStyles } from "@mui/material";
 import { Feature, Geometry, GeoJsonProperties } from "geojson";
 import { CoordinatesDisplay } from "./CoordinatesDisplay";
-import { LocationSearch } from "./LocationSearch";
+import { LocationSearch } from "../common/LocationSearch";
 import { CameraControls } from "./CameraControls";
-import { useCesiumViewer } from "./hooks/useCesiumViewer";
-import { useCameraOperations } from "./hooks/useCameraOperations";
-import { initializeCesiumConfig } from "./utils/cesiumConfig";
+import { useCesiumViewer } from "../../hooks/useCesiumViewer";
+import { useCameraOperations } from "../../hooks/useCameraOperations";
+import { initializeCesiumConfig } from "../../utils/cesiumConfig";
 
 // Initialize Cesium configuration
 initializeCesiumConfig();

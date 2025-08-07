@@ -5,12 +5,12 @@ import {
   Geometry,
   GeoJsonProperties,
 } from "geojson";
-import { CoordinatesDisplay } from "./CoordinatesDisplay";
-import { LocationSearch } from "./LocationSearch";
+import { CoordinatesDisplay } from "../3d/CoordinatesDisplay";
+import { LocationSearch } from "../common/LocationSearch";
 import { BaseMapSelector } from "./BaseMapSelector";
 import { MapControls } from "./MapControls";
-import { MeasurementTool } from "./components/MeasurementTool";
-import { useOpenLayersMap } from "./hooks/useOpenLayersMap";
+import { MeasurementTool } from "./MeasurementTool";
+import { useOpenLayersMap } from "../../hooks/useOpenLayersMap";
 
 interface Props {
   children?: ReactNode;

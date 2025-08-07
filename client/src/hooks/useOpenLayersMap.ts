@@ -19,7 +19,7 @@ import {
   Geometry,
   GeoJsonProperties,
 } from "geojson";
-import { BASE_MAPS, BaseMapKey } from "../BaseMapSelector";
+import { BASE_MAPS, BaseMapKey } from "../components/2d/BaseMapSelector";
 import {
   INITIAL_VIEW,
   ZOOM_LIMITS,

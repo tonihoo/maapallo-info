@@ -8,10 +8,10 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-import { Map } from "./Map";
-import FeatureList from "./FeatureList";
-import { FeatureInfo } from "./FeatureInfo";
-import { MobileMenu } from "./MobileMenu";
+import { Map } from "./components/2d/Map";
+import FeatureList from "./components/common/FeatureList";
+import { FeatureInfo } from "./components/common/FeatureInfo";
+import { MobileMenu } from "./components/common/MobileMenu";
 import { FeatureTypes } from "./types/featureTypes";
 import { Feature, Geometry, GeoJsonProperties } from "geojson";
 
@@ -43,7 +43,7 @@ export function App() {
       try {
         console.log("🔄 Background preloading Cesium...");
         // Preload Cesium module in the background
-        const cesiumModule = await import("./CesiumMap");
+        const cesiumModule = await import("./components/3d/CesiumMap");
         console.log("✅ Cesium preloaded successfully");
         setCesiumMapComponent(() => cesiumModule.CesiumMap);
         setCesiumPreloaded(true);
@@ -76,7 +76,7 @@ export function App() {
     if (!cesiumPreloaded && !CesiumMapComponent) {
       try {
         console.log("🔄 Loading Cesium on demand...");
-        const cesiumModule = await import("./CesiumMap");
+        const cesiumModule = await import("./components/3d/CesiumMap");
         setCesiumMapComponent(() => cesiumModule.CesiumMap);
         setCesiumPreloaded(true);
         console.log("✅ Cesium loaded on demand");
