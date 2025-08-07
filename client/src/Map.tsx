@@ -76,15 +76,12 @@ export function Map({
       <BaseMapSelector
         currentBaseMap={currentBaseMap}
         onBaseMapChange={handleBaseMapChange}
+        onHome={handleHome}
       />
 
       <LocationSearch onLocationSelect={handleLocationSelect} />
 
-      <MapControls
-        onZoom={handleZoom}
-        onRotate={handleRotate}
-        onHome={handleHome}
-      />
+      <MapControls onZoom={handleZoom} onRotate={handleRotate} />
 
       <CoordinatesDisplay coordinates={mouseCoordinates} />
     </div>

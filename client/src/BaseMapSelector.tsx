@@ -85,14 +85,16 @@ export type BaseMapKey = keyof typeof BASE_MAPS;
 interface BaseMapSelectorProps {
   currentBaseMap: BaseMapKey;
   onBaseMapChange: (baseMapKey: BaseMapKey) => void;
+  onHome: () => void;
 }
 
 export function BaseMapSelector({
   currentBaseMap,
   onBaseMapChange,
+  onHome,
 }: BaseMapSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
-  
+
   return (
     <div
       style={{
@@ -100,8 +102,34 @@ export function BaseMapSelector({
         top: "150px",
         right: "20px",
         zIndex: 1000,
+        display: "flex",
+        flexDirection: "column",
+        gap: "8px",
       }}
     >
+      {/* Home button */}
+      <button
+        onClick={onHome}
+        style={{
+          width: "40px",
+          height: "40px",
+          backgroundColor: "rgba(42, 42, 42, 0.8)",
+          color: "white",
+          border: "1px solid rgba(255, 255, 255, 0.3)",
+          borderRadius: "4px",
+          cursor: "pointer",
+          fontSize: "16px",
+          fontWeight: "normal",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          outline: "none",
+        }}
+        title="View Home"
+      >
+        🏠
+      </button>
+
       {/* Main button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
@@ -129,7 +157,7 @@ export function BaseMapSelector({
         <div
           style={{
             position: "absolute",
-            top: "45px",
+            top: "93px", // Adjusted for home button + base selector + gap
             right: "0",
             backgroundColor: "rgba(42, 42, 42, 0.95)",
             border: "1px solid rgba(255, 255, 255, 0.3)",
@@ -149,7 +177,10 @@ export function BaseMapSelector({
               style={{
                 width: "100%",
                 padding: "8px 12px",
-                backgroundColor: currentBaseMap === key ? "rgba(255, 255, 255, 0.2)" : "transparent",
+                backgroundColor:
+                  currentBaseMap === key
+                    ? "rgba(255, 255, 255, 0.2)"
+                    : "transparent",
                 color: "white",
                 border: "none",
                 borderRadius: "2px",
@@ -163,7 +194,8 @@ export function BaseMapSelector({
               }}
               onMouseEnter={(e) => {
                 if (currentBaseMap !== key) {
-                  e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
+                  e.currentTarget.style.backgroundColor =
+                    "rgba(255, 255, 255, 0.1)";
                 }
               }}
               onMouseLeave={(e) => {
