@@ -35,6 +35,11 @@ interface UseOpenLayersMapProps {
   onFeatureHover?: (featureId: number | null) => void;
 }
 
+interface LayerVisibility {
+  worldBoundaries: boolean;
+  oceanCurrents: boolean;
+}
+
 export function useOpenLayersMap({
   features,
   selectedFeatureId,
@@ -47,7 +52,13 @@ export function useOpenLayersMap({
     lon: number;
     lat: number;
   } | null>(null);
-  const [currentBaseMap, setCurrentBaseMap] = useState<BaseMapKey>("satellite"); // Changed to satellite for testing
+  const [currentBaseMap, setCurrentBaseMap] = useState<BaseMapKey>("topo"); // Back to default
+
+  // Layer visibility state
+  const [layerVisibility, setLayerVisibility] = useState<LayerVisibility>({
+    worldBoundaries: true,
+    oceanCurrents: true,
+  });
 
   // Measurement state
   const [isMeasuring, setIsMeasuring] = useState(false);
@@ -245,7 +256,7 @@ export function useOpenLayersMap({
             : undefined,
         });
       },
-      visible: true, // Initially visible since we start with satellite base map
+      visible: true, // Initially visible based on default layer visibility
     });
 
     // Store reference to ocean currents layer
@@ -257,7 +268,7 @@ export function useOpenLayersMap({
       view: olView,
       keyboardEventTarget: document,
       layers: [
-        BASE_MAPS.topo.layer(),
+        BASE_MAPS.topo.layer(), // This should be dynamic based on currentBaseMap
         worldBoundariesLayer,
         oceanCurrentsLayer, // Ocean currents layer
         new VectorLayer({
@@ -406,22 +417,34 @@ export function useOpenLayersMap({
     setIsMeasuring(false);
   }, [olMap]);
 
+  // Layer visibility control
+  const handleLayerVisibilityChange = useCallback(
+    (layerId: string, visible: boolean) => {
+      setLayerVisibility((prev) => ({
+        ...prev,
+        [layerId]: visible,
+      }));
+
+      // Update the actual layer visibility
+      if (layerId === "worldBoundaries" && worldBoundariesLayerRef.current) {
+        worldBoundariesLayerRef.current.setVisible(visible);
+        console.log(
+          `🔍 World boundaries visibility manually set to: ${visible}`
+        );
+      } else if (layerId === "oceanCurrents" && oceanCurrentsLayerRef.current) {
+        oceanCurrentsLayerRef.current.setVisible(visible);
+        console.log(`🌊 Ocean currents visibility manually set to: ${visible}`);
+      }
+    },
+    []
+  );
+
   const handleBaseMapChange = useCallback(
     (baseMapKey: BaseMapKey) => {
       const layers = olMap.getLayers();
       const newBaseLayer = BASE_MAPS[baseMapKey].layer();
       layers.setAt(0, newBaseLayer);
       setCurrentBaseMap(baseMapKey);
-
-      // Show/hide world boundaries based on satellite base map selection
-      if (worldBoundariesLayerRef.current) {
-        worldBoundariesLayerRef.current.setVisible(baseMapKey === "satellite");
-      }
-
-      // Show/hide ocean currents based on satellite base map selection
-      if (oceanCurrentsLayerRef.current) {
-        oceanCurrentsLayerRef.current.setVisible(baseMapKey === "satellite");
-      }
     },
     [olMap]
   );
@@ -587,37 +610,32 @@ export function useOpenLayersMap({
     }
   }, [olMap, loadOceanCurrents]);
 
-  // Update world boundaries visibility when base map changes
+  // Update layer visibility when state changes
   useEffect(() => {
     if (worldBoundariesLayerRef.current) {
-      const shouldShow = currentBaseMap === "satellite";
-      worldBoundariesLayerRef.current.setVisible(shouldShow);
+      worldBoundariesLayerRef.current.setVisible(
+        layerVisibility.worldBoundaries
+      );
       console.log(
-        `🔍 World boundaries visibility set to: ${shouldShow} (base map: ${currentBaseMap})`
+        `🔍 World boundaries visibility set to: ${layerVisibility.worldBoundaries}`
       );
     }
-  }, [currentBaseMap]);
+  }, [layerVisibility.worldBoundaries]);
 
-  // Update ocean currents visibility when base map changes
   useEffect(() => {
     if (oceanCurrentsLayerRef.current) {
-      const shouldShow = currentBaseMap === "satellite";
-      oceanCurrentsLayerRef.current.setVisible(shouldShow);
+      oceanCurrentsLayerRef.current.setVisible(layerVisibility.oceanCurrents);
       console.log(
-        `🌊 Ocean currents visibility set to: ${shouldShow} (base map: ${currentBaseMap})`
+        `🌊 Ocean currents visibility set to: ${layerVisibility.oceanCurrents}`
       );
 
       // Force a redraw to ensure the layer updates
-      if (shouldShow) {
+      if (layerVisibility.oceanCurrents) {
         oceanCurrentsLayerRef.current.changed();
         console.log("🔄 Forced ocean currents layer redraw");
       }
-    } else {
-      console.log(
-        "❌ Ocean currents layer reference is null in visibility update"
-      );
     }
-  }, [currentBaseMap]);
+  }, [layerVisibility.oceanCurrents]);
 
   // Update world boundaries style when zoom changes (for labels)
   useEffect(() => {
@@ -801,5 +819,7 @@ export function useOpenLayersMap({
     currentMeasurement,
     toggleMeasurement,
     clearMeasurements,
+    layerVisibility,
+    handleLayerVisibilityChange,
   };
 }

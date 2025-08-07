@@ -10,6 +10,7 @@ import { LocationSearch } from "../common/LocationSearch";
 import { BaseMapSelector } from "./BaseMapSelector";
 import { MapControls } from "./MapControls";
 import { MeasurementTool } from "./MeasurementTool";
+import { LayerSwitcher } from "./LayerSwitcher";
 import { useOpenLayersMap } from "../../hooks/useOpenLayersMap";
 
 interface Props {
@@ -42,6 +43,8 @@ export function Map({
     currentMeasurement,
     toggleMeasurement,
     clearMeasurements,
+    layerVisibility,
+    handleLayerVisibilityChange,
   } = useOpenLayersMap({
     features,
     selectedFeatureId: selectedFeatureId || null,
@@ -94,6 +97,30 @@ export function Map({
       />
 
       <MapControls onZoom={handleZoom} onRotate={handleRotate} />
+
+      <LayerSwitcher
+        layers={[
+          {
+            id: "worldBoundaries",
+            name: "World Boundaries",
+            description: "Country borders and names",
+            visible: layerVisibility.worldBoundaries,
+          },
+          {
+            id: "oceanCurrents",
+            name: "Ocean Currents",
+            description: "Global ocean circulation patterns",
+            visible: layerVisibility.oceanCurrents,
+          },
+        ]}
+        onLayerToggle={handleLayerVisibilityChange}
+        style={{
+          position: "absolute",
+          top: "246px", // Position under BaseMapSelector (150px + 40px home + 8px gap + 40px base + 8px gap)
+          right: "20px",
+          zIndex: 1000,
+        }}
+      />
 
       <CoordinatesDisplay coordinates={mouseCoordinates} />
     </div>
