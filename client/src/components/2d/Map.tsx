@@ -5,7 +5,7 @@ import {
   Geometry,
   GeoJsonProperties,
 } from "geojson";
-import { CoordinatesDisplay } from "../3d/CoordinatesDisplay";
+import { CoordinatesDisplay } from "../common/CoordinatesDisplay";
 import { LocationSearch } from "../common/LocationSearch";
 import { BaseMapSelector } from "./BaseMapSelector";
 import { MapControls } from "./MapControls";

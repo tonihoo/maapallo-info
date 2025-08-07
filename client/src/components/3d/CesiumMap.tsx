@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback } from "react";
 import * as Cesium from "cesium";
 import { GlobalStyles } from "@mui/material";
 import { Feature, Geometry, GeoJsonProperties } from "geojson";
-import { CoordinatesDisplay } from "./CoordinatesDisplay";
+import { CoordinatesDisplay } from "../common/CoordinatesDisplay";
 import { LocationSearch } from "../common/LocationSearch";
 import { CameraControls } from "./CameraControls";
 import { useCesiumViewer } from "../../hooks/useCesiumViewer";
