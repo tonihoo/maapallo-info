@@ -54,6 +54,11 @@ export function useOpenLayersMap({
   const measureDrawRef = useRef<Draw | null>(null);
   const measureSourceRef = useRef<VectorSource | null>(null);
 
+  // World boundaries layer reference
+  const worldBoundariesLayerRef = useRef<VectorLayer<VectorSource> | null>(
+    null
+  );
+
   // Store selectedFeatureId in a ref so it's always current
   const selectedFeatureIdRef = useRef<number | null>(selectedFeatureId);
 
@@ -131,6 +136,25 @@ export function useOpenLayersMap({
       }),
     });
 
+    // Create world boundaries layer
+    const worldBoundariesSource = new VectorSource();
+    const worldBoundariesLayer = new VectorLayer({
+      source: worldBoundariesSource,
+      style: new Style({
+        stroke: new Stroke({
+          color: "rgba(255, 255, 255, 1)",
+          width: 0.5,
+        }),
+        fill: new Fill({
+          color: "rgba(255, 255, 255, 0)",
+        }),
+      }),
+      visible: true,
+    });
+
+    // Store reference to world boundaries layer
+    worldBoundariesLayerRef.current = worldBoundariesLayer;
+
     return new OlMap({
       target: undefined,
       controls: [],
@@ -138,6 +162,7 @@ export function useOpenLayersMap({
       keyboardEventTarget: document,
       layers: [
         BASE_MAPS.topo.layer(),
+        worldBoundariesLayer,
         new VectorLayer({
           source: new VectorSource(),
           style: styleFunction,
@@ -290,9 +315,105 @@ export function useOpenLayersMap({
       const newBaseLayer = BASE_MAPS[baseMapKey].layer();
       layers.setAt(0, newBaseLayer);
       setCurrentBaseMap(baseMapKey);
+
+      // Show/hide world boundaries based on satellite base map selection
+      if (worldBoundariesLayerRef.current) {
+        worldBoundariesLayerRef.current.setVisible(baseMapKey === "satellite");
+      }
     },
     [olMap]
   );
+
+  // Load world boundaries
+  const loadWorldBoundaries = useCallback(async () => {
+    try {
+      console.log("🌍 Loading world boundaries...");
+      const response = await fetch("/data/world.geojson");
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const geojsonData = await response.json();
+      console.log("📊 GeoJSON data:", {
+        type: geojsonData.type,
+        featuresCount: geojsonData.features?.length,
+      });
+
+      if (worldBoundariesLayerRef.current) {
+        const source = worldBoundariesLayerRef.current.getSource();
+        console.log("🔍 Layer source exists:", !!source);
+        console.log(
+          "🔍 Layer visible:",
+          worldBoundariesLayerRef.current.getVisible()
+        );
+
+        if (source) {
+          source.clear();
+
+          const format = new GeoJSON();
+          const features = format.readFeatures(geojsonData, {
+            dataProjection: "EPSG:4326",
+            featureProjection: "EPSG:3857",
+          });
+
+          console.log("🗺️ Parsed features:", features.length);
+          console.log(
+            "🗺️ First feature geometry type:",
+            features[0]?.getGeometry()?.getType()
+          );
+          console.log(
+            "🗺️ First feature extent:",
+            features[0]?.getGeometry()?.getExtent()
+          );
+
+          source.addFeatures(features);
+          console.log(
+            `✅ Added ${features.length} country boundaries to 2D map`
+          );
+
+          // Force redraw
+          worldBoundariesLayerRef.current.changed();
+          console.log("🔄 Forced layer redraw");
+        }
+      } else {
+        console.error("❌ World boundaries layer reference is null!");
+      }
+    } catch (error) {
+      console.warn("❌ Failed to load world boundaries:", error);
+    }
+  }, []);
+
+  // Load world boundaries when map is ready
+  useEffect(() => {
+    if (olMap && worldBoundariesLayerRef.current) {
+      // Debug layer structure
+      const layers = olMap.getLayers().getArray();
+      console.log(
+        "🔍 Map layers:",
+        layers.map((layer, index) => ({
+          index,
+          type: layer.constructor.name,
+          visible: layer.getVisible?.() ?? "unknown",
+        }))
+      );
+
+      // Small delay to ensure map is fully initialized
+      const timer = setTimeout(() => {
+        loadWorldBoundaries();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [olMap, loadWorldBoundaries]);
+
+  // Update world boundaries visibility when base map changes
+  useEffect(() => {
+    if (worldBoundariesLayerRef.current) {
+      const shouldShow = currentBaseMap === "satellite";
+      worldBoundariesLayerRef.current.setVisible(shouldShow);
+      console.log(
+        `🔍 World boundaries visibility set to: ${shouldShow} (base map: ${currentBaseMap})`
+      );
+    }
+  }, [currentBaseMap]);
 
   // Initialize map
   useEffect(() => {
@@ -383,9 +504,9 @@ export function useOpenLayersMap({
   useEffect(() => {
     try {
       const layers = olMap.getLayers().getArray();
-      if (!layers || layers.length < 2) return;
+      if (!layers || layers.length < 3) return;
 
-      const vectorLayer = layers[1] as VectorLayer<VectorSource>;
+      const vectorLayer = layers[2] as VectorLayer<VectorSource>;
       const source = vectorLayer.getSource();
       if (!source) return;
 
@@ -441,7 +562,7 @@ export function useOpenLayersMap({
   // Force re-render of feature styles when selection changes
   useEffect(() => {
     const layers = olMap.getLayers().getArray();
-    const vectorLayer = layers[1] as VectorLayer<VectorSource>;
+    const vectorLayer = layers[2] as VectorLayer<VectorSource>;
     if (vectorLayer) {
       vectorLayer.setStyle(styleFunction);
     }
@@ -456,7 +577,6 @@ export function useOpenLayersMap({
     handleHome,
     handleLocationSelect,
     handleBaseMapChange,
-    // Measurement functionality
     isMeasuring,
     currentMeasurement,
     toggleMeasurement,
