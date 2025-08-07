@@ -1,3 +1,4 @@
+import { useState } from "react";
 import TileLayer from "ol/layer/Tile";
 import OSM from "ol/source/OSM.js";
 import XYZ from "ol/source/XYZ";
@@ -90,6 +91,8 @@ export function BaseMapSelector({
   currentBaseMap,
   onBaseMapChange,
 }: BaseMapSelectorProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  
   return (
     <div
       style={{
@@ -99,32 +102,97 @@ export function BaseMapSelector({
         zIndex: 1000,
       }}
     >
-      <select
-        value={currentBaseMap}
-        onChange={(e) => onBaseMapChange(e.target.value as BaseMapKey)}
+      {/* Main button */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
         style={{
-          padding: "8px 12px",
-          backgroundColor: "rgba(42, 42, 42, 0.9)",
+          width: "40px",
+          height: "40px",
+          backgroundColor: "rgba(42, 42, 42, 0.8)",
           color: "white",
           border: "1px solid rgba(255, 255, 255, 0.3)",
           borderRadius: "4px",
-          fontSize: "14px",
-          fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
           cursor: "pointer",
+          fontSize: "16px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
           outline: "none",
-          minWidth: "140px",
         }}
+        title={`Base Map: ${BASE_MAPS[currentBaseMap].name}`}
       >
-        {Object.entries(BASE_MAPS).map(([key, config]) => (
-          <option
-            key={key}
-            value={key}
-            style={{ backgroundColor: "#2a2a2a", color: "white" }}
-          >
-            {config.icon} {config.name}
-          </option>
-        ))}
-      </select>
+        {BASE_MAPS[currentBaseMap].icon}
+      </button>
+
+      {/* Dropdown menu */}
+      {isOpen && (
+        <div
+          style={{
+            position: "absolute",
+            top: "45px",
+            right: "0",
+            backgroundColor: "rgba(42, 42, 42, 0.95)",
+            border: "1px solid rgba(255, 255, 255, 0.3)",
+            borderRadius: "4px",
+            padding: "4px",
+            minWidth: "160px",
+            boxShadow: "0 4px 8px rgba(0, 0, 0, 0.3)",
+          }}
+        >
+          {Object.entries(BASE_MAPS).map(([key, config]) => (
+            <button
+              key={key}
+              onClick={() => {
+                onBaseMapChange(key as BaseMapKey);
+                setIsOpen(false);
+              }}
+              style={{
+                width: "100%",
+                padding: "8px 12px",
+                backgroundColor: currentBaseMap === key ? "rgba(255, 255, 255, 0.2)" : "transparent",
+                color: "white",
+                border: "none",
+                borderRadius: "2px",
+                cursor: "pointer",
+                fontSize: "14px",
+                textAlign: "left",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                outline: "none",
+              }}
+              onMouseEnter={(e) => {
+                if (currentBaseMap !== key) {
+                  e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.1)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (currentBaseMap !== key) {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }
+              }}
+            >
+              <span style={{ fontSize: "16px" }}>{config.icon}</span>
+              <span>{config.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Click outside to close */}
+      {isOpen && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: -1,
+          }}
+          onClick={() => setIsOpen(false)}
+        />
+      )}
     </div>
   );
 }
