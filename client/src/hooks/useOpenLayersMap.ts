@@ -7,6 +7,7 @@ import { Circle } from "ol/style";
 import Fill from "ol/style/Fill";
 import Stroke from "ol/style/Stroke";
 import Style from "ol/style/Style";
+import Text from "ol/style/Text";
 import { FeatureLike } from "ol/Feature";
 import { toLonLat, fromLonLat } from "ol/proj";
 import type { MapBrowserEvent } from "ol";
@@ -136,19 +137,46 @@ export function useOpenLayersMap({
       }),
     });
 
-    // Create world boundaries layer
+    // Create world boundaries layer with country labels
     const worldBoundariesSource = new VectorSource();
+
     const worldBoundariesLayer = new VectorLayer({
       source: worldBoundariesSource,
-      style: new Style({
-        stroke: new Stroke({
-          color: "rgba(255, 255, 255, 1)",
-          width: 0.5,
-        }),
-        fill: new Fill({
-          color: "rgba(255, 255, 255, 0)",
-        }),
-      }),
+      style: (feature: FeatureLike, resolution: number) => {
+        const zoom = olView.getZoomForResolution(resolution);
+        const countryName = feature.get("name") || feature.get("name_fi") || "";
+
+        // Show labels only at zoom level 3 and above, below 10.
+        const showLabels = zoom >= 4;
+
+        return new Style({
+          stroke: new Stroke({
+            color: "rgba(255, 255, 255, 0.8)",
+            width: 0.5,
+          }),
+          fill: new Fill({
+            color: "rgba(255, 255, 255, 0)",
+          }),
+          text:
+            showLabels && countryName
+              ? new Text({
+                  text: countryName,
+                  font: "12px Calibri,sans-serif",
+                  fill: new Fill({
+                    color: "rgba(255, 255, 255, 0.9)",
+                  }),
+                  stroke: new Stroke({
+                    color: "rgba(0, 0, 0, 0.7)",
+                    width: 2,
+                  }),
+                  offsetY: 0,
+                  placement: "point",
+                  overflow: true,
+                  maxAngle: 0,
+                })
+              : undefined,
+        });
+      },
       visible: true,
     });
 
@@ -364,6 +392,17 @@ export function useOpenLayersMap({
             "🗺️ First feature extent:",
             features[0]?.getGeometry()?.getExtent()
           );
+          console.log(
+            "🏷️ First feature properties:",
+            features[0]?.getProperties()
+          );
+          console.log(
+            "🏷️ Sample country names:",
+            features.slice(0, 5).map((f) => ({
+              name: f.get("name"),
+              name_fi: f.get("name_fi"),
+            }))
+          );
 
           source.addFeatures(features);
           console.log(
@@ -414,6 +453,22 @@ export function useOpenLayersMap({
       );
     }
   }, [currentBaseMap]);
+
+  // Update world boundaries style when zoom changes (for labels)
+  useEffect(() => {
+    const handleZoomChange = () => {
+      if (worldBoundariesLayerRef.current) {
+        // Force style update by changing the layer
+        worldBoundariesLayerRef.current.changed();
+      }
+    };
+
+    olView.on("change:resolution", handleZoomChange);
+
+    return () => {
+      olView.un("change:resolution", handleZoomChange);
+    };
+  }, [olView]);
 
   // Initialize map
   useEffect(() => {
