@@ -38,6 +38,7 @@ interface UseOpenLayersMapProps {
 interface LayerVisibility {
   worldBoundaries: boolean;
   oceanCurrents: boolean;
+  articleLocators: boolean;
 }
 
 export function useOpenLayersMap({
@@ -58,6 +59,7 @@ export function useOpenLayersMap({
   const [layerVisibility, setLayerVisibility] = useState<LayerVisibility>({
     worldBoundaries: false,
     oceanCurrents: false,
+    articleLocators: true, // Default to true since features are shown by default
   });
 
   // Measurement state
@@ -73,6 +75,9 @@ export function useOpenLayersMap({
 
   // Ocean currents layer reference
   const oceanCurrentsLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
+
+  // Article locators layer reference
+  const articleLocatorsLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
 
   // Store selectedFeatureId in a ref so it's always current
   const selectedFeatureIdRef = useRef<number | null>(selectedFeatureId);
@@ -262,6 +267,32 @@ export function useOpenLayersMap({
     // Store reference to ocean currents layer
     oceanCurrentsLayerRef.current = oceanCurrentsLayer;
 
+    // Create article locators layer
+    const articleLocatorsSource = new VectorSource();
+    const articleLocatorsLayer = new VectorLayer({
+      source: articleLocatorsSource,
+      style: (feature: FeatureLike) => {
+        const isHighlighted = feature.get("highlighted");
+
+        return new Style({
+          image: new Circle({
+            radius: isHighlighted ? 10 : 7,
+            fill: new Fill({
+              color: isHighlighted ? "#ff4444" : "#1976d2"
+            }),
+            stroke: new Stroke({
+              color: "#ffffff",
+              width: isHighlighted ? 3 : 2
+            }),
+          }),
+        });
+      },
+      visible: false, // Initially hidden
+    });
+
+    // Store reference to article locators layer
+    articleLocatorsLayerRef.current = articleLocatorsLayer;
+
     return new OlMap({
       target: undefined,
       controls: [],
@@ -271,6 +302,7 @@ export function useOpenLayersMap({
         BASE_MAPS.topo.layer(), // This should be dynamic based on currentBaseMap
         worldBoundariesLayer,
         oceanCurrentsLayer, // Ocean currents layer
+        articleLocatorsLayer, // Article locators layer
         new VectorLayer({
           source: new VectorSource(),
           style: styleFunction,
@@ -430,6 +462,8 @@ export function useOpenLayersMap({
         worldBoundariesLayerRef.current.setVisible(visible);
       } else if (layerId === "oceanCurrents" && oceanCurrentsLayerRef.current) {
         oceanCurrentsLayerRef.current.setVisible(visible);
+      } else if (layerId === "articleLocators" && articleLocatorsLayerRef.current) {
+        articleLocatorsLayerRef.current.setVisible(visible);
       }
     },
     []
@@ -513,6 +547,40 @@ export function useOpenLayersMap({
     }
   }, []);
 
+  // Load article locators
+  const loadArticleLocators = useCallback(async () => {
+    try {
+      const response = await fetch("/data/article-locators.geojson");
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      const geojsonData = await response.json();
+
+      if (articleLocatorsLayerRef.current) {
+        const source = articleLocatorsLayerRef.current.getSource();
+
+        if (source) {
+          source.clear();
+
+          const format = new GeoJSON();
+          const features = format.readFeatures(geojsonData, {
+            dataProjection: "EPSG:4326",
+            featureProjection: "EPSG:3857",
+          });
+
+          source.addFeatures(features);
+
+          // Force redraw
+          articleLocatorsLayerRef.current.changed();
+        }
+      } else {
+        console.error("❌ Article locators layer reference is null!");
+      }
+    } catch (error) {
+      console.warn("❌ Failed to load article locators:", error);
+    }
+  }, []);
+
   // Load world boundaries when map is ready
   useEffect(() => {
     if (olMap && worldBoundariesLayerRef.current) {
@@ -538,6 +606,17 @@ export function useOpenLayersMap({
     }
   }, [olMap, loadOceanCurrents]);
 
+  // Load article locators when map is ready
+  useEffect(() => {
+    if (olMap && articleLocatorsLayerRef.current) {
+      // Small delay to ensure map is fully initialized
+      const timer = setTimeout(() => {
+        loadArticleLocators();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [olMap, loadArticleLocators]);
+
   // Update layer visibility when state changes
   useEffect(() => {
     if (worldBoundariesLayerRef.current) {
@@ -557,6 +636,28 @@ export function useOpenLayersMap({
       }
     }
   }, [layerVisibility.oceanCurrents]);
+
+  // Update article locators layer visibility when state changes
+  useEffect(() => {
+    // Update the main features layer visibility (the orange locators)
+    const layers = olMap.getLayers().getArray();
+    if (layers.length >= 5) {
+      const vectorLayer = layers[4] as VectorLayer<VectorSource>; // Features layer
+      if (vectorLayer) {
+        vectorLayer.setVisible(layerVisibility.articleLocators);
+      }
+    }
+
+    // Also update the dedicated article locators layer if it exists
+    if (articleLocatorsLayerRef.current) {
+      articleLocatorsLayerRef.current.setVisible(layerVisibility.articleLocators);
+
+      // Force a redraw to ensure the layer updates
+      if (layerVisibility.articleLocators) {
+        articleLocatorsLayerRef.current.changed();
+      }
+    }
+  }, [layerVisibility.articleLocators, olMap]);
 
   // Update world boundaries style when zoom changes (for labels)
   useEffect(() => {
@@ -663,9 +764,9 @@ export function useOpenLayersMap({
   useEffect(() => {
     try {
       const layers = olMap.getLayers().getArray();
-      if (!layers || layers.length < 4) return;
+      if (!layers || layers.length < 5) return;
 
-      const vectorLayer = layers[3] as VectorLayer<VectorSource>; // Updated index for features layer
+      const vectorLayer = layers[4] as VectorLayer<VectorSource>; // Updated index for features layer
       const source = vectorLayer.getSource();
       if (!source) return;
 
@@ -691,10 +792,13 @@ export function useOpenLayersMap({
       });
 
       source.addFeatures(olFeatures);
+
+      // Update the layer visibility based on articleLocators setting
+      vectorLayer.setVisible(layerVisibility.articleLocators);
     } catch (error) {
       console.error("Error updating features:", error);
     }
-  }, [features, olMap]);
+  }, [features, olMap, layerVisibility.articleLocators]);
 
   // Zoom to selected feature
   useEffect(() => {
@@ -721,7 +825,7 @@ export function useOpenLayersMap({
   // Force re-render of feature styles when selection changes
   useEffect(() => {
     const layers = olMap.getLayers().getArray();
-    const vectorLayer = layers[3] as VectorLayer<VectorSource>; // Updated index for features layer
+    const vectorLayer = layers[4] as VectorLayer<VectorSource>; // Updated index for features layer
     if (vectorLayer) {
       vectorLayer.setStyle(styleFunction);
     }

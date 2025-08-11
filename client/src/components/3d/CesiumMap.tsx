@@ -17,6 +17,7 @@ interface Props {
   onMapClick?: (coordinates: number[]) => void;
   selectedFeatureId?: number | null;
   onFeatureClick?: (featureId: number) => void;
+  articleLocatorsVisible?: boolean;
 }
 
 export function CesiumMap({
@@ -24,6 +25,7 @@ export function CesiumMap({
   onMapClick,
   selectedFeatureId,
   onFeatureClick,
+  articleLocatorsVisible = true,
 }: Props) {
   const featuresRef = useRef(features);
 
@@ -60,9 +62,6 @@ export function CesiumMap({
     featuresRef.current = features;
   }, [features]);
 
-  // Remove the duplicate click handler - the hook already handles this
-  // useEffect(() => { ... click handler ... }, [viewerReady, onMapClick, onFeatureClick]);
-
   // Update features on viewer - ensure all markers are added but with correct visibility
   useEffect(() => {
     if (!viewerRef.current?.entities) return;
@@ -84,7 +83,9 @@ export function CesiumMap({
         if (feature?.geometry?.type === "Point") {
           const [longitude, latitude] = feature.geometry.coordinates;
           const isSelected = feature.properties?.id === selectedFeatureId;
-          const isVisible = isPointOnVisibleHemisphere(longitude, latitude);
+          const isVisible =
+            articleLocatorsVisible &&
+            isPointOnVisibleHemisphere(longitude, latitude);
 
           if (viewerRef.current) {
             viewerRef.current.entities.add({
@@ -135,7 +136,12 @@ export function CesiumMap({
     } catch (error) {
       console.error("Error updating features:", error);
     }
-  }, [features, isPointOnVisibleHemisphere, selectedFeatureId]);
+  }, [
+    features,
+    isPointOnVisibleHemisphere,
+    selectedFeatureId,
+    articleLocatorsVisible,
+  ]);
 
   // Fly to selected feature
   useEffect(() => {

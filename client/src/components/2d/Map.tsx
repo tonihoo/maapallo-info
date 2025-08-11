@@ -112,6 +112,12 @@ export function Map({
             description: "Merivirtojen globaalit kiertomallit",
             visible: layerVisibility.oceanCurrents,
           },
+          {
+            id: "articleLocators",
+            name: "Artikkelien sijainnit",
+            description: "Maapallo-lehden artikkelien kohdealueet",
+            visible: layerVisibility.articleLocators,
+          },
         ]}
         onLayerToggle={handleLayerVisibilityChange}
         style={{
