@@ -11,7 +11,7 @@ import {
 import { Map } from "./components/2d/Map";
 import FeatureList from "./components/common/FeatureList";
 import { FeatureInfo } from "./components/common/FeatureInfo";
-import { MobileMenu } from "./components/common/MobileMenu";
+import { HeaderMenu } from "./components/common/HeaderMenu";
 import { FeatureTypes } from "./types/featureTypes";
 import { Feature, Geometry, GeoJsonProperties } from "geojson";
 
@@ -133,7 +133,7 @@ export function App() {
     left: 0,
     right: 0,
     zIndex: 1000,
-    height: isMobile ? "64px" : "40px",
+    height: "45px",
     display: "flex",
     alignItems: "center",
     justifyContent: isMobile ? "center" : "space-between",
@@ -150,7 +150,7 @@ export function App() {
     left: 0,
     right: 0,
     zIndex: 1000,
-    height: "30px",
+    height: "18px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -235,28 +235,7 @@ export function App() {
           )}
         </Box>
 
-        {!isMobile && (
-          <Paper
-            elevation={8}
-            sx={{
-              position: "absolute",
-              top: 56,
-              left: 16,
-              width: 320,
-              height: 880,
-              ...panelStyle,
-            }}
-          >
-            <FeatureList
-              onSelectFeature={handleFeatureSelect}
-              selectedFeatureId={selectedFeatureId}
-              refreshTrigger={refreshTrigger}
-              is3DMode={is3DMode}
-            />
-          </Paper>
-        )}
-
-        <MobileMenu
+        <HeaderMenu
           onSelectFeature={handleFeatureSelect}
           selectedFeatureId={selectedFeatureId}
           refreshTrigger={refreshTrigger}

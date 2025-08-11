@@ -16,7 +16,7 @@ interface Props {
   is3DMode?: boolean;
 }
 
-export function MobileMenu({
+export function HeaderMenu({
   onSelectFeature,
   selectedFeatureId,
   refreshTrigger,
@@ -24,7 +24,7 @@ export function MobileMenu({
 }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  //   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
   const handleToggle = () => {
     setIsOpen(!isOpen);
@@ -35,11 +35,6 @@ export function MobileMenu({
     setIsOpen(false); // Close menu after selection
   };
 
-  // Only render on mobile devices
-  if (!isMobile) {
-    return null;
-  }
-
   return (
     <>
       {/* Hamburger Menu Button */}
@@ -47,15 +42,15 @@ export function MobileMenu({
         onClick={handleToggle}
         sx={{
           position: "fixed",
-          top: "8px", // On top of header to match 2D/3D toggle
+          top: "2px", // On top of header to match 2D/3D toggle
           left: "16px",
           zIndex: 1200,
           backgroundColor: is3DMode
             ? "rgba(126, 199, 129, 0.9)" // Same green as header in 3D mode
             : "rgba(255, 179, 76, 0.9)", // Same orange as header in 2D mode
           color: "black",
-          width: "48px", // Same size as 2D/3D toggle on mobile
-          height: "48px", // Same size as 2D/3D toggle on mobile
+          width: "38px", // Same size as 2D/3D toggle on mobile
+          height: "38px", // Same size as 2D/3D toggle on mobile
           "&:hover": {
             backgroundColor: is3DMode
               ? "rgba(126, 199, 129, 1)" // Solid green on hover in 3D mode

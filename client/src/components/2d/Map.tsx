@@ -116,7 +116,7 @@ export function Map({
         onLayerToggle={handleLayerVisibilityChange}
         style={{
           position: "absolute",
-          top: "246px", // Position under BaseMapSelector (150px + 40px home + 8px gap + 40px base + 8px gap)
+          top: "246px",
           right: "20px",
           zIndex: 1000,
         }}

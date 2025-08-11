@@ -108,6 +108,7 @@ export function LayerSwitcher({
             <div
               style={{
                 color: "white",
+                fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
                 fontSize: "12px",
                 fontWeight: "bold",
                 textTransform: "uppercase",
@@ -131,6 +132,7 @@ export function LayerSwitcher({
                 borderRadius: "2px",
                 cursor: "pointer",
                 fontSize: "14px",
+                fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
                 textAlign: "left",
                 display: "flex",
                 alignItems: "center",
