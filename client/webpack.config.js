@@ -117,13 +117,11 @@ module.exports = (env, argv) => {
             to: 'cesium/Widgets',
           },
           {
-            from: path.join(__dirname, 'public/images'),
-            to: 'images',
-            noErrorOnMissing: true,
-          },
-          {
-            from: path.join(__dirname, 'public/data'),
-            to: 'data',
+            from: path.join(__dirname, 'public'),
+            to: '',
+            globOptions: {
+              ignore: ['**/index.html'], // Exclude index.html since HtmlWebpackPlugin handles it
+            },
             noErrorOnMissing: true,
           },
         ],
