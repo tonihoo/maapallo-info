@@ -56,8 +56,8 @@ export function useOpenLayersMap({
 
   // Layer visibility state
   const [layerVisibility, setLayerVisibility] = useState<LayerVisibility>({
-    worldBoundaries: true,
-    oceanCurrents: true,
+    worldBoundaries: false,
+    oceanCurrents: false,
   });
 
   // Measurement state
@@ -428,12 +428,8 @@ export function useOpenLayersMap({
       // Update the actual layer visibility
       if (layerId === "worldBoundaries" && worldBoundariesLayerRef.current) {
         worldBoundariesLayerRef.current.setVisible(visible);
-        console.log(
-          `🔍 World boundaries visibility manually set to: ${visible}`
-        );
       } else if (layerId === "oceanCurrents" && oceanCurrentsLayerRef.current) {
         oceanCurrentsLayerRef.current.setVisible(visible);
-        console.log(`🌊 Ocean currents visibility manually set to: ${visible}`);
       }
     },
     []
@@ -452,24 +448,14 @@ export function useOpenLayersMap({
   // Load world boundaries
   const loadWorldBoundaries = useCallback(async () => {
     try {
-      console.log("🌍 Loading world boundaries...");
       const response = await fetch("/data/world.geojson");
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const geojsonData = await response.json();
-      console.log("📊 GeoJSON data:", {
-        type: geojsonData.type,
-        featuresCount: geojsonData.features?.length,
-      });
 
       if (worldBoundariesLayerRef.current) {
         const source = worldBoundariesLayerRef.current.getSource();
-        console.log("🔍 Layer source exists:", !!source);
-        console.log(
-          "🔍 Layer visible:",
-          worldBoundariesLayerRef.current.getVisible()
-        );
 
         if (source) {
           source.clear();
@@ -480,35 +466,10 @@ export function useOpenLayersMap({
             featureProjection: "EPSG:3857",
           });
 
-          console.log("🗺️ Parsed features:", features.length);
-          console.log(
-            "🗺️ First feature geometry type:",
-            features[0]?.getGeometry()?.getType()
-          );
-          console.log(
-            "🗺️ First feature extent:",
-            features[0]?.getGeometry()?.getExtent()
-          );
-          console.log(
-            "🏷️ First feature properties:",
-            features[0]?.getProperties()
-          );
-          console.log(
-            "🏷️ Sample country names:",
-            features.slice(0, 5).map((f) => ({
-              name: f.get("name"),
-              name_fi: f.get("name_fi"),
-            }))
-          );
-
           source.addFeatures(features);
-          console.log(
-            `✅ Added ${features.length} country boundaries to 2D map`
-          );
 
           // Force redraw
           worldBoundariesLayerRef.current.changed();
-          console.log("🔄 Forced layer redraw");
         }
       } else {
         console.error("❌ World boundaries layer reference is null!");
@@ -521,16 +482,11 @@ export function useOpenLayersMap({
   // Load ocean currents
   const loadOceanCurrents = useCallback(async () => {
     try {
-      console.log("🌊 Loading ocean currents...");
       const response = await fetch("/data/ocean-currents.geojson");
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const geojsonData = await response.json();
-      console.log("📊 Ocean currents data:", {
-        type: geojsonData.type,
-        featuresCount: geojsonData.features?.length,
-      });
 
       if (oceanCurrentsLayerRef.current) {
         const source = oceanCurrentsLayerRef.current.getSource();
@@ -544,20 +500,10 @@ export function useOpenLayersMap({
             featureProjection: "EPSG:3857",
           });
 
-          console.log("🌊 Parsed ocean current features:", features.length);
-          console.log(
-            "🌊 First feature properties:",
-            features[0]?.getProperties()
-          );
-
           source.addFeatures(features);
-          console.log(
-            `✅ Added ${features.length} ocean current features to 2D map`
-          );
 
           // Force redraw
           oceanCurrentsLayerRef.current.changed();
-          console.log("🔄 Forced ocean currents layer redraw");
         }
       } else {
         console.error("❌ Ocean currents layer reference is null!");
@@ -572,14 +518,6 @@ export function useOpenLayersMap({
     if (olMap && worldBoundariesLayerRef.current) {
       // Debug layer structure
       const layers = olMap.getLayers().getArray();
-      console.log(
-        "🔍 Map layers:",
-        layers.map((layer, index) => ({
-          index,
-          type: layer.constructor.name,
-          visible: layer.getVisible?.() ?? "unknown",
-        }))
-      );
 
       // Small delay to ensure map is fully initialized
       const timer = setTimeout(() => {
@@ -592,21 +530,11 @@ export function useOpenLayersMap({
   // Load ocean currents when map is ready
   useEffect(() => {
     if (olMap && oceanCurrentsLayerRef.current) {
-      console.log("🌊 Ocean currents useEffect triggered", {
-        mapExists: !!olMap,
-        layerExists: !!oceanCurrentsLayerRef.current,
-      });
-
       // Small delay to ensure map is fully initialized
       const timer = setTimeout(() => {
         loadOceanCurrents();
       }, 100);
       return () => clearTimeout(timer);
-    } else {
-      console.log("🌊 Ocean currents useEffect conditions not met", {
-        mapExists: !!olMap,
-        layerExists: !!oceanCurrentsLayerRef.current,
-      });
     }
   }, [olMap, loadOceanCurrents]);
 
@@ -616,23 +544,16 @@ export function useOpenLayersMap({
       worldBoundariesLayerRef.current.setVisible(
         layerVisibility.worldBoundaries
       );
-      console.log(
-        `🔍 World boundaries visibility set to: ${layerVisibility.worldBoundaries}`
-      );
     }
   }, [layerVisibility.worldBoundaries]);
 
   useEffect(() => {
     if (oceanCurrentsLayerRef.current) {
       oceanCurrentsLayerRef.current.setVisible(layerVisibility.oceanCurrents);
-      console.log(
-        `🌊 Ocean currents visibility set to: ${layerVisibility.oceanCurrents}`
-      );
 
       // Force a redraw to ensure the layer updates
       if (layerVisibility.oceanCurrents) {
         oceanCurrentsLayerRef.current.changed();
-        console.log("🔄 Forced ocean currents layer redraw");
       }
     }
   }, [layerVisibility.oceanCurrents]);

@@ -102,14 +102,14 @@ export function Map({
         layers={[
           {
             id: "worldBoundaries",
-            name: "World Boundaries",
-            description: "Country borders and names",
+            name: "Valtioiden rajat",
+            description: "Valtioiden rajat ja nimet",
             visible: layerVisibility.worldBoundaries,
           },
           {
             id: "oceanCurrents",
-            name: "Ocean Currents",
-            description: "Global ocean circulation patterns",
+            name: "Merivirrat",
+            description: "Merivirtojen globaalit kiertomallit",
             visible: layerVisibility.oceanCurrents,
           },
         ]}
