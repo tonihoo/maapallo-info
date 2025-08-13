@@ -77,7 +77,9 @@ export function useOpenLayersMap({
   const oceanCurrentsLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
 
   // Article locators layer reference
-  const articleLocatorsLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
+  const articleLocatorsLayerRef = useRef<VectorLayer<VectorSource> | null>(
+    null
+  );
 
   // Store selectedFeatureId in a ref so it's always current
   const selectedFeatureIdRef = useRef<number | null>(selectedFeatureId);
@@ -278,11 +280,11 @@ export function useOpenLayersMap({
           image: new Circle({
             radius: isHighlighted ? 10 : 7,
             fill: new Fill({
-              color: isHighlighted ? "#ff4444" : "#1976d2"
+              color: isHighlighted ? "#ff4444" : "#1976d2",
             }),
             stroke: new Stroke({
               color: "#ffffff",
-              width: isHighlighted ? 3 : 2
+              width: isHighlighted ? 3 : 2,
             }),
           }),
         });
@@ -462,7 +464,10 @@ export function useOpenLayersMap({
         worldBoundariesLayerRef.current.setVisible(visible);
       } else if (layerId === "oceanCurrents" && oceanCurrentsLayerRef.current) {
         oceanCurrentsLayerRef.current.setVisible(visible);
-      } else if (layerId === "articleLocators" && articleLocatorsLayerRef.current) {
+      } else if (
+        layerId === "articleLocators" &&
+        articleLocatorsLayerRef.current
+      ) {
         articleLocatorsLayerRef.current.setVisible(visible);
       }
     },
@@ -650,7 +655,9 @@ export function useOpenLayersMap({
 
     // Also update the dedicated article locators layer if it exists
     if (articleLocatorsLayerRef.current) {
-      articleLocatorsLayerRef.current.setVisible(layerVisibility.articleLocators);
+      articleLocatorsLayerRef.current.setVisible(
+        layerVisibility.articleLocators
+      );
 
       // Force a redraw to ensure the layer updates
       if (layerVisibility.articleLocators) {

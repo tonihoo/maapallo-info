@@ -178,15 +178,15 @@ export function App() {
           size="small"
           sx={{
             position: "absolute",
-            top: isMobile ? "8px" : "64px",
-            right: "20px",
+            top: isMobile ? "2px" : "70px",
+            right: isMobile ? "20px" : "10px",
             zIndex: 1001,
             backgroundColor: "rgba(255, 255, 255, 0.9)",
             color: is3DMode ? "#ffb34c" : "#4caf50",
             fontSize: isMobile ? "18px" : "24px",
             fontWeight: "bold",
-            width: isMobile ? "48px" : "64px",
-            height: isMobile ? "48px" : "64px",
+            width: isMobile ? "38px" : "64px",
+            height: isMobile ? "38px" : "64px",
             "&:hover": {
               backgroundColor: "rgba(255, 255, 255, 1)",
               color: is3DMode ? "#e89d2b" : "#388e3c",
