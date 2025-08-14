@@ -96,7 +96,7 @@ RUN mkdir -p /opt/geoserver/data_dir && \
 ENV PYTHONPATH=/app
 ENV PORT=8080
 ENV ENVIRONMENT=production
-ENV GEOSERVER_URL=http://localhost:8080/geoserver
+ENV GEOSERVER_URL=http://localhost:8081/geoserver
 ENV GEOSERVER_DATA_DIR=/opt/geoserver/data_dir
 ENV CATALINA_HOME=/opt/tomcat
 
@@ -109,7 +109,7 @@ EXPOSE 8080
 # Health check that waits longer for both services to start
 HEALTHCHECK --interval=45s --timeout=15s --start-period=120s --retries=3 \
     CMD curl -f http://localhost:8080/api/v1/health && \
-        curl -f http://localhost:8080/geoserver/web/ || exit 1
+    curl -f http://localhost:8081/geoserver/web/ || exit 1
 
 # Start both services
 CMD ["/app/start-production.sh"]

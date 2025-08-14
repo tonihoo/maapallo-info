@@ -5,11 +5,12 @@ from contextlib import asynccontextmanager
 from typing import Tuple
 
 import uvicorn
+import httpx
 from config import settings
 from database import init_db
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from routes import feature, geoserver, health
 
@@ -43,9 +44,10 @@ async def simple_auth_middleware(request: Request, call_next):
     # Only protect the main page and HTML routes
     path = request.url.path
 
-    # Skip auth for all API routes, static assets, and health checks
+    # Skip auth for all API routes, static assets, health checks, and geoserver
     if (
         path.startswith("/api/")
+        or path.startswith("/geoserver/")
         or path.startswith("/images/")
         or path.startswith("/cesium/")
         or path.startswith("/data/")
@@ -136,6 +138,37 @@ app.add_middleware(
 app.include_router(health.router, prefix="/api/v1/health", tags=["health"])
 app.include_router(feature.router, prefix="/api/v1/feature", tags=["features"])
 app.include_router(geoserver.router, prefix="/api/v1", tags=["geoserver"])
+
+# GeoServer reverse proxy (only in production)
+if settings.is_production:
+    @app.api_route(
+        "/geoserver/{path:path}",
+        methods=["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "PATCH"]
+    )
+    async def geoserver_proxy(request: Request, path: str):
+        """Reverse proxy for GeoServer running on port 8081"""
+        geoserver_url = f"http://localhost:8081/geoserver/{path}"
+        
+        # Forward query parameters
+        if request.url.query:
+            geoserver_url += f"?{request.url.query}"
+        
+        async with httpx.AsyncClient() as client:
+            # Forward the request
+            response = await client.request(
+                method=request.method,
+                url=geoserver_url,
+                headers=dict(request.headers),
+                content=await request.body(),
+                timeout=30.0
+            )
+            
+            # Return the response
+            return Response(
+                content=response.content,
+                status_code=response.status_code,
+                headers=dict(response.headers)
+            )
 
 # Serve static files in production
 if settings.is_production:

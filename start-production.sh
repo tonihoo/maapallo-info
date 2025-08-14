@@ -13,6 +13,9 @@ export CATALINA_HOME="/opt/tomcat"
 export CATALINA_BASE="/opt/tomcat"
 export JAVA_OPTS="-Xms512m -Xmx1g -XX:+UseParallelGC -Dfile.encoding=UTF8 -Duser.timezone=GMT -Djava.awt.headless=true"
 
+# Configure Tomcat to run on port 8081 instead of 8080
+sed -i 's/port="8080"/port="8081"/g' /opt/tomcat/conf/server.xml
+
 # Initialize GeoServer data directory if it doesn't exist
 if [ ! -f "/opt/geoserver/data_dir/global.xml" ]; then
     echo "📁 Initializing GeoServer data directory..."
