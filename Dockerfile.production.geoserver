@@ -56,13 +56,15 @@ RUN wget -q -O /tmp/apache-tomcat-${TOMCAT_VERSION}.tar.gz \
     chmod +x ${CATALINA_HOME}/bin/*.sh
 
 # Download and install GeoServer
-ENV GEOSERVER_VERSION=2.24.1
-RUN curl -L -o /tmp/geoserver.war \
-    "https://build.geoserver.org/geoserver/${GEOSERVER_VERSION}/geoserver-${GEOSERVER_VERSION}-war.war" && \
+ENV GEOSERVER_VERSION=2.24.x
+RUN curl -L -o /tmp/geoserver.zip \
+    "https://build.geoserver.org/geoserver/${GEOSERVER_VERSION}/geoserver-${GEOSERVER_VERSION}-latest-war.zip" && \
+    cd /tmp && \
+    unzip -q geoserver.zip geoserver.war && \
     mkdir -p ${CATALINA_HOME}/webapps/geoserver && \
     cd ${CATALINA_HOME}/webapps/geoserver && \
     unzip -q /tmp/geoserver.war && \
-    rm /tmp/geoserver.war && \
+    rm /tmp/geoserver.war /tmp/geoserver.zip && \
     chown -R 1000:1000 ${CATALINA_HOME}/webapps/geoserver
 
 # Set up Python application
