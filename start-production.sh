@@ -38,15 +38,17 @@ cd /opt/tomcat
 
 # Wait for GeoServer to be fully ready
 echo "⏳ Waiting for GeoServer to initialize..."
-max_attempts=30
+max_attempts=12  # 2 minutes total (12 * 10 seconds)
 attempt=0
 while [ $attempt -lt $max_attempts ]; do
     sleep 10
     attempt=$((attempt + 1))
 
-    # Debug: Check what's deployed
-    echo "🔍 Deployed webapps:"
-    ls -la /opt/tomcat/webapps/
+    # Debug: Check what's deployed (only first few attempts to reduce noise)
+    if [ $attempt -le 3 ]; then
+        echo "🔍 Deployed webapps:"
+        ls -la /opt/tomcat/webapps/
+    fi
 
     # Check if GeoServer web interface is responding
     if curl -sf http://localhost:8081/geoserver/web/ > /dev/null 2>&1; then
@@ -57,16 +59,22 @@ while [ $attempt -lt $max_attempts ]; do
         break
     else
         echo "⏳ GeoServer not ready yet... (attempt $attempt/$max_attempts)"
-        # Show Tomcat logs for debugging
-        if [ -f "/opt/tomcat/logs/catalina.out" ]; then
-            echo "📋 Last 5 lines of Tomcat log:"
-            tail -5 /opt/tomcat/logs/catalina.out
+        # Show Tomcat logs for debugging on later attempts
+        if [ $attempt -gt 5 ] && [ -f "/opt/tomcat/logs/catalina.out" ]; then
+            echo "📋 Last 3 lines of Tomcat log:"
+            tail -3 /opt/tomcat/logs/catalina.out
         fi
         if [ $attempt -eq $max_attempts ]; then
-            echo "⚠️  GeoServer startup timeout, but continuing with FastAPI..."
+            echo "⚠️  GeoServer startup timeout, continuing with FastAPI anyway..."
+            echo "📋 Final Tomcat log check:"
+            if [ -f "/opt/tomcat/logs/catalina.out" ]; then
+                tail -10 /opt/tomcat/logs/catalina.out
+            fi
         fi
     fi
-done# Run database migrations for FastAPI
+done
+
+# Run database migrations for FastAPI
 echo "🗃️  Running database migrations..."
 cd /app
 python migrate.py
