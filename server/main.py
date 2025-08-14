@@ -4,8 +4,8 @@ import secrets
 from contextlib import asynccontextmanager
 from typing import Tuple
 
-import uvicorn
 import httpx
+import uvicorn
 from config import settings
 from database import init_db
 from fastapi import FastAPI, HTTPException, Request, status
@@ -41,6 +41,16 @@ async def simple_auth_middleware(request: Request, call_next):
     if settings.environment == "development":
         return await call_next(request)
 
+    # Debug logging for production
+    print(f"🔍 Auth middleware - Path: {request.url.path}")
+    print(f"🔍 Environment: {settings.environment}")
+    
+    # Check if environment variables are set
+    valid_username = os.getenv("BASIC_AUTH_USERNAME")
+    valid_password = os.getenv("BASIC_AUTH_PASSWORD")
+    print(f"🔍 Auth env vars - Username set: {bool(valid_username)}, "
+          f"Password set: {bool(valid_password)}")
+    
     # Only protect the main page and HTML routes
     path = request.url.path
 
@@ -78,8 +88,13 @@ async def simple_auth_middleware(request: Request, call_next):
 
             valid_username = os.getenv("BASIC_AUTH_USERNAME")
             valid_password = os.getenv("BASIC_AUTH_PASSWORD")
+            
+            print(f"🔍 Auth attempt - User: {username}, "
+                  f"Valid: {valid_username}")
+            print(f"🔍 Password match: {password == valid_password}")
 
             if username != valid_username or password != valid_password:
+                print("❌ Auth failed - invalid credentials")
                 return HTMLResponse(
                     content="""<!DOCTYPE html>
 <html><head><title>Invalid Credentials</title></head>
@@ -89,7 +104,10 @@ async def simple_auth_middleware(request: Request, call_next):
                         "WWW-Authenticate": 'Basic realm="Maapallo Info"'
                     },
                 )
-        except Exception:
+            
+            print("✅ Auth successful")
+        except Exception as e:
+            print(f"❌ Auth exception: {str(e)}")
             return HTMLResponse(
                 content="""<!DOCTYPE html>
 <html><head><title>Authentication Error</title></head>
@@ -141,18 +159,19 @@ app.include_router(geoserver.router, prefix="/api/v1", tags=["geoserver"])
 
 # GeoServer reverse proxy (only in production)
 if settings.is_production:
+
     @app.api_route(
         "/geoserver/{path:path}",
-        methods=["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "PATCH"]
+        methods=["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "PATCH"],
     )
     async def geoserver_proxy(request: Request, path: str):
         """Reverse proxy for GeoServer running on port 8081"""
         geoserver_url = f"http://localhost:8081/geoserver/{path}"
-        
+
         # Forward query parameters
         if request.url.query:
             geoserver_url += f"?{request.url.query}"
-        
+
         async with httpx.AsyncClient() as client:
             # Forward the request
             response = await client.request(
@@ -160,15 +179,16 @@ if settings.is_production:
                 url=geoserver_url,
                 headers=dict(request.headers),
                 content=await request.body(),
-                timeout=30.0
+                timeout=30.0,
             )
-            
+
             # Return the response
             return Response(
                 content=response.content,
                 status_code=response.status_code,
-                headers=dict(response.headers)
+                headers=dict(response.headers),
             )
+
 
 # Serve static files in production
 if settings.is_production:

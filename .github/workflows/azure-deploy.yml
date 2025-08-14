@@ -118,14 +118,17 @@ jobs:
 
       - name: Configure App Service Environment Variables
         run: |
-          echo "Setting up GeoServer environment variables..."
+          echo "Setting up environment variables..."
           az webapp config appsettings set \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --name ${{ env.APP_NAME }} \
             --settings \
-              GEOSERVER_URL="http://localhost:8080/geoserver" \
+              GEOSERVER_URL="http://localhost:8081/geoserver" \
               GEOSERVER_ADMIN_USER="${{ secrets.GEOSERVER_ADMIN_USER }}" \
-              GEOSERVER_ADMIN_PASSWORD="${{ secrets.GEOSERVER_ADMIN_PASSWORD }}"
+              GEOSERVER_ADMIN_PASSWORD="${{ secrets.GEOSERVER_ADMIN_PASSWORD }}" \
+              BASIC_AUTH_USERNAME="${{ secrets.BASIC_AUTH_USERNAME }}" \
+              BASIC_AUTH_PASSWORD="${{ secrets.BASIC_AUTH_PASSWORD }}" \
+              ENVIRONMENT="production"
 
       - name: Restart Web App to trigger migrations
         run: |
