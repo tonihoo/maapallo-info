@@ -157,7 +157,7 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(health.router, prefix="/api/v1/health", tags=["health"])
+app.include_router(health.router, prefix="/api/v1", tags=["health"])
 app.include_router(feature.router, prefix="/api/v1/feature", tags=["features"])
 app.include_router(geoserver.router, prefix="/api/v1", tags=["geoserver"])
 

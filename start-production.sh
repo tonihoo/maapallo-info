@@ -53,10 +53,10 @@ while [ $attempt -lt $max_attempts ]; do
     fi
 
     # Check if GeoServer web interface is responding
-    if curl -sf http://localhost:8081/geoserver/web/ > /dev/null 2>&1; then
+    if curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/geoserver/web/ | grep -q "302\|200"; then
         echo "✅ GeoServer is ready!"
         break
-    elif curl -sf http://localhost:8081/geoserver/ > /dev/null 2>&1; then
+    elif curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/geoserver/ | grep -q "302\|200"; then
         echo "✅ GeoServer is ready!"
         break
     else
