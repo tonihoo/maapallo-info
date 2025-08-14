@@ -16,7 +16,14 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/geoserver", tags=["geoserver"])
 
 # GeoServer configuration
-GEOSERVER_URL = os.getenv("GEOSERVER_URL", "http://geoserver:8080/geoserver")
+# In production, GeoServer runs in the same container
+# In development, GeoServer runs in a separate container
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+if ENVIRONMENT == "production":
+    GEOSERVER_URL = os.getenv("GEOSERVER_URL", "http://localhost:8080/geoserver")
+else:
+    GEOSERVER_URL = os.getenv("GEOSERVER_URL", "http://geoserver:8080/geoserver")
+
 GEOSERVER_USER = os.getenv("GEOSERVER_ADMIN_USER", "admin")
 GEOSERVER_PASS = os.getenv("GEOSERVER_ADMIN_PASSWORD", "geoserver")
 

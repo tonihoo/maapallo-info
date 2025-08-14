@@ -100,19 +100,32 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Dockerfile.production
+          file: ./Dockerfile.production.geoserver
           push: true
           tags: ${{ env.ACR_REGISTRY }}/${{ env.APP_NAME }}:${{ github.sha }}, ${{ env.ACR_REGISTRY }}/${{ env.APP_NAME }}:latest
           build-args: |
             CESIUM_ION_TOKEN=${{ secrets.CESIUM_ION_TOKEN }}
             BASIC_AUTH_USERNAME=${{ secrets.BASIC_AUTH_USERNAME }}
             BASIC_AUTH_PASSWORD=${{ secrets.BASIC_AUTH_PASSWORD }}
+            GEOSERVER_ADMIN_USER=${{ secrets.GEOSERVER_ADMIN_USER }}
+            GEOSERVER_ADMIN_PASSWORD=${{ secrets.GEOSERVER_ADMIN_PASSWORD }}
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.APP_NAME }}
           images: ${{ env.ACR_REGISTRY }}/${{ env.APP_NAME }}:${{ github.sha }}
+
+      - name: Configure App Service Environment Variables
+        run: |
+          echo "Setting up GeoServer environment variables..."
+          az webapp config appsettings set \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.APP_NAME }} \
+            --settings \
+              GEOSERVER_URL="http://localhost:8080/geoserver" \
+              GEOSERVER_ADMIN_USER="${{ secrets.GEOSERVER_ADMIN_USER }}" \
+              GEOSERVER_ADMIN_PASSWORD="${{ secrets.GEOSERVER_ADMIN_PASSWORD }}"
 
       - name: Restart Web App to trigger migrations
         run: |
