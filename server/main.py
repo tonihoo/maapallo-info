@@ -171,6 +171,8 @@ if settings.is_production:
         # Forward query parameters
         if request.url.query:
             geoserver_url += f"?{request.url.query}"
+        
+        print(f"🔄 Proxying to GeoServer: {geoserver_url}")
 
         async with httpx.AsyncClient() as client:
             # Forward the request
@@ -181,6 +183,8 @@ if settings.is_production:
                 content=await request.body(),
                 timeout=30.0,
             )
+            
+            print(f"🔄 GeoServer response: {response.status_code}")
 
             # Return the response
             return Response(
