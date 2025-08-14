@@ -11,7 +11,7 @@ from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from routes import feature, health
+from routes import feature, geoserver, health
 
 
 def verify_basic_auth(credentials: str) -> bool:
@@ -135,6 +135,7 @@ app.add_middleware(
 # Include routers
 app.include_router(health.router, prefix="/api/v1/health", tags=["health"])
 app.include_router(feature.router, prefix="/api/v1/feature", tags=["features"])
+app.include_router(geoserver.router, prefix="/api/v1", tags=["geoserver"])
 
 # Serve static files in production
 if settings.is_production:
