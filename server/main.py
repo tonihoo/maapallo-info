@@ -44,13 +44,15 @@ async def simple_auth_middleware(request: Request, call_next):
     # Debug logging for production
     print(f"🔍 Auth middleware - Path: {request.url.path}")
     print(f"🔍 Environment: {settings.environment}")
-    
+
     # Check if environment variables are set
     valid_username = os.getenv("BASIC_AUTH_USERNAME")
     valid_password = os.getenv("BASIC_AUTH_PASSWORD")
-    print(f"🔍 Auth env vars - Username set: {bool(valid_username)}, "
-          f"Password set: {bool(valid_password)}")
-    
+    print(
+        f"🔍 Auth env vars - Username set: {bool(valid_username)}, "
+        f"Password set: {bool(valid_password)}"
+    )
+
     # Only protect the main page and HTML routes
     path = request.url.path
 
@@ -88,9 +90,11 @@ async def simple_auth_middleware(request: Request, call_next):
 
             valid_username = os.getenv("BASIC_AUTH_USERNAME")
             valid_password = os.getenv("BASIC_AUTH_PASSWORD")
-            
-            print(f"🔍 Auth attempt - User: {username}, "
-                  f"Valid: {valid_username}")
+
+            print(
+                f"🔍 Auth attempt - User: {username}, "
+                f"Valid: {valid_username}"
+            )
             print(f"🔍 Password match: {password == valid_password}")
 
             if username != valid_username or password != valid_password:
@@ -104,7 +108,7 @@ async def simple_auth_middleware(request: Request, call_next):
                         "WWW-Authenticate": 'Basic realm="Maapallo Info"'
                     },
                 )
-            
+
             print("✅ Auth successful")
         except Exception as e:
             print(f"❌ Auth exception: {str(e)}")
@@ -171,7 +175,7 @@ if settings.is_production:
         # Forward query parameters
         if request.url.query:
             geoserver_url += f"?{request.url.query}"
-        
+
         print(f"🔄 Proxying to GeoServer: {geoserver_url}")
 
         async with httpx.AsyncClient() as client:
@@ -183,7 +187,7 @@ if settings.is_production:
                 content=await request.body(),
                 timeout=30.0,
             )
-            
+
             print(f"🔄 GeoServer response: {response.status_code}")
 
             # Return the response

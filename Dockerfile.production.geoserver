@@ -59,8 +59,11 @@ RUN wget -q -O /tmp/apache-tomcat-${TOMCAT_VERSION}.tar.gz \
 ENV GEOSERVER_VERSION=2.24.1
 RUN curl -L -o /tmp/geoserver.war \
     "https://build.geoserver.org/geoserver/${GEOSERVER_VERSION}/geoserver-${GEOSERVER_VERSION}-war.war" && \
-    cp /tmp/geoserver.war ${CATALINA_HOME}/webapps/geoserver.war && \
-    rm /tmp/geoserver.war
+    mkdir -p ${CATALINA_HOME}/webapps/geoserver && \
+    cd ${CATALINA_HOME}/webapps/geoserver && \
+    unzip -q /tmp/geoserver.war && \
+    rm /tmp/geoserver.war && \
+    chown -R 1000:1000 ${CATALINA_HOME}/webapps/geoserver
 
 # Set up Python application
 WORKDIR /app

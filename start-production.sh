@@ -11,7 +11,7 @@ echo "🚀 Starting Maapallo.info with GeoServer..."
 export GEOSERVER_DATA_DIR="/opt/geoserver/data_dir"
 export CATALINA_HOME="/opt/tomcat"
 export CATALINA_BASE="/opt/tomcat"
-export JAVA_OPTS="-Xms512m -Xmx1g -XX:+UseParallelGC -Dfile.encoding=UTF8 -Duser.timezone=GMT -Djava.awt.headless=true"
+export JAVA_OPTS="-Xms512m -Xmx1536m -XX:+UseParallelGC -Dfile.encoding=UTF8 -Duser.timezone=GMT -Djava.awt.headless=true -Dgeoserver.data.dir=/opt/geoserver/data_dir"
 
 # Configure Tomcat to run on port 8081 instead of 8080
 sed -i 's/port="8080"/port="8081"/g' /opt/tomcat/conf/server.xml
@@ -30,8 +30,10 @@ fi
 echo "🗺️  Starting GeoServer..."
 
 # Debug: Check if geoserver.war exists
-echo "🔍 Checking GeoServer WAR file..."
+echo "🔍 Checking GeoServer deployment..."
 ls -la /opt/tomcat/webapps/
+echo "🔍 Checking if geoserver directory exists:"
+ls -la /opt/tomcat/webapps/geoserver/ 2>/dev/null || echo "❌ No geoserver directory found"
 
 cd /opt/tomcat
 ./bin/catalina.sh start
