@@ -178,50 +178,45 @@ if settings.is_production:
 
         print(f"🔄 Proxying to GeoServer: {geoserver_url}")
 
-        # Prepare headers - exclude problematic ones and handle auth properly
-        headers = dict(request.headers)
-        
-        # Remove headers that can cause issues with proxying
-        headers.pop("host", None)
-        headers.pop("content-length", None)
-        
-        # If there's no authorization header, add default GeoServer credentials
-        if "authorization" not in headers:
-            # Use default GeoServer admin credentials
-            import base64
-            credentials = base64.b64encode(b"admin:geoserver").decode("ascii")
-            headers["authorization"] = f"Basic {credentials}"
+        async with httpx.AsyncClient(follow_redirects=False) as client:
+            # Prepare headers for proxying
+            proxy_headers = dict(request.headers)
+            # Remove host header to avoid conflicts
+            proxy_headers.pop("host", None)
+            # Add proper forwarding headers
+            client_host = request.client.host if request.client else "unknown"
+            proxy_headers["X-Forwarded-For"] = client_host
+            proxy_headers["X-Forwarded-Proto"] = "https"
+            proxy_headers["X-Forwarded-Host"] = "maapallo.info"
 
-        async with httpx.AsyncClient() as client:
             # Forward the request
             response = await client.request(
                 method=request.method,
                 url=geoserver_url,
-                headers=headers,
+                headers=proxy_headers,
                 content=await request.body(),
-                timeout=30.0,
+                timeout=60.0,  # Increased timeout for web interface
             )
 
             print(f"🔄 GeoServer response: {response.status_code}")
 
-            # Prepare response headers - remove problematic ones
+            # Handle redirects for web interface
             response_headers = dict(response.headers)
-            response_headers.pop("content-length", None)
-            response_headers.pop("transfer-encoding", None)
-            
-            # If GeoServer returns 401, convert to user-friendly response
-            if response.status_code == 401:
-                return HTMLResponse(
-                    content="""<!DOCTYPE html>
-<html><head><title>GeoServer Authentication</title></head>
-<body>
-<h1>GeoServer Access</h1>
-<p>GeoServer authentication is required. Please contact the administrator.</p>
-<p><a href="/">← Back to main site</a></p>
-</body></html>""",
-                    status_code=200,
-                    headers={"Content-Type": "text/html"}
-                )
+            if response.status_code in [301, 302, 303, 307, 308]:
+                location = response_headers.get("location", "")
+                if location.startswith("./"):
+                    # Fix relative redirects
+                    base_path = f"/geoserver/{path}".rstrip("/")
+                    if location == "./":
+                        response_headers["location"] = f"{base_path}/"
+                    else:
+                        response_headers["location"] = (
+                            f"{base_path}/{location[2:]}"
+                        )
+                    print(
+                        f"🔄 Fixed redirect: {location} -> "
+                        f"{response_headers['location']}"
+                    )
 
             # Return the response
             return Response(
