@@ -164,43 +164,54 @@ app.include_router(geoserver.router, prefix="/api/v1", tags=["geoserver"])
 # GeoServer reverse proxy (only in production)
 if settings.is_production:
 
+    @app.get("/admin/geoserver")
+    async def geoserver_admin_direct():
+        """Direct access to GeoServer admin - simple redirect"""
+        return HTMLResponse(content="""
+<!DOCTYPE html>
+<html>
+<head>
+    <title>GeoServer Admin Access</title>
+    <script>
+        // Simple direct redirect to GeoServer on port 8081
+        window.location.href = window.location.protocol + "//" + 
+                              window.location.hostname + ":8081/geoserver/web/";
+    </script>
+</head>
+<body>
+    <p>Redirecting to GeoServer admin...</p>
+    <p>If redirect fails, try: <strong>https://maapallo.info:8081/geoserver/web/</strong></p>
+</body>
+</html>""")
+
     @app.api_route(
         "/geoserver/{path:path}",
         methods=["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "PATCH"],
     )
     async def geoserver_proxy(request: Request, path: str):
-        """Reverse proxy for GeoServer running on port 8081"""
+        """Simple proxy for GeoServer services only (WMS, WFS, REST)"""            
         geoserver_url = f"http://localhost:8081/geoserver/{path}"
 
         # Forward query parameters
         if request.url.query:
             geoserver_url += f"?{request.url.query}"
 
-        print(f"🔄 Proxying to GeoServer: {geoserver_url}")
-
         async with httpx.AsyncClient() as client:
-            # Prepare headers for proxying
-            proxy_headers = dict(request.headers)
-            # Remove host header to avoid conflicts
-            proxy_headers.pop("host", None)
-            
-            # Forward the request
             response = await client.request(
                 method=request.method,
                 url=geoserver_url,
-                headers=proxy_headers,
+                headers=dict(request.headers),
                 content=await request.body(),
-                timeout=60.0,  # Increased timeout for web interface
+                timeout=30.0,
             )
 
-            print(f"🔄 GeoServer response: {response.status_code}")
-
-            # Return the response
             return Response(
                 content=response.content,
                 status_code=response.status_code,
                 headers=dict(response.headers),
             )
+
+
 # Serve static files in production
 if settings.is_production:
     static_dir = os.path.join(os.path.dirname(__file__), "static")
