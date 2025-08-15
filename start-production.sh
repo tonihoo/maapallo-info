@@ -38,9 +38,9 @@ ls -la /opt/tomcat/webapps/geoserver/ 2>/dev/null || echo "❌ No geoserver dire
 cd /opt/tomcat
 ./bin/catalina.sh start
 
-# Wait for GeoServer to be fully ready
+# Wait for GeoServer to be fully ready - AGGRESSIVE TIMEOUT FOR AZURE
 echo "⏳ Waiting for GeoServer to initialize..."
-max_attempts=6  # 1 minute total (6 * 10 seconds) 
+max_attempts=2  # 20 seconds total (2 * 10 seconds) - MINIMAL FOR AZURE STARTUP
 attempt=0
 while [ $attempt -lt $max_attempts ]; do
     sleep 10
