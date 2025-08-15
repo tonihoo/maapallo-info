@@ -38,43 +38,12 @@ ls -la /opt/tomcat/webapps/geoserver/ 2>/dev/null || echo "❌ No geoserver dire
 cd /opt/tomcat
 ./bin/catalina.sh start
 
-# Wait for GeoServer to be fully ready - AGGRESSIVE TIMEOUT FOR AZURE
-echo "⏳ Waiting for GeoServer to initialize..."
-max_attempts=2  # 20 seconds total (2 * 10 seconds) - MINIMAL FOR AZURE STARTUP
-attempt=0
-while [ $attempt -lt $max_attempts ]; do
-    sleep 10
-    attempt=$((attempt + 1))
+# ZERO-WAIT STRATEGY: Start FastAPI immediately without waiting for GeoServer
+# This ensures Azure gets a response within the 230s limit
+echo "⚡ Zero-wait strategy: Starting FastAPI immediately..."
+echo "🗺️  GeoServer will initialize in background..."
 
-    # Debug: Check what's deployed (only first few attempts to reduce noise)
-    if [ $attempt -le 2 ]; then
-        echo "🔍 Deployed webapps:"
-        ls -la /opt/tomcat/webapps/
-    fi
-
-    # Check if GeoServer web interface is responding
-    if curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/geoserver/web/ | grep -q "302\|200"; then
-        echo "✅ GeoServer is ready!"
-        break
-    elif curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/geoserver/ | grep -q "302\|200"; then
-        echo "✅ GeoServer is ready!"
-        break
-    else
-        echo "⏳ GeoServer not ready yet... (attempt $attempt/$max_attempts)"
-        # Show Tomcat logs for debugging on later attempts
-        if [ $attempt -gt 3 ] && [ -f "/opt/tomcat/logs/catalina.out" ]; then
-            echo "📋 Last 2 lines of Tomcat log:"
-            tail -2 /opt/tomcat/logs/catalina.out
-        fi
-        if [ $attempt -eq $max_attempts ]; then
-            echo "⚠️  GeoServer startup timeout, continuing with FastAPI anyway..."
-            echo "📋 Final Tomcat log check:"
-            if [ -f "/opt/tomcat/logs/catalina.out" ]; then
-                tail -5 /opt/tomcat/logs/catalina.out
-            fi
-        fi
-    fi
-done
+# Skip GeoServer wait completely for Azure startup compliance
 
 # Run database migrations for FastAPI
 echo "🗃️  Running database migrations..."
