@@ -45,11 +45,14 @@ echo "🗺️  GeoServer will initialize in background..."
 
 # Skip GeoServer wait completely for Azure startup compliance
 
-# Run database migrations for FastAPI
-echo "🗃️  Running database migrations..."
+# Run database migrations with timeout (don't let this block FastAPI startup)
+echo "🗃️  Attempting database migrations (with timeout)..."
 cd /app
-python migrate.py
 
-# Start FastAPI application
+# Try migrations but don't fail if they timeout or fail
+# Use timeout to prevent migrations from blocking FastAPI startup
+timeout 30 python migrate.py || echo "⚠️  Migration timeout/failed - continuing with FastAPI startup"
+
+# Start FastAPI application immediately
 echo "🐍 Starting FastAPI application..."
 exec python -m uvicorn main:app --host 0.0.0.0 --port 8080
