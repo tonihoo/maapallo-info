@@ -157,7 +157,7 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(health.router, prefix="/api/v1", tags=["health"])
+app.include_router(health.router, prefix="/api/v1/health", tags=["health"])
 app.include_router(feature.router, prefix="/api/v1/feature", tags=["features"])
 app.include_router(geoserver.router, prefix="/api/v1", tags=["geoserver"])
 
@@ -178,23 +178,56 @@ if settings.is_production:
 
         print(f"🔄 Proxying to GeoServer: {geoserver_url}")
 
+        # Prepare headers - exclude problematic ones and handle auth properly
+        headers = dict(request.headers)
+        
+        # Remove headers that can cause issues with proxying
+        headers.pop("host", None)
+        headers.pop("content-length", None)
+        
+        # If there's no authorization header, add default GeoServer credentials
+        if "authorization" not in headers:
+            # Use default GeoServer admin credentials
+            import base64
+            credentials = base64.b64encode(b"admin:geoserver").decode("ascii")
+            headers["authorization"] = f"Basic {credentials}"
+
         async with httpx.AsyncClient() as client:
             # Forward the request
             response = await client.request(
                 method=request.method,
                 url=geoserver_url,
-                headers=dict(request.headers),
+                headers=headers,
                 content=await request.body(),
                 timeout=30.0,
             )
 
             print(f"🔄 GeoServer response: {response.status_code}")
 
+            # Prepare response headers - remove problematic ones
+            response_headers = dict(response.headers)
+            response_headers.pop("content-length", None)
+            response_headers.pop("transfer-encoding", None)
+            
+            # If GeoServer returns 401, convert to user-friendly response
+            if response.status_code == 401:
+                return HTMLResponse(
+                    content="""<!DOCTYPE html>
+<html><head><title>GeoServer Authentication</title></head>
+<body>
+<h1>GeoServer Access</h1>
+<p>GeoServer authentication is required. Please contact the administrator.</p>
+<p><a href="/">← Back to main site</a></p>
+</body></html>""",
+                    status_code=200,
+                    headers={"Content-Type": "text/html"}
+                )
+
             # Return the response
             return Response(
                 content=response.content,
                 status_code=response.status_code,
-                headers=dict(response.headers),
+                headers=response_headers,
             )
 
 
