@@ -178,17 +178,12 @@ if settings.is_production:
 
         print(f"🔄 Proxying to GeoServer: {geoserver_url}")
 
-        async with httpx.AsyncClient(follow_redirects=False) as client:
+        async with httpx.AsyncClient() as client:
             # Prepare headers for proxying
             proxy_headers = dict(request.headers)
             # Remove host header to avoid conflicts
             proxy_headers.pop("host", None)
-            # Add proper forwarding headers
-            client_host = request.client.host if request.client else "unknown"
-            proxy_headers["X-Forwarded-For"] = client_host
-            proxy_headers["X-Forwarded-Proto"] = "https"
-            proxy_headers["X-Forwarded-Host"] = "maapallo.info"
-
+            
             # Forward the request
             response = await client.request(
                 method=request.method,
@@ -200,32 +195,12 @@ if settings.is_production:
 
             print(f"🔄 GeoServer response: {response.status_code}")
 
-            # Handle redirects for web interface
-            response_headers = dict(response.headers)
-            if response.status_code in [301, 302, 303, 307, 308]:
-                location = response_headers.get("location", "")
-                if location.startswith("./"):
-                    # Fix relative redirects
-                    base_path = f"/geoserver/{path}".rstrip("/")
-                    if location == "./":
-                        response_headers["location"] = f"{base_path}/"
-                    else:
-                        response_headers["location"] = (
-                            f"{base_path}/{location[2:]}"
-                        )
-                    print(
-                        f"🔄 Fixed redirect: {location} -> "
-                        f"{response_headers['location']}"
-                    )
-
             # Return the response
             return Response(
                 content=response.content,
                 status_code=response.status_code,
-                headers=response_headers,
+                headers=dict(response.headers),
             )
-
-
 # Serve static files in production
 if settings.is_production:
     static_dir = os.path.join(os.path.dirname(__file__), "static")
