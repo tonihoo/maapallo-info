@@ -32,14 +32,23 @@ ARG BASIC_AUTH_PASSWORD
 ARG GEOSERVER_ADMIN_USER=admin
 ARG GEOSERVER_ADMIN_PASSWORD=geoserver
 
-# Install system dependencies including Java for GeoServer
+# Install system dependencies including Java for GeoServer and SSH
 RUN apt-get update && apt-get install -y \
     postgresql-client \
     curl \
     wget \
     unzip \
     default-jre-headless \
+    openssh-server \
+    supervisor \
     && rm -rf /var/lib/apt/lists/*
+
+# Configure SSH for Azure App Service
+RUN mkdir -p /var/run/sshd \
+    && echo "root:Docker!" | chpasswd \
+    && sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config \
+    && sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config \
+    && sed -i 's/Port 22/Port 2222/' /etc/ssh/sshd_config
 
 # Set up Java environment
 ENV JAVA_HOME=/usr/lib/jvm/default-java
@@ -87,8 +96,13 @@ COPY --from=client-build /app/client/node_modules/cesium/Build/Cesium ./static/c
 COPY client/public/data/world.geojson ./static/data/
 
 # Copy production startup script
-COPY start-production.sh /app/
+# Copy startup script and supervisor config
+COPY start-production.sh /app/start-production.sh
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 RUN chmod +x /app/start-production.sh
+
+# Create log directory
+RUN mkdir -p /var/log/supervisor
 
 # Make existing startup script executable
 RUN chmod +x start.sh
@@ -108,13 +122,13 @@ ENV CATALINA_HOME=/opt/tomcat
 # Note: Sensitive environment variables (BASIC_AUTH_*, GEOSERVER_ADMIN_*)
 # are set at runtime by Azure App Service for security
 
-# Expose port (both FastAPI and GeoServer accessible through port 8080)
-EXPOSE 8080
+# Expose ports (8080 for app, 2222 for SSH)
+EXPOSE 8080 2222
 
 # Health check that waits longer for both services to start
 HEALTHCHECK --interval=45s --timeout=15s --start-period=120s --retries=3 \
     CMD curl -f http://localhost:8080/api/v1/health && \
     curl -f http://localhost:8081/geoserver/web/ || exit 1
 
-# Start both services
-CMD ["/app/start-production.sh"]
+# Start both SSH and application services
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]

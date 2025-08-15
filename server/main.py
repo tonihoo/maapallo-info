@@ -167,14 +167,15 @@ if settings.is_production:
     @app.get("/admin/geoserver")
     async def geoserver_admin_direct():
         """Direct access to GeoServer admin - simple redirect"""
-        return HTMLResponse(content="""
+        return HTMLResponse(
+            content="""
 <!DOCTYPE html>
 <html>
 <head>
     <title>GeoServer Admin Access</title>
     <script>
         // Simple direct redirect to GeoServer on port 8081
-        window.location.href = window.location.protocol + "//" + 
+        window.location.href = window.location.protocol + "//" +
                               window.location.hostname + ":8081/geoserver/web/";
     </script>
 </head>
@@ -182,14 +183,15 @@ if settings.is_production:
     <p>Redirecting to GeoServer admin...</p>
     <p>If redirect fails, try: <strong>https://maapallo.info:8081/geoserver/web/</strong></p>
 </body>
-</html>""")
+</html>"""
+        )
 
     @app.api_route(
         "/geoserver/{path:path}",
         methods=["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "PATCH"],
     )
     async def geoserver_proxy(request: Request, path: str):
-        """Simple proxy for GeoServer services only (WMS, WFS, REST)"""            
+        """Simple proxy for GeoServer services only (WMS, WFS, REST)"""
         geoserver_url = f"http://localhost:8081/geoserver/{path}"
 
         # Forward query parameters
