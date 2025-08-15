@@ -11,7 +11,7 @@ echo "🚀 Starting Maapallo.info with GeoServer..."
 export GEOSERVER_DATA_DIR="/opt/geoserver/data_dir"
 export CATALINA_HOME="/opt/tomcat"
 export CATALINA_BASE="/opt/tomcat"
-export JAVA_OPTS="-Xms512m -Xmx1536m -XX:+UseParallelGC -Dfile.encoding=UTF8 -Duser.timezone=GMT -Djava.awt.headless=true -Dgeoserver.data.dir=/opt/geoserver/data_dir"
+export JAVA_OPTS="-Xms256m -Xmx1024m -XX:+UseParallelGC -Dfile.encoding=UTF8 -Duser.timezone=GMT -Djava.awt.headless=true -Dgeoserver.data.dir=/opt/geoserver/data_dir"
 
 # Configure Tomcat to run on port 8081 instead of 8080
 sed -i 's/port="8080"/port="8081"/g' /opt/tomcat/conf/server.xml
@@ -40,14 +40,14 @@ cd /opt/tomcat
 
 # Wait for GeoServer to be fully ready
 echo "⏳ Waiting for GeoServer to initialize..."
-max_attempts=12  # 2 minutes total (12 * 10 seconds)
+max_attempts=6  # 1 minute total (6 * 10 seconds) 
 attempt=0
 while [ $attempt -lt $max_attempts ]; do
     sleep 10
     attempt=$((attempt + 1))
 
     # Debug: Check what's deployed (only first few attempts to reduce noise)
-    if [ $attempt -le 3 ]; then
+    if [ $attempt -le 2 ]; then
         echo "🔍 Deployed webapps:"
         ls -la /opt/tomcat/webapps/
     fi
@@ -62,15 +62,15 @@ while [ $attempt -lt $max_attempts ]; do
     else
         echo "⏳ GeoServer not ready yet... (attempt $attempt/$max_attempts)"
         # Show Tomcat logs for debugging on later attempts
-        if [ $attempt -gt 5 ] && [ -f "/opt/tomcat/logs/catalina.out" ]; then
-            echo "📋 Last 3 lines of Tomcat log:"
-            tail -3 /opt/tomcat/logs/catalina.out
+        if [ $attempt -gt 3 ] && [ -f "/opt/tomcat/logs/catalina.out" ]; then
+            echo "📋 Last 2 lines of Tomcat log:"
+            tail -2 /opt/tomcat/logs/catalina.out
         fi
         if [ $attempt -eq $max_attempts ]; then
             echo "⚠️  GeoServer startup timeout, continuing with FastAPI anyway..."
             echo "📋 Final Tomcat log check:"
             if [ -f "/opt/tomcat/logs/catalina.out" ]; then
-                tail -10 /opt/tomcat/logs/catalina.out
+                tail -5 /opt/tomcat/logs/catalina.out
             fi
         fi
     fi
