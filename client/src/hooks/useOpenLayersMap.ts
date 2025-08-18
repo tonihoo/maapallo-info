@@ -21,6 +21,7 @@ import {
   GeoJsonProperties,
 } from "geojson";
 import { BASE_MAPS, BaseMapKey } from "../components/2d/BaseMapSelector";
+import { useAdultLiteracyLayer } from "./useAdultLiteracyLayer";
 import {
   INITIAL_VIEW,
   ZOOM_LIMITS,
@@ -39,6 +40,7 @@ interface LayerVisibility {
   worldBoundaries: boolean;
   oceanCurrents: boolean;
   articleLocators: boolean;
+  adultLiteracy: boolean;
 }
 
 export function useOpenLayersMap({
@@ -60,6 +62,7 @@ export function useOpenLayersMap({
     worldBoundaries: false,
     oceanCurrents: false,
     articleLocators: true, // Default to true since features are shown by default
+    adultLiteracy: false,
   });
 
   // Measurement state
@@ -80,6 +83,14 @@ export function useOpenLayersMap({
   const articleLocatorsLayerRef = useRef<VectorLayer<VectorSource> | null>(
     null
   );
+
+  // Adult literacy layer hook
+  const adultLiteracyLayer = useAdultLiteracyLayer({
+    visible: layerVisibility.adultLiteracy,
+  });
+
+  // Flag to track if adult literacy layer has been added
+  const adultLiteracyLayerAddedRef = useRef<boolean>(false);
 
   // Store selectedFeatureId in a ref so it's always current
   const selectedFeatureIdRef = useRef<number | null>(selectedFeatureId);
@@ -469,6 +480,8 @@ export function useOpenLayersMap({
         articleLocatorsLayerRef.current
       ) {
         articleLocatorsLayerRef.current.setVisible(visible);
+      } else if (layerId === "adultLiteracy") {
+        adultLiteracyLayer.setVisible(visible);
       }
     },
     []
@@ -589,9 +602,6 @@ export function useOpenLayersMap({
   // Load world boundaries when map is ready
   useEffect(() => {
     if (olMap && worldBoundariesLayerRef.current) {
-      // Debug layer structure
-      const layers = olMap.getLayers().getArray();
-
       // Small delay to ensure map is fully initialized
       const timer = setTimeout(() => {
         loadWorldBoundaries();
@@ -621,6 +631,31 @@ export function useOpenLayersMap({
       return () => clearTimeout(timer);
     }
   }, [olMap, loadArticleLocators]);
+
+  // Load adult literacy layer when map is ready (only once)
+  useEffect(() => {
+    if (olMap && !adultLiteracyLayerAddedRef.current) {
+      const timer = setTimeout(async () => {
+        const layer = await adultLiteracyLayer.getLayer();
+        if (layer) {
+          // Check if layer is already in the map
+          const existingLayers = olMap.getLayers().getArray();
+          const layerExists = existingLayers.some(
+            (existingLayer) => existingLayer === layer
+          );
+
+          if (!layerExists) {
+            olMap.addLayer(layer);
+            adultLiteracyLayerAddedRef.current = true;
+          }
+        }
+      }, 100);
+
+      return () => {
+        clearTimeout(timer);
+      };
+    }
+  }, [olMap]); // Remove adultLiteracyLayer dependency
 
   // Update layer visibility when state changes
   useEffect(() => {
@@ -665,6 +700,11 @@ export function useOpenLayersMap({
       }
     }
   }, [layerVisibility.articleLocators, olMap]);
+
+  // Update adult literacy layer visibility when state changes
+  useEffect(() => {
+    adultLiteracyLayer.setVisible(layerVisibility.adultLiteracy);
+  }, [layerVisibility.adultLiteracy, adultLiteracyLayer]);
 
   // Update world boundaries style when zoom changes (for labels)
   useEffect(() => {
@@ -853,5 +893,6 @@ export function useOpenLayersMap({
     clearMeasurements,
     layerVisibility,
     handleLayerVisibilityChange,
+    adultLiteracyLegendData: adultLiteracyLayer.getLegendData(),
   };
 }
