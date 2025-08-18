@@ -24,7 +24,7 @@ export const AdultLiteracyLegend: React.FC<AdultLiteracyLegendProps> = ({
   }
 
   return (
-    <div 
+    <div
       style={{
         position: "absolute",
         top: "70px", // Moved down 50px from original 20px
@@ -37,15 +37,17 @@ export const AdultLiteracyLegend: React.FC<AdultLiteracyLegendProps> = ({
         maxWidth: "300px",
         boxShadow: "0 4px 8px rgba(0,0,0,0.3)",
         fontSize: "14px",
-        fontFamily: "Arial, sans-serif"
+        fontFamily: "Arial, sans-serif",
       }}
     >
-      <h3 style={{ 
-        margin: "0 0 12px 0", 
-        fontSize: "16px", 
-        fontWeight: "bold",
-        color: "#333"
-      }}>
+      <h3
+        style={{
+          margin: "0 0 12px 0",
+          fontSize: "16px",
+          fontWeight: "bold",
+          color: "#333",
+        }}
+      >
         Lukutaito, aikuiset
       </h3>
       <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>

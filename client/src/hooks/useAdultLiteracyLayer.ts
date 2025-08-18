@@ -232,7 +232,7 @@ export function useAdultLiteracyLayer({ visible }: UseAdultLiteracyLayerProps) {
         source: source,
         style: styleFunction,
         visible: visible,
-        zIndex: 1, // Below other layers but above base map
+        zIndex: 1, // Above base map but below world boundaries
       });
 
       // Add features

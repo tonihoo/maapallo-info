@@ -167,6 +167,7 @@ export function useOpenLayersMap({
           stroke: new Stroke({ color: "#ff9900", width: 2 }),
         }),
       }),
+      zIndex: 25, // Measurement layer always on top
     });
 
     // Create world boundaries layer with country labels
@@ -210,6 +211,7 @@ export function useOpenLayersMap({
         });
       },
       visible: true,
+      zIndex: 10, // Ensure country borders and names appear above literacy layer
     });
 
     // Store reference to world boundaries layer
@@ -275,6 +277,7 @@ export function useOpenLayersMap({
         });
       },
       visible: true, // Initially visible based on default layer visibility
+      zIndex: 12, // Above world boundaries but below article locators
     });
 
     // Store reference to ocean currents layer
@@ -301,6 +304,7 @@ export function useOpenLayersMap({
         });
       },
       visible: false, // Initially hidden
+      zIndex: 15, // Above literacy layer and world boundaries
     });
 
     // Store reference to article locators layer
@@ -312,13 +316,18 @@ export function useOpenLayersMap({
       view: olView,
       keyboardEventTarget: document,
       layers: [
-        BASE_MAPS.topo.layer(), // This should be dynamic based on currentBaseMap
-        worldBoundariesLayer,
+        (() => {
+          const baseLayer = BASE_MAPS.topo.layer();
+          baseLayer.setZIndex(0); // Explicitly set base map z-index
+          return baseLayer;
+        })(), // Base map with z-index 0
+        worldBoundariesLayer, // z-index 10
         oceanCurrentsLayer, // Ocean currents layer
         articleLocatorsLayer, // Article locators layer
         new VectorLayer({
           source: new VectorSource(),
           style: styleFunction,
+          zIndex: 20, // Features layer on top of article locators
         }),
         measureLayer, // Add measurement layer on top
       ],
@@ -645,7 +654,9 @@ export function useOpenLayersMap({
           );
 
           if (!layerExists) {
-            olMap.addLayer(layer);
+            // Insert at position 1 (after base map, before world boundaries)
+            const layers = olMap.getLayers();
+            layers.insertAt(1, layer);
             adultLiteracyLayerAddedRef.current = true;
           }
         }
