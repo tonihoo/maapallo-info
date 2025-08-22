@@ -1,8 +1,6 @@
-import { useEffect, useRef } from "react";
-import { toLonLat } from "ol/proj";
-import type { MapBrowserEvent } from "ol";
-import { Point } from "ol/geom";
+import { useRef, useEffect } from "react";
 import VectorLayer from "ol/layer/Vector";
+import VectorSource from "ol/source/Vector";
 import {
   Feature as GeoJSONFeature,
   Geometry,
@@ -15,6 +13,8 @@ import { useMapView } from "./map/useMapView";
 import { useMapInitialization } from "./map/useMapInitialization";
 import { useDataLoading } from "./map/useDataLoading";
 import { useFeatureManagement } from "./map/useFeatureManagement";
+import { useLayerEffects } from "./map/useLayerEffects";
+import { useMapEvents } from "./map/useMapEvents";
 
 interface UseOpenLayersMapProps {
   features: GeoJSONFeature<Geometry, GeoJsonProperties>[];
@@ -118,99 +118,29 @@ export function useOpenLayersMap({
     adultLiteracyLayerAddedRef,
   });
 
-  // Update layer visibility when state changes
-  useEffect(() => {
-    if (worldBoundariesLayerRef.current) {
-      worldBoundariesLayerRef.current.setVisible(
-        layerVisibility.worldBoundaries
-      );
-    }
-  }, [layerVisibility.worldBoundaries]);
+  // Layer effects management
+  useLayerEffects({
+    worldBoundariesLayerRef,
+    oceanCurrentsLayerRef,
+    adultLiteracyLayer,
+    olView,
+    layerVisibility: {
+      worldBoundaries: layerVisibility.worldBoundaries,
+      oceanCurrents: layerVisibility.oceanCurrents,
+      adultLiteracy: layerVisibility.adultLiteracy,
+    },
+  });
 
-  useEffect(() => {
-    if (oceanCurrentsLayerRef.current) {
-      oceanCurrentsLayerRef.current.setVisible(layerVisibility.oceanCurrents);
-
-      // Force a redraw to ensure the layer updates
-      if (layerVisibility.oceanCurrents) {
-        oceanCurrentsLayerRef.current.changed();
-      }
-    }
-  }, [layerVisibility.oceanCurrents]);
-
-  // Update adult literacy layer visibility when state changes
-  useEffect(() => {
-    adultLiteracyLayer.setVisible(layerVisibility.adultLiteracy);
-  }, [layerVisibility.adultLiteracy, adultLiteracyLayer]);
-
-  // Update world boundaries style when zoom changes (for labels)
-  useEffect(() => {
-    const handleZoomChange = () => {
-      if (worldBoundariesLayerRef.current) {
-        // Force style update by changing the layer
-        worldBoundariesLayerRef.current.changed();
-      }
-    };
-
-    olView.on("change:resolution", handleZoomChange);
-
-    return () => {
-      olView.un("change:resolution", handleZoomChange);
-    };
-  }, [olView]);
-
-  // Initialize map
-  useEffect(() => {
-    if (!mapRef.current) return;
-
-    olMap.setTarget(mapRef.current as HTMLElement);
-
-    // Handle click events
-    const clickHandler = (event: MapBrowserEvent<UIEvent>) => {
-      try {
-        const feature = olMap.forEachFeatureAtPixel(
-          event.pixel,
-          (feature) => feature
-        );
-
-        if (feature && feature.get("featureType") === "feature") {
-          const featureId = feature.get("id");
-          if (featureId && onFeatureClick) {
-            onFeatureClick(featureId);
-
-            const geometry = feature.getGeometry();
-            if (geometry && geometry instanceof Point) {
-              olView.animate({
-                center: geometry.getCoordinates(),
-                zoom: 8,
-                duration: 1000,
-              });
-            }
-          }
-        } else if (onMapClick && event.coordinate) {
-          const coordinates = toLonLat(event.coordinate);
-          onMapClick(coordinates);
-        }
-      } catch (error) {
-        console.error("Error in click handler:", error);
-      }
-    };
-
-    olMap.on("click", clickHandler);
-    olMap.on("pointermove", handlePointerMove);
-
-    return () => {
-      olMap.un("click", clickHandler);
-      olMap.un("pointermove", handlePointerMove);
-    };
-  }, [
+  // Map events management
+  useMapEvents({
     olMap,
+    olView,
+    mapRef,
     onMapClick,
     onFeatureClick,
     onFeatureHover,
-    olView,
     handlePointerMove,
-  ]);
+  });
 
   return {
     mapRef,
