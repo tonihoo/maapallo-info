@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from typing import Tuple
 
 import uvicorn
+from analytics.routes import router as analytics_router
 from config import settings
 from database import init_db
 from fastapi import FastAPI, Request
@@ -77,7 +78,7 @@ async def simple_auth_middleware(request: Request, call_next):
 <body><h1>Authentication Required</h1>
 <p>Please provide credentials to access this site.</p></body></html>""",
                 status_code=401,
-                headers={"WWW-Authenticate": 'Basic realm="Maapallo Info"'},
+                headers={"WWW-Authenticate": 'Basic realm="Maapallo.info"'},
             )
 
         # Quick credential check
@@ -103,7 +104,7 @@ async def simple_auth_middleware(request: Request, call_next):
 <body><h1>Invalid Credentials</h1></body></html>""",
                     status_code=401,
                     headers={
-                        "WWW-Authenticate": 'Basic realm="Maapallo Info"'
+                        "WWW-Authenticate": 'Basic realm="Maapallo.info"'
                     },
                 )
 
@@ -115,7 +116,7 @@ async def simple_auth_middleware(request: Request, call_next):
 <html><head><title>Authentication Error</title></head>
 <body><h1>Authentication Error</h1></body></html>""",
                 status_code=401,
-                headers={"WWW-Authenticate": 'Basic realm="Maapallo Info"'},
+                headers={"WWW-Authenticate": 'Basic realm="Maapallo.info"'},
             )
 
     # Authentication successful or not needed, proceed
@@ -136,8 +137,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Maapallo Info API",
-    description="API for Maapallo Info application",
+    title="Maapallo.info API",
+    description="API for Maapallo.info application",
     version="1.0.0",
     lifespan=lifespan,
 )
@@ -157,6 +158,9 @@ app.add_middleware(
 # Include routers
 app.include_router(health.router, prefix="/api/v1", tags=["health"])
 app.include_router(feature.router, prefix="/api/v1/feature", tags=["features"])
+app.include_router(
+    analytics_router, prefix="/api/v1/analytics", tags=["analytics"]
+)
 
 # Serve static files in production
 if settings.is_production:
@@ -170,7 +174,7 @@ if settings.is_production:
 # Simple health check for root path (API only)
 @app.get("/api")
 async def root():
-    return {"message": "Maapallo Info API is running", "version": "1.0.0"}
+    return {"message": "Maapallo.info API is running", "version": "1.0.0"}
 
 
 # Robots.txt to prevent search engine indexing

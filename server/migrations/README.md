@@ -1,11 +1,12 @@
 # Database Migrations
 
-This folder contains SQL migration files for the Maapallo Info database.
+This folder contains SQL migration files for the Maapallo.info database.
 
 ## Migration Files
 
 - `0001_create_feature_table.sql` - Creates the main feature table with PostGIS geometry support
 - `0002_add_test_data.sql` - Adds sample data for development and testing
+- `0003_create_analytics_tables.sql` - Creates privacy-focused analytics tables (sessions, page views, custom events)
 
 ## Running Migrations
 
@@ -44,6 +45,16 @@ CREATE TABLE feature (
 ```
 
 The `location` field uses PostGIS with SRID 3067 (ETRS-TM35FIN coordinate system for Finland).
+
+## Analytics Schema
+
+The analytics system includes three related tables for privacy-focused tracking:
+
+- `analytics_session` - Tracks user sessions with hashed identifiers for privacy
+- `page_view` - Records page visits linked to sessions
+- `custom_event` - Stores custom analytics events (map interactions, feature clicks, etc.)
+
+All tables use UUIDs as primary keys and include proper foreign key relationships for data integrity.
 
 ## Adding New Migrations
 

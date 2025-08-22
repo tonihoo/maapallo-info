@@ -11,6 +11,7 @@ import {
 import { Map } from "./components/2d/Map";
 import { FeatureInfo } from "./components/common/FeatureInfo";
 import { HeaderMenu } from "./components/common/HeaderMenu";
+import { CookieConsent } from "./components/common/CookieConsent";
 import { useAppDispatch, useAppSelector } from "./store/hooks";
 import {
   setSelectedFeatureId,
@@ -29,6 +30,7 @@ import {
   selectMapFeatures,
   selectHeaderFooterColor,
 } from "./store/selectors";
+import { analytics } from "./utils/analytics";
 
 export function App() {
   const theme = useTheme();
@@ -64,6 +66,13 @@ export function App() {
     return () => clearTimeout(timer);
   }, [dispatch]);
 
+  // Track initial page view if analytics is enabled
+  useEffect(() => {
+    if (analytics.isEnabled()) {
+      analytics.trackPageView("/");
+    }
+  }, []);
+
   const handleMapClick = useCallback(() => {
     dispatch(clearSelectedFeature());
   }, [dispatch]);
@@ -71,8 +80,11 @@ export function App() {
   const handleFeatureSelect = useCallback(
     (id: number) => {
       dispatch(setSelectedFeatureId(id));
+
+      // Track feature selection analytics
+      analytics.trackFeatureSelection(id, is3DMode ? "3d" : "2d", "map_click");
     },
-    [dispatch]
+    [dispatch, is3DMode]
   );
 
   const handleFeatureInfoClose = useCallback(() => {
@@ -81,6 +93,9 @@ export function App() {
 
   const toggleMapModeHandler = useCallback(async () => {
     console.log("🔄 Toggling to 3D mode, preloaded:", cesiumPreloaded);
+
+    const previousMode = is3DMode ? "3d" : "2d";
+    const newMode = is3DMode ? "2d" : "3d";
 
     // If switching to 3D mode and Cesium isn't loaded yet, load it now
     if (!cesiumPreloaded && !CesiumMapComponent) {
@@ -97,7 +112,10 @@ export function App() {
     }
 
     dispatch(toggleMapMode());
-  }, [cesiumPreloaded, CesiumMapComponent, dispatch]);
+
+    // Track map mode toggle
+    analytics.trackMapModeToggle(newMode, previousMode);
+  }, [cesiumPreloaded, CesiumMapComponent, dispatch, is3DMode]);
 
   useEffect(() => {
     dispatch(fetchAllFeatures());
@@ -247,6 +265,8 @@ export function App() {
           Kehitysmaantieteen yhdistys 2025
         </Typography>
       </Box>
+
+      <CookieConsent />
     </>
   );
 }

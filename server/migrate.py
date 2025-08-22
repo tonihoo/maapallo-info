@@ -56,6 +56,7 @@ async def run_all_migrations():
     migration_files = [
         "0001_create_feature_table.sql",
         "0002_add_test_data.sql",
+        "0003_create_analytics_tables.sql",
     ]
 
     success_count = 0
@@ -85,8 +86,15 @@ async def drop_all_tables():
         engine = create_async_engine(database_url, echo=True)
 
         async with engine.begin() as conn:
-            # Drop tables in correct order (features first,
-            # then spatial tables)
+            # Drop tables in correct order (analytics tables first,
+            # then features, then spatial tables)
+            await conn.execute(
+                text("DROP TABLE IF EXISTS custom_event CASCADE;")
+            )
+            await conn.execute(text("DROP TABLE IF EXISTS page_view CASCADE;"))
+            await conn.execute(
+                text("DROP TABLE IF EXISTS analytics_session CASCADE;")
+            )
             await conn.execute(text("DROP TABLE IF EXISTS feature CASCADE;"))
             await conn.execute(
                 text("DROP TABLE IF EXISTS spatial_ref_sys CASCADE;")
