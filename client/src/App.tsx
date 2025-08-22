@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import {
   Box,
   Paper,
@@ -9,33 +9,40 @@ import {
   useTheme,
 } from "@mui/material";
 import { Map } from "./components/2d/Map";
-import FeatureList from "./components/common/FeatureList";
 import { FeatureInfo } from "./components/common/FeatureInfo";
 import { HeaderMenu } from "./components/common/HeaderMenu";
-import { FeatureTypes } from "./types/featureTypes";
-import { Feature, Geometry, GeoJsonProperties } from "geojson";
-
-// Define the CesiumMap props interface to match what we're passing
-interface CesiumMapProps {
-  features: Feature<Geometry, GeoJsonProperties>[];
-  selectedFeatureId?: number | null;
-  onMapClick?: (coordinates: number[]) => void;
-  onFeatureClick?: (featureId: number) => void;
-}
+import { useAppDispatch, useAppSelector } from "./store/hooks";
+import {
+  setSelectedFeatureId,
+  clearSelectedFeature,
+  toggleMapMode,
+  setCesiumPreloaded,
+  setCesiumComponent,
+} from "./store/slices/mapSlice";
+import { fetchAllFeatures } from "./store/slices/featuresSlice";
+import {
+  selectSelectedFeatureId,
+  selectIs3DMode,
+  selectCesiumPreloaded,
+  selectCesiumComponent,
+  selectRefreshTrigger,
+  selectMapFeatures,
+  selectHeaderFooterColor,
+} from "./store/selectors";
 
 export function App() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
-  const [selectedFeatureId, setSelectedFeatureId] = useState<number | null>(
-    null
-  );
-  const [refreshTrigger] = useState(0);
-  const [allFeatures, setAllFeatures] = useState<FeatureTypes[]>([]);
-  const [is3DMode, setIs3DMode] = useState(false);
-  const [cesiumPreloaded, setCesiumPreloaded] = useState(false);
-  const [CesiumMapComponent, setCesiumMapComponent] =
-    useState<React.ComponentType<CesiumMapProps> | null>(null);
+  // Redux state
+  const dispatch = useAppDispatch();
+  const selectedFeatureId = useAppSelector(selectSelectedFeatureId);
+  const is3DMode = useAppSelector(selectIs3DMode);
+  const cesiumPreloaded = useAppSelector(selectCesiumPreloaded);
+  const CesiumMapComponent = useAppSelector(selectCesiumComponent);
+  const refreshTrigger = useAppSelector(selectRefreshTrigger);
+  const mapFeatures = useAppSelector(selectMapFeatures);
+  const headerFooterColor = useAppSelector(selectHeaderFooterColor);
 
   // Background preload Cesium after initial render
   useEffect(() => {
@@ -45,8 +52,8 @@ export function App() {
         // Preload Cesium module in the background
         const cesiumModule = await import("./components/3d/CesiumMap");
         console.log("✅ Cesium preloaded successfully");
-        setCesiumMapComponent(() => cesiumModule.CesiumMap);
-        setCesiumPreloaded(true);
+        dispatch(setCesiumComponent(cesiumModule.CesiumMap));
+        dispatch(setCesiumPreloaded(true));
       } catch (error) {
         console.warn("⚠️ Cesium preload failed (will load on demand):", error);
       }
@@ -55,21 +62,24 @@ export function App() {
     // Start preloading after a short delay to not interfere with initial page load
     const timer = setTimeout(preloadCesium, 2000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [dispatch]);
 
   const handleMapClick = useCallback(() => {
-    setSelectedFeatureId(null);
-  }, []);
+    dispatch(clearSelectedFeature());
+  }, [dispatch]);
 
-  const handleFeatureSelect = useCallback((id: number) => {
-    setSelectedFeatureId(id);
-  }, []);
+  const handleFeatureSelect = useCallback(
+    (id: number) => {
+      dispatch(setSelectedFeatureId(id));
+    },
+    [dispatch]
+  );
 
   const handleFeatureInfoClose = useCallback(() => {
-    setSelectedFeatureId(null);
-  }, []);
+    dispatch(clearSelectedFeature());
+  }, [dispatch]);
 
-  const toggleMapMode = useCallback(async () => {
+  const toggleMapModeHandler = useCallback(async () => {
     console.log("🔄 Toggling to 3D mode, preloaded:", cesiumPreloaded);
 
     // If switching to 3D mode and Cesium isn't loaded yet, load it now
@@ -77,8 +87,8 @@ export function App() {
       try {
         console.log("🔄 Loading Cesium on demand...");
         const cesiumModule = await import("./components/3d/CesiumMap");
-        setCesiumMapComponent(() => cesiumModule.CesiumMap);
-        setCesiumPreloaded(true);
+        dispatch(setCesiumComponent(cesiumModule.CesiumMap));
+        dispatch(setCesiumPreloaded(true));
         console.log("✅ Cesium loaded on demand");
       } catch (error) {
         console.error("❌ Failed to load Cesium:", error);
@@ -86,43 +96,12 @@ export function App() {
       }
     }
 
-    setIs3DMode((prev) => !prev);
-  }, [cesiumPreloaded, CesiumMapComponent]);
+    dispatch(toggleMapMode());
+  }, [cesiumPreloaded, CesiumMapComponent, dispatch]);
 
   useEffect(() => {
-    const fetchAllFeatures = async () => {
-      try {
-        const response = await fetch("/api/v1/feature/");
-        if (!response.ok) return;
-
-        const data = await response.json();
-        setAllFeatures(data.features || []);
-      } catch (error) {
-        console.error("Error fetching all features:", error);
-      }
-    };
-
-    fetchAllFeatures();
-  }, [refreshTrigger]);
-
-  const createMapFeatures = (): Feature<Geometry, GeoJsonProperties>[] => {
-    return allFeatures
-      .filter((feature) => feature.location)
-      .map((feature) => ({
-        type: "Feature",
-        geometry: feature.location,
-        properties: {
-          id: feature.id,
-          title: feature.title,
-          featureType: "feature",
-          isSelected: feature.id === selectedFeatureId,
-        },
-      }));
-  };
-
-  const headerFooterColor = is3DMode
-    ? "rgba(126, 199, 129, 0.75)"
-    : "rgba(255, 179, 76, 0.75)";
+    dispatch(fetchAllFeatures());
+  }, [dispatch, refreshTrigger]);
 
   const headerStyle = {
     backgroundColor: headerFooterColor,
@@ -174,7 +153,7 @@ export function App() {
 
       <Tooltip title={is3DMode ? "2D kartta" : "3D maapallo"}>
         <IconButton
-          onClick={toggleMapMode}
+          onClick={toggleMapModeHandler}
           size="small"
           sx={{
             position: "absolute",
@@ -212,7 +191,7 @@ export function App() {
           {is3DMode ? (
             CesiumMapComponent ? (
               <CesiumMapComponent
-                features={createMapFeatures()}
+                features={mapFeatures}
                 selectedFeatureId={selectedFeatureId}
                 onMapClick={handleMapClick}
                 onFeatureClick={handleFeatureSelect}
@@ -224,7 +203,7 @@ export function App() {
             )
           ) : (
             <Map
-              features={createMapFeatures()}
+              features={mapFeatures}
               onMapClick={handleMapClick}
               onFeatureClick={handleFeatureSelect}
               onFeatureHover={() => {
