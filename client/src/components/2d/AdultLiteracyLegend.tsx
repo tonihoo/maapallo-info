@@ -27,7 +27,7 @@ export const AdultLiteracyLegend: React.FC<AdultLiteracyLegendProps> = ({
     <div
       style={{
         position: "absolute",
-        top: "70px", // Moved down 50px from original 20px
+        top: "70px",
         left: "20px",
         backgroundColor: "white",
         border: "1px solid #ccc",

@@ -1,6 +1,6 @@
 // Constants for 2D map configuration
 export const INITIAL_VIEW = {
-  center: [15, 25], // Horn of Africa in lon/lat
+  center: [15, 25],
   zoom: 3,
 };
 
