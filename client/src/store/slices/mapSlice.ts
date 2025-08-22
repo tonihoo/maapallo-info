@@ -2,6 +2,13 @@ import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { Feature, Geometry, GeoJsonProperties } from "geojson";
 import { BaseMapKey } from "../../components/2d/BaseMapSelector";
 
+interface LayerVisibility {
+  worldBoundaries: boolean;
+  oceanCurrents: boolean;
+  articleLocators: boolean;
+  adultLiteracy: boolean;
+}
+
 interface CesiumMapProps {
   features: Feature<Geometry, GeoJsonProperties>[];
   selectedFeatureId?: number | null;
@@ -15,6 +22,7 @@ interface MapState {
   cesiumPreloaded: boolean;
   CesiumMapComponent: React.ComponentType<CesiumMapProps> | null;
   currentBaseMap: BaseMapKey;
+  layerVisibility: LayerVisibility;
 }
 
 const initialState: MapState = {
@@ -23,6 +31,12 @@ const initialState: MapState = {
   cesiumPreloaded: false,
   CesiumMapComponent: null,
   currentBaseMap: "topo",
+  layerVisibility: {
+    worldBoundaries: false,
+    oceanCurrents: false,
+    articleLocators: false,
+    adultLiteracy: false,
+  },
 };
 
 const mapSlice = createSlice({
@@ -53,6 +67,9 @@ const mapSlice = createSlice({
     setCurrentBaseMap: (state, action: PayloadAction<BaseMapKey>) => {
       state.currentBaseMap = action.payload;
     },
+    setLayerVisibility: (state, action: PayloadAction<{ layerId: keyof LayerVisibility; visible: boolean }>) => {
+      state.layerVisibility[action.payload.layerId] = action.payload.visible;
+    },
   },
 });
 
@@ -64,6 +81,7 @@ export const {
   setCesiumPreloaded,
   setCesiumComponent,
   setCurrentBaseMap,
+  setLayerVisibility,
 } = mapSlice.actions;
 
 export default mapSlice.reducer;

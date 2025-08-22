@@ -21,7 +21,7 @@ import {
   GeoJsonProperties,
 } from "geojson";
 import { BASE_MAPS, BaseMapKey } from "../components/2d/BaseMapSelector";
-import { useAdultLiteracyLayer } from "./useAdultLiteracyLayer";
+import { useLayerVisibility } from "./map/useLayerVisibility";
 import { useAppSelector, useAppDispatch } from "../store/hooks";
 import { setCurrentBaseMap } from "../store/slices/mapSlice";
 import {
@@ -38,13 +38,6 @@ interface UseOpenLayersMapProps {
   onFeatureHover?: (featureId: number | null) => void;
 }
 
-interface LayerVisibility {
-  worldBoundaries: boolean;
-  oceanCurrents: boolean;
-  articleLocators: boolean;
-  adultLiteracy: boolean;
-}
-
 export function useOpenLayersMap({
   features,
   selectedFeatureId,
@@ -55,20 +48,12 @@ export function useOpenLayersMap({
   // Redux state and dispatch
   const currentBaseMap = useAppSelector((state) => state.map.currentBaseMap);
   const dispatch = useAppDispatch();
-  
+
   const mapRef = useRef<HTMLDivElement>(null);
   const [mouseCoordinates, setMouseCoordinates] = useState<{
     lon: number;
     lat: number;
   } | null>(null);
-
-  // Layer visibility state
-  const [layerVisibility, setLayerVisibility] = useState<LayerVisibility>({
-    worldBoundaries: false,
-    oceanCurrents: false,
-    articleLocators: false,
-    adultLiteracy: false,
-  });
 
   // Measurement state
   const [isMeasuring, setIsMeasuring] = useState(false);
@@ -84,9 +69,14 @@ export function useOpenLayersMap({
   // Ocean currents layer reference
   const oceanCurrentsLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
 
-  // Adult literacy layer hook
-  const adultLiteracyLayer = useAdultLiteracyLayer({
-    visible: layerVisibility.adultLiteracy,
+  // Layer visibility management
+  const {
+    layerVisibility,
+    handleLayerVisibilityChange,
+    adultLiteracyLayer,
+  } = useLayerVisibility({
+    worldBoundariesLayerRef,
+    oceanCurrentsLayerRef,
   });
 
   // Flag to track if adult literacy layer has been added
@@ -442,25 +432,6 @@ export function useOpenLayersMap({
     }
     setIsMeasuring(false);
   }, [olMap]);
-
-  // Layer visibility control
-  const handleLayerVisibilityChange = useCallback(
-    (layerId: string, visible: boolean) => {
-      setLayerVisibility((prev) => ({
-        ...prev,
-        [layerId]: visible,
-      }));
-
-      if (layerId === "worldBoundaries" && worldBoundariesLayerRef.current) {
-        worldBoundariesLayerRef.current.setVisible(visible);
-      } else if (layerId === "oceanCurrents" && oceanCurrentsLayerRef.current) {
-        oceanCurrentsLayerRef.current.setVisible(visible);
-      } else if (layerId === "adultLiteracy") {
-        adultLiteracyLayer.setVisible(visible);
-      }
-    },
-    [adultLiteracyLayer]
-  );
 
   // Base map change handler using Redux
   const handleBaseMapChange = useCallback(
