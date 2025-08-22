@@ -23,6 +23,8 @@ interface MapState {
   CesiumMapComponent: React.ComponentType<CesiumMapProps> | null;
   currentBaseMap: BaseMapKey;
   layerVisibility: LayerVisibility;
+  isMeasuring: boolean;
+  currentMeasurement: string;
 }
 
 const initialState: MapState = {
@@ -37,6 +39,8 @@ const initialState: MapState = {
     articleLocators: false,
     adultLiteracy: false,
   },
+  isMeasuring: false,
+  currentMeasurement: "",
 };
 
 const mapSlice = createSlice({
@@ -67,8 +71,20 @@ const mapSlice = createSlice({
     setCurrentBaseMap: (state, action: PayloadAction<BaseMapKey>) => {
       state.currentBaseMap = action.payload;
     },
-    setLayerVisibility: (state, action: PayloadAction<{ layerId: keyof LayerVisibility; visible: boolean }>) => {
+    setLayerVisibility: (
+      state,
+      action: PayloadAction<{
+        layerId: keyof LayerVisibility;
+        visible: boolean;
+      }>
+    ) => {
       state.layerVisibility[action.payload.layerId] = action.payload.visible;
+    },
+    setIsMeasuring: (state, action: PayloadAction<boolean>) => {
+      state.isMeasuring = action.payload;
+    },
+    setCurrentMeasurement: (state, action: PayloadAction<string>) => {
+      state.currentMeasurement = action.payload;
     },
   },
 });
@@ -82,6 +98,8 @@ export const {
   setCesiumComponent,
   setCurrentBaseMap,
   setLayerVisibility,
+  setIsMeasuring,
+  setCurrentMeasurement,
 } = mapSlice.actions;
 
 export default mapSlice.reducer;
