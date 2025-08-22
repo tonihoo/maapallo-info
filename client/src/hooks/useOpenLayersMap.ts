@@ -21,6 +21,7 @@ import { useMeasurement } from "./map/useMeasurement";
 import { useMouseCoordinates } from "./map/useMouseCoordinates";
 import { useMapView } from "./map/useMapView";
 import { useMapInitialization } from "./map/useMapInitialization";
+import { useDataLoading } from "./map/useDataLoading";
 
 interface UseOpenLayersMapProps {
   features: GeoJSONFeature<Geometry, GeoJsonProperties>[];
@@ -134,123 +135,14 @@ export function useOpenLayersMap({
     onFeatureHover,
   });
 
-  // Load world boundaries
-  const loadWorldBoundaries = useCallback(async () => {
-    try {
-      const response = await fetch("/data/world.geojson");
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const geojsonData = await response.json();
-
-      if (worldBoundariesLayerRef.current) {
-        const source = worldBoundariesLayerRef.current.getSource();
-
-        if (source) {
-          source.clear();
-
-          const format = new GeoJSON();
-          const features = format.readFeatures(geojsonData, {
-            dataProjection: "EPSG:4326",
-            featureProjection: "EPSG:3857",
-          });
-
-          source.addFeatures(features);
-
-          // Force redraw
-          worldBoundariesLayerRef.current.changed();
-        }
-      } else {
-        console.error("❌ World boundaries layer reference is null!");
-      }
-    } catch (error) {
-      console.warn("❌ Failed to load world boundaries:", error);
-    }
-  }, []);
-
-  // Load ocean currents
-  const loadOceanCurrents = useCallback(async () => {
-    try {
-      const response = await fetch("/data/ocean-currents.geojson");
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const geojsonData = await response.json();
-
-      if (oceanCurrentsLayerRef.current) {
-        const source = oceanCurrentsLayerRef.current.getSource();
-
-        if (source) {
-          source.clear();
-
-          const format = new GeoJSON();
-          const features = format.readFeatures(geojsonData, {
-            dataProjection: "EPSG:4326",
-            featureProjection: "EPSG:3857",
-          });
-
-          source.addFeatures(features);
-
-          // Force redraw
-          oceanCurrentsLayerRef.current.changed();
-        }
-      }
-    } catch (error) {
-      console.warn("❌ Failed to load ocean currents:", error);
-    }
-  }, []);
-
-  // Load world boundaries when map is ready
-  useEffect(() => {
-    if (olMap && worldBoundariesLayerRef.current) {
-      // Small delay to ensure map is fully initialized
-      const timer = setTimeout(() => {
-        loadWorldBoundaries();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [olMap, loadWorldBoundaries]);
-
-  // Load ocean currents when map is ready
-  useEffect(() => {
-    if (olMap && oceanCurrentsLayerRef.current) {
-      // Small delay to ensure map is fully initialized
-      const timer = setTimeout(() => {
-        loadOceanCurrents();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [olMap, loadOceanCurrents]);
-
-  // No separate loading needed - features come from props
-  // Article locators visibility is controlled via the main features layer
-
-  // Load adult literacy layer when map is ready (only once)
-  useEffect(() => {
-    if (olMap && !adultLiteracyLayerAddedRef.current) {
-      const timer = setTimeout(async () => {
-        const layer = await adultLiteracyLayer.getLayer();
-        if (layer) {
-          // Check if layer is already in the map
-          const existingLayers = olMap.getLayers().getArray();
-          const layerExists = existingLayers.some(
-            (existingLayer) => existingLayer === layer
-          );
-
-          if (!layerExists) {
-            // Insert at position 1 (after base map, before world boundaries)
-            const layers = olMap.getLayers();
-            layers.insertAt(1, layer);
-            adultLiteracyLayerAddedRef.current = true;
-          }
-        }
-      }, 100);
-
-      return () => {
-        clearTimeout(timer);
-      };
-    }
-  }, [olMap]); // Remove adultLiteracyLayer dependency
+  // Data loading management
+  useDataLoading({
+    olMap,
+    worldBoundariesLayerRef,
+    oceanCurrentsLayerRef,
+    adultLiteracyLayer,
+    adultLiteracyLayerAddedRef,
+  });
 
   // Update layer visibility when state changes
   useEffect(() => {
