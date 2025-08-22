@@ -61,7 +61,7 @@ export function useOpenLayersMap({
   const [layerVisibility, setLayerVisibility] = useState<LayerVisibility>({
     worldBoundaries: false,
     oceanCurrents: false,
-    articleLocators: true, // Default to true since features are shown by default
+    articleLocators: false,
     adultLiteracy: false,
   });
 
@@ -78,11 +78,6 @@ export function useOpenLayersMap({
 
   // Ocean currents layer reference
   const oceanCurrentsLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
-
-  // Article locators layer reference
-  const articleLocatorsLayerRef = useRef<VectorLayer<VectorSource> | null>(
-    null
-  );
 
   // Adult literacy layer hook
   const adultLiteracyLayer = useAdultLiteracyLayer({
@@ -283,33 +278,6 @@ export function useOpenLayersMap({
     // Store reference to ocean currents layer
     oceanCurrentsLayerRef.current = oceanCurrentsLayer;
 
-    // Create article locators layer
-    const articleLocatorsSource = new VectorSource();
-    const articleLocatorsLayer = new VectorLayer({
-      source: articleLocatorsSource,
-      style: (feature: FeatureLike) => {
-        const isHighlighted = feature.get("highlighted");
-
-        return new Style({
-          image: new Circle({
-            radius: isHighlighted ? 10 : 7,
-            fill: new Fill({
-              color: isHighlighted ? "#ff4444" : "#1976d2",
-            }),
-            stroke: new Stroke({
-              color: "#ffffff",
-              width: isHighlighted ? 3 : 2,
-            }),
-          }),
-        });
-      },
-      visible: false, // Initially hidden
-      zIndex: 15, // Above literacy layer and world boundaries
-    });
-
-    // Store reference to article locators layer
-    articleLocatorsLayerRef.current = articleLocatorsLayer;
-
     return new OlMap({
       target: undefined,
       controls: [],
@@ -323,7 +291,6 @@ export function useOpenLayersMap({
         })(), // Base map with z-index 0
         worldBoundariesLayer, // z-index 10
         oceanCurrentsLayer, // Ocean currents layer
-        articleLocatorsLayer, // Article locators layer
         new VectorLayer({
           source: new VectorSource(),
           style: styleFunction,
@@ -479,23 +446,16 @@ export function useOpenLayersMap({
         [layerId]: visible,
       }));
 
-      // Update the actual layer visibility
       if (layerId === "worldBoundaries" && worldBoundariesLayerRef.current) {
         worldBoundariesLayerRef.current.setVisible(visible);
       } else if (layerId === "oceanCurrents" && oceanCurrentsLayerRef.current) {
         oceanCurrentsLayerRef.current.setVisible(visible);
-      } else if (
-        layerId === "articleLocators" &&
-        articleLocatorsLayerRef.current
-      ) {
-        articleLocatorsLayerRef.current.setVisible(visible);
       } else if (layerId === "adultLiteracy") {
         adultLiteracyLayer.setVisible(visible);
       }
     },
-    []
+    [adultLiteracyLayer]
   );
-
   const handleBaseMapChange = useCallback(
     (baseMapKey: BaseMapKey) => {
       const layers = olMap.getLayers();
@@ -566,45 +526,9 @@ export function useOpenLayersMap({
           // Force redraw
           oceanCurrentsLayerRef.current.changed();
         }
-      } else {
-        console.error("❌ Ocean currents layer reference is null!");
       }
     } catch (error) {
       console.warn("❌ Failed to load ocean currents:", error);
-    }
-  }, []);
-
-  // Load article locators
-  const loadArticleLocators = useCallback(async () => {
-    try {
-      const response = await fetch("/data/article-locators.geojson");
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const geojsonData = await response.json();
-
-      if (articleLocatorsLayerRef.current) {
-        const source = articleLocatorsLayerRef.current.getSource();
-
-        if (source) {
-          source.clear();
-
-          const format = new GeoJSON();
-          const features = format.readFeatures(geojsonData, {
-            dataProjection: "EPSG:4326",
-            featureProjection: "EPSG:3857",
-          });
-
-          source.addFeatures(features);
-
-          // Force redraw
-          articleLocatorsLayerRef.current.changed();
-        }
-      } else {
-        console.error("❌ Article locators layer reference is null!");
-      }
-    } catch (error) {
-      console.warn("❌ Failed to load article locators:", error);
     }
   }, []);
 
@@ -630,16 +554,8 @@ export function useOpenLayersMap({
     }
   }, [olMap, loadOceanCurrents]);
 
-  // Load article locators when map is ready
-  useEffect(() => {
-    if (olMap && articleLocatorsLayerRef.current) {
-      // Small delay to ensure map is fully initialized
-      const timer = setTimeout(() => {
-        loadArticleLocators();
-      }, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [olMap, loadArticleLocators]);
+  // No separate loading needed - features come from props
+  // Article locators visibility is controlled via the main features layer
 
   // Load adult literacy layer when map is ready (only once)
   useEffect(() => {
@@ -688,29 +604,63 @@ export function useOpenLayersMap({
     }
   }, [layerVisibility.oceanCurrents]);
 
-  // Update article locators layer visibility when state changes
+  // Effect to handle when features change (but visibility is controlled above)
   useEffect(() => {
-    // Update the main features layer visibility (the orange locators)
-    const layers = olMap.getLayers().getArray();
-    if (layers.length >= 5) {
-      const vectorLayer = layers[4] as VectorLayer<VectorSource>; // Features layer
-      if (vectorLayer) {
-        vectorLayer.setVisible(layerVisibility.articleLocators);
-      }
-    }
+    try {
+      const layers = olMap.getLayers().getArray();
 
-    // Also update the dedicated article locators layer if it exists
-    if (articleLocatorsLayerRef.current) {
-      articleLocatorsLayerRef.current.setVisible(
-        layerVisibility.articleLocators
+      // Find the features layer - it should be the VectorLayer with our styleFunction
+      let featuresLayerIndex = -1;
+      for (let i = 0; i < layers.length; i++) {
+        const layer = layers[i];
+        if (layer instanceof VectorLayer && layer.getZIndex() === 20) {
+          featuresLayerIndex = i;
+          break;
+        }
+      }
+
+      if (featuresLayerIndex === -1) return;
+
+      const vectorLayer = layers[
+        featuresLayerIndex
+      ] as VectorLayer<VectorSource>;
+      const source = vectorLayer.getSource();
+      if (!source) return;
+
+      // Always clear first
+      source.clear();
+
+      // Only add features if layer is currently visible
+      if (layerVisibility.articleLocators && features && features.length) {
+        const olFeatures = features.map((geoJsonFeature) => {
+          const olFeature = new Feature({
+            geometry: new GeoJSON().readGeometry(geoJsonFeature.geometry, {
+              dataProjection: "EPSG:4326",
+              featureProjection: "EPSG:3857",
+            }),
+          });
+
+          if (geoJsonFeature.properties) {
+            Object.keys(geoJsonFeature.properties).forEach((key) => {
+              olFeature.set(key, geoJsonFeature.properties?.[key]);
+            });
+          }
+
+          return olFeature;
+        });
+
+        source.addFeatures(olFeatures);
+      }
+
+      // Always set the layer visibility to match the state
+      vectorLayer.setVisible(layerVisibility.articleLocators);
+    } catch (error) {
+      console.error(
+        "Error updating features when features prop changes:",
+        error
       );
-
-      // Force a redraw to ensure the layer updates
-      if (layerVisibility.articleLocators) {
-        articleLocatorsLayerRef.current.changed();
-      }
     }
-  }, [layerVisibility.articleLocators, olMap]);
+  }, [features, olMap, layerVisibility.articleLocators]);
 
   // Update adult literacy layer visibility when state changes
   useEffect(() => {
@@ -818,46 +768,6 @@ export function useOpenLayersMap({
     };
   }, [olMap, onMapClick, onFeatureClick, onFeatureHover, olView]);
 
-  // Update features
-  useEffect(() => {
-    try {
-      const layers = olMap.getLayers().getArray();
-      if (!layers || layers.length < 5) return;
-
-      const vectorLayer = layers[4] as VectorLayer<VectorSource>; // Updated index for features layer
-      const source = vectorLayer.getSource();
-      if (!source) return;
-
-      source.clear();
-
-      if (!features || !features.length) return;
-
-      const olFeatures = features.map((geoJsonFeature) => {
-        const olFeature = new Feature({
-          geometry: new GeoJSON().readGeometry(geoJsonFeature.geometry, {
-            dataProjection: "EPSG:4326",
-            featureProjection: "EPSG:3857",
-          }),
-        });
-
-        if (geoJsonFeature.properties) {
-          Object.keys(geoJsonFeature.properties).forEach((key) => {
-            olFeature.set(key, geoJsonFeature.properties?.[key]);
-          });
-        }
-
-        return olFeature;
-      });
-
-      source.addFeatures(olFeatures);
-
-      // Update the layer visibility based on articleLocators setting
-      vectorLayer.setVisible(layerVisibility.articleLocators);
-    } catch (error) {
-      console.error("Error updating features:", error);
-    }
-  }, [features, olMap, layerVisibility.articleLocators]);
-
   // Zoom to selected feature
   useEffect(() => {
     try {
@@ -883,9 +793,19 @@ export function useOpenLayersMap({
   // Force re-render of feature styles when selection changes
   useEffect(() => {
     const layers = olMap.getLayers().getArray();
-    const vectorLayer = layers[4] as VectorLayer<VectorSource>; // Updated index for features layer
-    if (vectorLayer) {
-      vectorLayer.setStyle(styleFunction);
+
+    // Find the features layer by zIndex
+    let featuresLayer = null;
+    for (let i = 0; i < layers.length; i++) {
+      const layer = layers[i];
+      if (layer instanceof VectorLayer && layer.getZIndex() === 20) {
+        featuresLayer = layer;
+        break;
+      }
+    }
+
+    if (featuresLayer) {
+      featuresLayer.setStyle(styleFunction);
     }
   }, [selectedFeatureId, styleFunction, olMap]);
 
