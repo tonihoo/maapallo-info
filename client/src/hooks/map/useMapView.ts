@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { View } from "ol";
 import { fromLonLat } from "ol/proj";
 import { useAppSelector, useAppDispatch } from "../../store/hooks";
@@ -16,7 +16,7 @@ export function useMapView() {
 
   // Create OpenLayers View
   const [olView] = useState(() => {
-    const view = new View({
+    return new View({
       center: fromLonLat(viewState.center),
       zoom: viewState.zoom,
       rotation: viewState.rotation,
@@ -24,30 +24,41 @@ export function useMapView() {
       minZoom: ZOOM_LIMITS.min,
       maxZoom: ZOOM_LIMITS.max,
     });
+  });
 
-    // Listen to view changes and update Redux state
-    view.on("change:center", () => {
-      const center = view.getCenter();
+  // Set up view change listeners after view creation
+  useEffect(() => {
+    const handleCenterChange = () => {
+      const center = olView.getCenter();
       if (center) {
         // Convert back to lon/lat for storage
         dispatch(setViewState({ center: center as [number, number] }));
       }
-    });
+    };
 
-    view.on("change:zoom", () => {
-      const zoom = view.getZoom();
+    const handleZoomChange = () => {
+      const zoom = olView.getZoom();
       if (zoom !== undefined) {
         dispatch(setViewState({ zoom }));
       }
-    });
+    };
 
-    view.on("change:rotation", () => {
-      const rotation = view.getRotation();
+    const handleRotationChange = () => {
+      const rotation = olView.getRotation();
       dispatch(setViewState({ rotation }));
-    });
+    };
 
-    return view;
-  });
+    // Listen to view changes and update Redux state
+    olView.on("change:center", handleCenterChange);
+    olView.on("change:zoom", handleZoomChange);
+    olView.on("change:rotation", handleRotationChange);
+
+    return () => {
+      olView.un("change:center", handleCenterChange);
+      olView.un("change:zoom", handleZoomChange);
+      olView.un("change:rotation", handleRotationChange);
+    };
+  }, [olView, dispatch]);
 
   // Control functions
   const handleZoom = useCallback(

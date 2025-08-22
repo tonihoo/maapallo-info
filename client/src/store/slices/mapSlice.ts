@@ -32,6 +32,10 @@ interface MapState {
     zoom: number;
     rotation: number;
   };
+  mapConfig: {
+    isInitialized: boolean;
+    hasTarget: boolean;
+  };
 }
 
 const initialState: MapState = {
@@ -53,6 +57,10 @@ const initialState: MapState = {
     center: INITIAL_VIEW.center,
     zoom: INITIAL_VIEW.zoom,
     rotation: 0,
+  },
+  mapConfig: {
+    isInitialized: false,
+    hasTarget: false,
   },
 };
 
@@ -123,6 +131,12 @@ const mapSlice = createSlice({
         state.viewState.rotation = action.payload.rotation;
       }
     },
+    setMapInitialized: (state, action: PayloadAction<boolean>) => {
+      state.mapConfig.isInitialized = action.payload;
+    },
+    setMapHasTarget: (state, action: PayloadAction<boolean>) => {
+      state.mapConfig.hasTarget = action.payload;
+    },
   },
 });
 
@@ -139,6 +153,8 @@ export const {
   setCurrentMeasurement,
   setMouseCoordinates,
   setViewState,
+  setMapInitialized,
+  setMapHasTarget,
 } = mapSlice.actions;
 
 export default mapSlice.reducer;
