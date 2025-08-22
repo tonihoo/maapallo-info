@@ -1,13 +1,8 @@
 import { useState } from "react";
-import {
-  IconButton,
-  Drawer,
-  useMediaQuery,
-  useTheme,
-  Box,
-} from "@mui/material";
+import { IconButton, Drawer, Box } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import FeatureList from "./FeatureList";
+import { CookiePreferences } from "./CookiePreferences";
 
 interface Props {
   onSelectFeature: (id: number) => void;
@@ -23,8 +18,7 @@ export function HeaderMenu({
   is3DMode,
 }: Props) {
   const [isOpen, setIsOpen] = useState(false);
-  const theme = useTheme();
-  //   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const [preferencesOpen, setPreferencesOpen] = useState(false);
 
   const handleToggle = () => {
     setIsOpen(!isOpen);
@@ -33,6 +27,11 @@ export function HeaderMenu({
   const handleFeatureSelect = (id: number) => {
     onSelectFeature(id);
     setIsOpen(false); // Close menu after selection
+  };
+
+  const handlePreferencesClick = () => {
+    setPreferencesOpen(true);
+    setIsOpen(false); // Close menu when opening preferences
   };
 
   return (
@@ -82,9 +81,16 @@ export function HeaderMenu({
             selectedFeatureId={selectedFeatureId}
             refreshTrigger={refreshTrigger}
             is3DMode={is3DMode}
+            onPreferencesClick={handlePreferencesClick}
           />
         </Box>
       </Drawer>
+
+      {/* Cookie Preferences Dialog */}
+      <CookiePreferences
+        open={preferencesOpen}
+        onClose={() => setPreferencesOpen(false)}
+      />
     </>
   );
 }

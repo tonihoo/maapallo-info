@@ -1,4 +1,5 @@
-import { Box, MenuItem, Paper, Typography } from "@mui/material";
+import { Box, MenuItem, Paper, Typography, Divider } from "@mui/material";
+import { Settings as SettingsIcon } from "@mui/icons-material";
 import { FeatureTypes } from "./types/featureTypes";
 import { useEffect, useState } from "react";
 
@@ -7,11 +8,13 @@ export default function FeatureList({
   selectedFeatureId = null,
   refreshTrigger = 0,
   is3DMode = true,
+  onPreferencesClick,
 }: {
   onSelectFeature: (id: number) => void;
   selectedFeatureId?: number | null;
   refreshTrigger?: number;
   is3DMode?: boolean;
+  onPreferencesClick?: () => void;
 }) {
   const [features, setFeatures] = useState<FeatureTypes[]>([]);
 
@@ -124,11 +127,54 @@ export default function FeatureList({
               </Box>
             </MenuItem>
           ))}
+
+          {/* Preferences Menu Item */}
+          <Divider sx={{ my: 1 }} />
+          <MenuItem
+            onClick={onPreferencesClick}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              py: 1.5,
+              color: "#666",
+              "&:hover": {
+                color: "#333",
+                backgroundColor: "rgba(0,0,0,0.04)",
+              },
+            }}
+          >
+            <SettingsIcon sx={{ fontSize: "1.2rem" }} />
+            <Typography variant="body2">Evästeasetukset</Typography>
+          </MenuItem>
         </Box>
       ) : (
-        <Typography sx={{ padding: "1em" }}>
-          Ei artikkeleita tietokannassa.
-        </Typography>
+        <Box>
+          <Typography sx={{ padding: "1em" }}>
+            Ei artikkeleita tietokannassa.
+          </Typography>
+
+          {/* Preferences Menu Item - shown even when no features */}
+          <Divider sx={{ mx: 2, mb: 1 }} />
+          <MenuItem
+            onClick={onPreferencesClick}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              py: 1.5,
+              mx: 1,
+              color: "#666",
+              "&:hover": {
+                color: "#333",
+                backgroundColor: "rgba(0,0,0,0.04)",
+              },
+            }}
+          >
+            <SettingsIcon sx={{ fontSize: "1.2rem" }} />
+            <Typography variant="body2">Evästeasetukset</Typography>
+          </MenuItem>
+        </Box>
       )}
     </Paper>
   );
