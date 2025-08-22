@@ -20,6 +20,7 @@ import {
 import { BASE_MAPS, BaseMapKey } from "../components/2d/BaseMapSelector";
 import { useLayerVisibility } from "./map/useLayerVisibility";
 import { useMeasurement } from "./map/useMeasurement";
+import { useMouseCoordinates } from "./map/useMouseCoordinates";
 import { useAppSelector, useAppDispatch } from "../store/hooks";
 import { setCurrentBaseMap } from "../store/slices/mapSlice";
 import {
@@ -48,10 +49,6 @@ export function useOpenLayersMap({
   const dispatch = useAppDispatch();
 
   const mapRef = useRef<HTMLDivElement>(null);
-  const [mouseCoordinates, setMouseCoordinates] = useState<{
-    lon: number;
-    lat: number;
-  } | null>(null);
 
   // Measurement source reference
   const measureSourceRef = useRef<VectorSource | null>(null);
@@ -297,6 +294,12 @@ export function useOpenLayersMap({
   } = useMeasurement({
     olMap,
     measureSourceRef,
+  });
+
+  // Mouse coordinates management
+  const { mouseCoordinates, handlePointerMove } = useMouseCoordinates({
+    olMap,
+    onFeatureHover,
   });
 
   // Control functions
@@ -617,53 +620,21 @@ export function useOpenLayersMap({
       }
     };
 
-    // Handle hover events and coordinate tracking
-    const pointerMoveHandler = (event: MapBrowserEvent<UIEvent>) => {
-      try {
-        if (!event.coordinate) return;
-
-        const feature = olMap.forEachFeatureAtPixel(
-          event.pixel,
-          (feature) => feature
-        );
-
-        const coordinates = toLonLat(event.coordinate);
-        setMouseCoordinates({
-          lon: Number(coordinates[0].toFixed(4)),
-          lat: Number(coordinates[1].toFixed(4)),
-        });
-
-        if (feature && feature.get("featureType") === "feature") {
-          const featureId = feature.get("id");
-          if (onFeatureHover) {
-            onFeatureHover(featureId);
-          }
-          const viewport = olMap.getViewport();
-          if (viewport) {
-            viewport.style.cursor = "pointer";
-          }
-        } else {
-          if (onFeatureHover) {
-            onFeatureHover(null);
-          }
-          const viewport = olMap.getViewport();
-          if (viewport) {
-            viewport.style.cursor = "";
-          }
-        }
-      } catch (error) {
-        console.error("Error in pointer move handler:", error);
-      }
-    };
-
     olMap.on("click", clickHandler);
-    olMap.on("pointermove", pointerMoveHandler);
+    olMap.on("pointermove", handlePointerMove);
 
     return () => {
       olMap.un("click", clickHandler);
-      olMap.un("pointermove", pointerMoveHandler);
+      olMap.un("pointermove", handlePointerMove);
     };
-  }, [olMap, onMapClick, onFeatureClick, onFeatureHover, olView]);
+  }, [
+    olMap,
+    onMapClick,
+    onFeatureClick,
+    onFeatureHover,
+    olView,
+    handlePointerMove,
+  ]);
 
   // Zoom to selected feature
   useEffect(() => {

@@ -25,6 +25,7 @@ interface MapState {
   layerVisibility: LayerVisibility;
   isMeasuring: boolean;
   currentMeasurement: string;
+  mouseCoordinates: { lon: number; lat: number } | null;
 }
 
 const initialState: MapState = {
@@ -41,6 +42,7 @@ const initialState: MapState = {
   },
   isMeasuring: false,
   currentMeasurement: "",
+  mouseCoordinates: null,
 };
 
 const mapSlice = createSlice({
@@ -86,6 +88,12 @@ const mapSlice = createSlice({
     setCurrentMeasurement: (state, action: PayloadAction<string>) => {
       state.currentMeasurement = action.payload;
     },
+    setMouseCoordinates: (
+      state,
+      action: PayloadAction<{ lon: number; lat: number } | null>
+    ) => {
+      state.mouseCoordinates = action.payload;
+    },
   },
 });
 
@@ -100,6 +108,7 @@ export const {
   setLayerVisibility,
   setIsMeasuring,
   setCurrentMeasurement,
+  setMouseCoordinates,
 } = mapSlice.actions;
 
 export default mapSlice.reducer;
