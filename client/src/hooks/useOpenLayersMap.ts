@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { View, Map as OlMap, Feature } from "ol";
+import { Map as OlMap, Feature } from "ol";
 import { GeoJSON } from "ol/format";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
@@ -21,13 +21,9 @@ import { BASE_MAPS, BaseMapKey } from "../components/2d/BaseMapSelector";
 import { useLayerVisibility } from "./map/useLayerVisibility";
 import { useMeasurement } from "./map/useMeasurement";
 import { useMouseCoordinates } from "./map/useMouseCoordinates";
+import { useMapView } from "./map/useMapView";
 import { useAppSelector, useAppDispatch } from "../store/hooks";
 import { setCurrentBaseMap } from "../store/slices/mapSlice";
-import {
-  INITIAL_VIEW,
-  ZOOM_LIMITS,
-  ANIMATION_DURATIONS,
-} from "../constants/mapConstants";
 
 interface UseOpenLayersMapProps {
   features: GeoJSONFeature<Geometry, GeoJsonProperties>[];
@@ -116,16 +112,9 @@ export function useOpenLayersMap({
     }
   }, []);
 
-  // OpenLayers View
-  const [olView] = useState(() => {
-    return new View({
-      center: fromLonLat(INITIAL_VIEW.center),
-      zoom: INITIAL_VIEW.zoom,
-      projection: "EPSG:3857",
-      minZoom: ZOOM_LIMITS.min,
-      maxZoom: ZOOM_LIMITS.max,
-    });
-  });
+  // Map view management
+  const { olView, handleZoom, handleRotate, handleHome, handleLocationSelect } =
+    useMapView();
 
   // OpenLayers Map
   const [olMap] = useState(() => {
@@ -301,59 +290,6 @@ export function useOpenLayersMap({
     olMap,
     onFeatureHover,
   });
-
-  // Control functions
-  const handleZoom = useCallback(
-    (zoomIn: boolean) => {
-      const currentZoom = olView.getZoom() || INITIAL_VIEW.zoom;
-      const newZoom = zoomIn
-        ? Math.min(currentZoom + 1, ZOOM_LIMITS.max)
-        : Math.max(currentZoom - 1, ZOOM_LIMITS.min);
-
-      olView.animate({
-        zoom: newZoom,
-        duration: ANIMATION_DURATIONS.zoom,
-      });
-    },
-    [olView]
-  );
-
-  const handleRotate = useCallback(
-    (direction: "left" | "right") => {
-      const currentRotation = olView.getRotation();
-      const rotationIncrement = Math.PI / 12; // 15 degrees in radians
-      const newRotation =
-        direction === "left"
-          ? currentRotation - rotationIncrement
-          : currentRotation + rotationIncrement;
-
-      olView.animate({
-        rotation: newRotation,
-        duration: ANIMATION_DURATIONS.rotate,
-      });
-    },
-    [olView]
-  );
-
-  const handleHome = useCallback(() => {
-    olView.animate({
-      center: fromLonLat(INITIAL_VIEW.center),
-      zoom: INITIAL_VIEW.zoom,
-      rotation: 0,
-      duration: ANIMATION_DURATIONS.home,
-    });
-  }, [olView]);
-
-  const handleLocationSelect = useCallback(
-    (lat: number, lon: number) => {
-      olView.animate({
-        center: fromLonLat([lon, lat]),
-        zoom: 12,
-        duration: 1000,
-      });
-    },
-    [olView]
-  );
 
   // Base map change handler using Redux
   const handleBaseMapChange = useCallback(

@@ -1,6 +1,7 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { Feature, Geometry, GeoJsonProperties } from "geojson";
 import { BaseMapKey } from "../../components/2d/BaseMapSelector";
+import { INITIAL_VIEW } from "../../constants/mapConstants";
 
 interface LayerVisibility {
   worldBoundaries: boolean;
@@ -26,6 +27,11 @@ interface MapState {
   isMeasuring: boolean;
   currentMeasurement: string;
   mouseCoordinates: { lon: number; lat: number } | null;
+  viewState: {
+    center: [number, number];
+    zoom: number;
+    rotation: number;
+  };
 }
 
 const initialState: MapState = {
@@ -43,6 +49,11 @@ const initialState: MapState = {
   isMeasuring: false,
   currentMeasurement: "",
   mouseCoordinates: null,
+  viewState: {
+    center: INITIAL_VIEW.center,
+    zoom: INITIAL_VIEW.zoom,
+    rotation: 0,
+  },
 };
 
 const mapSlice = createSlice({
@@ -94,6 +105,24 @@ const mapSlice = createSlice({
     ) => {
       state.mouseCoordinates = action.payload;
     },
+    setViewState: (
+      state,
+      action: PayloadAction<{
+        center?: [number, number];
+        zoom?: number;
+        rotation?: number;
+      }>
+    ) => {
+      if (action.payload.center !== undefined) {
+        state.viewState.center = action.payload.center;
+      }
+      if (action.payload.zoom !== undefined) {
+        state.viewState.zoom = action.payload.zoom;
+      }
+      if (action.payload.rotation !== undefined) {
+        state.viewState.rotation = action.payload.rotation;
+      }
+    },
   },
 });
 
@@ -109,6 +138,7 @@ export const {
   setIsMeasuring,
   setCurrentMeasurement,
   setMouseCoordinates,
+  setViewState,
 } = mapSlice.actions;
 
 export default mapSlice.reducer;
