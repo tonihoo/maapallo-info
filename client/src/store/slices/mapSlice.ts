@@ -1,5 +1,6 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { Feature, Geometry, GeoJsonProperties } from "geojson";
+import { BaseMapKey } from "../../components/2d/BaseMapSelector";
 
 interface CesiumMapProps {
   features: Feature<Geometry, GeoJsonProperties>[];
@@ -13,6 +14,7 @@ interface MapState {
   is3DMode: boolean;
   cesiumPreloaded: boolean;
   CesiumMapComponent: React.ComponentType<CesiumMapProps> | null;
+  currentBaseMap: BaseMapKey;
 }
 
 const initialState: MapState = {
@@ -20,6 +22,7 @@ const initialState: MapState = {
   is3DMode: false,
   cesiumPreloaded: false,
   CesiumMapComponent: null,
+  currentBaseMap: "topo",
 };
 
 const mapSlice = createSlice({
@@ -47,6 +50,9 @@ const mapSlice = createSlice({
     ) => {
       state.CesiumMapComponent = action.payload;
     },
+    setCurrentBaseMap: (state, action: PayloadAction<BaseMapKey>) => {
+      state.currentBaseMap = action.payload;
+    },
   },
 });
 
@@ -57,6 +63,7 @@ export const {
   setMapMode,
   setCesiumPreloaded,
   setCesiumComponent,
+  setCurrentBaseMap,
 } = mapSlice.actions;
 
 export default mapSlice.reducer;

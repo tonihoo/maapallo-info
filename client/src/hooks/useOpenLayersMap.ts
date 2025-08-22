@@ -22,6 +22,8 @@ import {
 } from "geojson";
 import { BASE_MAPS, BaseMapKey } from "../components/2d/BaseMapSelector";
 import { useAdultLiteracyLayer } from "./useAdultLiteracyLayer";
+import { useAppSelector, useAppDispatch } from "../store/hooks";
+import { setCurrentBaseMap } from "../store/slices/mapSlice";
 import {
   INITIAL_VIEW,
   ZOOM_LIMITS,
@@ -50,12 +52,15 @@ export function useOpenLayersMap({
   onFeatureClick,
   onFeatureHover,
 }: UseOpenLayersMapProps) {
+  // Redux state and dispatch
+  const currentBaseMap = useAppSelector((state) => state.map.currentBaseMap);
+  const dispatch = useAppDispatch();
+  
   const mapRef = useRef<HTMLDivElement>(null);
   const [mouseCoordinates, setMouseCoordinates] = useState<{
     lon: number;
     lat: number;
   } | null>(null);
-  const [currentBaseMap, setCurrentBaseMap] = useState<BaseMapKey>("topo"); // Back to default
 
   // Layer visibility state
   const [layerVisibility, setLayerVisibility] = useState<LayerVisibility>({
@@ -456,14 +461,16 @@ export function useOpenLayersMap({
     },
     [adultLiteracyLayer]
   );
+
+  // Base map change handler using Redux
   const handleBaseMapChange = useCallback(
     (baseMapKey: BaseMapKey) => {
       const layers = olMap.getLayers();
       const newBaseLayer = BASE_MAPS[baseMapKey].layer();
       layers.setAt(0, newBaseLayer);
-      setCurrentBaseMap(baseMapKey);
+      dispatch(setCurrentBaseMap(baseMapKey));
     },
-    [olMap]
+    [olMap, dispatch]
   );
 
   // Load world boundaries
