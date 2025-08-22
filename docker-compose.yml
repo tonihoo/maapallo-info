@@ -71,38 +71,7 @@ services:
       - db
     restart: unless-stopped
 
-  geoserver:
-    image: kartoza/geoserver:2.24.1
-    container_name: maapallo-geoserver
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:8081:8080"
-    environment:
-      - GEOSERVER_DATA_DIR=/opt/geoserver/data_dir
-      - GEOSERVER_ADMIN_USER=admin
-      - GEOSERVER_ADMIN_PASSWORD=geoserver
-      - INITIAL_MEMORY=512M
-      - MAXIMUM_MEMORY=1G
-      - POSTGRES_HOST=db
-      - POSTGRES_PORT=5432
-      - POSTGRES_DB=db_dev
-      - POSTGRES_USER=db_dev_user
-      - POSTGRES_PASS=DevPassword
-      - SAMPLE_DATA=false
-      - GEOSERVER_CSRF_DISABLED=true
-    volumes:
-      - geoserver-data:/opt/geoserver/data_dir
-      - ./geoserver/data:/opt/geoserver/upload_data
-    depends_on:
-      db:
-        condition: service_healthy
-    healthcheck:
-      test: curl --fail http://localhost:8080/geoserver/web/ || exit 1
-      interval: 30s
-      timeout: 10s
-      retries: 5
 
 volumes:
   db-volume:
   pgadmin-data:
-  geoserver-data:

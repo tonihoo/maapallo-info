@@ -4,15 +4,14 @@ import secrets
 from contextlib import asynccontextmanager
 from typing import Tuple
 
-import httpx
 import uvicorn
 from config import settings
 from database import init_db
-from fastapi import FastAPI, HTTPException, Request, status
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
-from routes import feature, geoserver, health
+from routes import feature, health
 
 
 def verify_basic_auth(credentials: str) -> bool:
@@ -56,10 +55,9 @@ async def simple_auth_middleware(request: Request, call_next):
     # Only protect the main page and HTML routes
     path = request.url.path
 
-    # Skip auth for all API routes, static assets, health checks, and geoserver
+    # Skip auth for all API routes, static assets, health checks
     if (
         path.startswith("/api/")
-        or path.startswith("/geoserver/")
         or path.startswith("/images/")
         or path.startswith("/cesium/")
         or path.startswith("/data/")
@@ -157,62 +155,8 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(health.router, prefix="/api/v1/health", tags=["health"])
+app.include_router(health.router, prefix="/api/v1", tags=["health"])
 app.include_router(feature.router, prefix="/api/v1/feature", tags=["features"])
-app.include_router(geoserver.router, prefix="/api/v1", tags=["geoserver"])
-
-# GeoServer reverse proxy (only in production)
-if settings.is_production:
-
-    @app.get("/admin/geoserver")
-    async def geoserver_admin_direct():
-        """Direct access to GeoServer admin - simple redirect"""
-        return HTMLResponse(
-            content="""
-<!DOCTYPE html>
-<html>
-<head>
-    <title>GeoServer Admin Access</title>
-    <script>
-        // Simple direct redirect to GeoServer on port 8081
-        window.location.href = window.location.protocol + "//" +
-                              window.location.hostname + ":8081/geoserver/web/";
-    </script>
-</head>
-<body>
-    <p>Redirecting to GeoServer admin...</p>
-    <p>If redirect fails, try: <strong>https://maapallo.info:8081/geoserver/web/</strong></p>
-</body>
-</html>"""
-        )
-
-    @app.api_route(
-        "/geoserver/{path:path}",
-        methods=["GET", "POST", "PUT", "DELETE", "HEAD", "OPTIONS", "PATCH"],
-    )
-    async def geoserver_proxy(request: Request, path: str):
-        """Simple proxy for GeoServer services only (WMS, WFS, REST)"""
-        geoserver_url = f"http://localhost:8081/geoserver/{path}"
-
-        # Forward query parameters
-        if request.url.query:
-            geoserver_url += f"?{request.url.query}"
-
-        async with httpx.AsyncClient() as client:
-            response = await client.request(
-                method=request.method,
-                url=geoserver_url,
-                headers=dict(request.headers),
-                content=await request.body(),
-                timeout=30.0,
-            )
-
-            return Response(
-                content=response.content,
-                status_code=response.status_code,
-                headers=dict(response.headers),
-            )
-
 
 # Serve static files in production
 if settings.is_production:

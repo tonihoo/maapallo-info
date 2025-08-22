@@ -9,13 +9,12 @@ Location database for Maapallo magazine articles. The application allows you to 
 
 ## Technical Implementation
 
-The application consists of five components:
+The application consists of four components:
 
 - **Server**: FastAPI/Python backend (port 3003)
 - **Client**: React/TypeScript frontend (port 8080)
 - **Database**: PostgreSQL + PostGIS database (port 5432)
 - **PgAdmin**: Database administration interface (port 5050)
-- **GeoServer**: Map server for geospatial data (port 8081)
 
 ## Initial Setup
 
@@ -51,9 +50,6 @@ docker compose exec server python run_migrations.py
 - **Frontend**: [http://localhost:8080](http://localhost:8080)
 - **API documentation**: [http://localhost:3003/docs](http://localhost:3003/docs)
 - **PgAdmin**: [http://localhost:5050](http://localhost:5050)
-- **GeoServer**: [http://localhost:8081/geoserver](http://localhost:8081/geoserver)
-  - Username: `admin`
-  - Password: `geoserver`
 
 ## Daily Development
 
@@ -286,7 +282,7 @@ docker compose exec server python -c "from migrate import check_migration_status
 - **React 18**: Modern React with hooks
 - **TypeScript**: Type safety
 - **Material-UI**: UI component library
-- **OpenLayers**: 2D mapping
+- **OpenLayers**: 2D mapping with static geospatial data
 - **Cesium**: 3D globe visualization
 - **Vite**: Fast build tool
 
