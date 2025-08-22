@@ -17,7 +17,7 @@ import {
 
 interface UseMapInitializationProps {
   olView: View; // OpenLayers View from useMapView
-  styleFunction: (feature: FeatureLike) => Style;
+  styleFunction?: (feature: FeatureLike) => Style;
   measureSourceRef: React.RefObject<VectorSource | null>;
   worldBoundariesLayerRef: React.RefObject<VectorLayer<VectorSource> | null>;
   oceanCurrentsLayerRef: React.RefObject<VectorLayer<VectorSource> | null>;
@@ -187,7 +187,7 @@ export function useMapInitialization({
         oceanCurrentsLayer, // Ocean currents layer
         new VectorLayer({
           source: new VectorSource(),
-          style: styleFunction,
+          style: styleFunction || new Style(), // Use provided style or default
           zIndex: 20, // Features layer on top of article locators
         }),
         measureLayer, // Add measurement layer on top
