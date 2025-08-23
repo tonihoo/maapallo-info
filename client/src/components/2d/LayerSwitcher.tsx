@@ -7,13 +7,6 @@ interface LayerConfig {
   visible: boolean;
 }
 
-interface LayerSwitcherProps {
-  layers: LayerConfig[];
-  onLayerToggle: (layerId: string, visible: boolean) => void;
-  className?: string;
-  style?: React.CSSProperties;
-}
-
 export function LayerSwitcher({
   layers,
   onLayerToggle,
@@ -59,7 +52,35 @@ export function LayerSwitcher({
         }}
         title={`Layers (${activeLayersCount} active)`}
       >
-        🗂️
+        <svg
+          width="22"
+          height="22"
+          viewBox="0 0 22 22"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          style={{ display: "block" }}
+        >
+          <polygon
+            points="11,3 21,8 11,13 1,8"
+            fill="#fff"
+            stroke="#fff"
+            strokeWidth="1"
+          />
+          <polygon
+            points="11,8 21,13 11,18 1,13"
+            fill="#fff"
+            stroke="#fff"
+            strokeWidth="1"
+            opacity="0.7"
+          />
+          <polygon
+            points="11,13 21,18 11,23 1,18"
+            fill="#fff"
+            stroke="#fff"
+            strokeWidth="1"
+            opacity="0.4"
+          />
+        </svg>
         {activeLayersCount > 0 && (
           <span
             style={{
