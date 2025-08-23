@@ -55,17 +55,16 @@ export function Map({
     onFeatureHover,
   });
 
-  // Debug: Static legend data
   const staticLegendData = [
-    { color: "#006837", label: "95-100% (Very High)", range: [95, 100] },
-    { color: "#31a354", label: "85-94% (High)", range: [85, 94] },
-    { color: "#78c679", label: "75-84% (Good)", range: [75, 84] },
-    { color: "#c2e699", label: "65-74% (Moderate)", range: [65, 74] },
-    { color: "#ffffcc", label: "50-64% (Low-Moderate)", range: [50, 64] },
-    { color: "#fed976", label: "35-49% (Low)", range: [35, 49] },
-    { color: "#fd8d3c", label: "20-34% (Very Low)", range: [20, 34] },
-    { color: "#e31a1c", label: "0-19% (Extremely Low)", range: [0, 19] },
-    { color: "rgba(200, 200, 200, 0.5)", label: "No Data", range: null },
+    { color: "#006837", label: "95-100%", range: [95, 100] },
+    { color: "#31a354", label: "85-94%", range: [85, 94] },
+    { color: "#78c679", label: "75-84%", range: [75, 84] },
+    { color: "#c2e699", label: "65-74%", range: [65, 74] },
+    { color: "#ffffcc", label: "50-64%", range: [50, 64] },
+    { color: "#fed976", label: "35-49%", range: [35, 49] },
+    { color: "#fd8d3c", label: "20-34%", range: [20, 34] },
+    { color: "#e31a1c", label: "0-19%", range: [0, 19] },
+    { color: "rgba(200, 200, 200, 0.5)", label: "Ei dataa", range: null },
   ];
 
   return (

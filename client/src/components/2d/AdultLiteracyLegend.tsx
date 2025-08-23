@@ -85,7 +85,7 @@ export const AdultLiteracyLegend: React.FC<AdultLiteracyLegendProps> = ({
             margin: 0,
           }}
         >
-          Data: World Development Indicators (2020-2023)
+          Lähde: World Development Indicators (2020-2023)
         </p>
       </div>
     </div>

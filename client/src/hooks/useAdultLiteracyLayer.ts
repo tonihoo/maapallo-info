@@ -19,20 +19,30 @@ interface UseAdultLiteracyLayerProps {
   visible: boolean;
 }
 
+const LITERACY_COLOR_SCALE = [
+  { color: "#006837", label: "95-100%", range: [95, 100] },
+  { color: "#31a354", label: "85-94%", range: [85, 94] },
+  { color: "#78c679", label: "75-84%", range: [75, 84] },
+  { color: "#c2e699", label: "65-74%", range: [65, 74] },
+  { color: "#ffffcc", label: "50-64%", range: [50, 64] },
+  { color: "#fed976", label: "35-49%", range: [35, 49] },
+  { color: "#fd8d3c", label: "20-34%", range: [20, 34] },
+  { color: "#e31a1c", label: "0-19%", range: [0, 19] },
+  { color: "rgba(200, 200, 200, 0.5)", label: "Ei dataa", range: null },
+];
+
 export function useAdultLiteracyLayer({ visible }: UseAdultLiteracyLayerProps) {
   const layerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const literacyDataRef = useRef<LiteracyData>({});
 
   // Color scale for literacy rates (0-100%)
   const getColorForRate = useCallback((rate: number): string => {
-    if (rate >= 95) return "#006837"; // Dark green - Very high literacy
-    if (rate >= 85) return "#31a354"; // Green - High literacy
-    if (rate >= 75) return "#78c679"; // Light green - Good literacy
-    if (rate >= 65) return "#c2e699"; // Very light green - Moderate literacy
-    if (rate >= 50) return "#ffffcc"; // Light yellow - Low-moderate literacy
-    if (rate >= 35) return "#fed976"; // Yellow - Low literacy
-    if (rate >= 20) return "#fd8d3c"; // Orange - Very low literacy
-    return "#e31a1c"; // Red - Extremely low literacy
+    for (const entry of LITERACY_COLOR_SCALE) {
+      if (entry.range && rate >= entry.range[0] && rate <= entry.range[1]) {
+        return entry.color;
+      }
+    }
+    return "rgba(200, 200, 200, 0.5)";
   }, []);
 
   // Create country code to name mapping for better matching
@@ -269,17 +279,7 @@ export function useAdultLiteracyLayer({ visible }: UseAdultLiteracyLayerProps) {
 
   // Get legend data
   const getLegendData = useCallback(() => {
-    return [
-      { color: "#006837", label: "95-100% (Very High)", range: [95, 100] },
-      { color: "#31a354", label: "85-94% (High)", range: [85, 94] },
-      { color: "#78c679", label: "75-84% (Good)", range: [75, 84] },
-      { color: "#c2e699", label: "65-74% (Moderate)", range: [65, 74] },
-      { color: "#ffffcc", label: "50-64% (Low-Moderate)", range: [50, 64] },
-      { color: "#fed976", label: "35-49% (Low)", range: [35, 49] },
-      { color: "#fd8d3c", label: "20-34% (Very Low)", range: [20, 34] },
-      { color: "#e31a1c", label: "0-19% (Extremely Low)", range: [0, 19] },
-      { color: "rgba(200, 200, 200, 0.5)", label: "No Data", range: null },
-    ];
+    return LITERACY_COLOR_SCALE;
   }, []);
 
   return {
