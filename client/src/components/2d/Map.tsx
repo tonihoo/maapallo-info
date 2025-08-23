@@ -128,16 +128,16 @@ export function Map({
             visible: layerVisibility.oceanCurrents,
           },
           {
-            id: "articleLocators",
-            name: "Artikkelien sijainnit",
-            description: "Maapallo-lehden artikkelien kohdealueet",
-            visible: layerVisibility.articleLocators,
-          },
-          {
             id: "adultLiteracy",
             name: "Lukutaito, aikuiset",
             description: "Aikuisten lukutaitoprosentit maittain (2020-2023)",
             visible: layerVisibility.adultLiteracy,
+          },
+          {
+            id: "articleLocators",
+            name: "Artikkelien kohteet",
+            description: "Maapallo-lehden artikkelien kohdealueet",
+            visible: layerVisibility.articleLocators,
           },
         ]}
         onLayerToggle={handleLayerVisibilityChange}
