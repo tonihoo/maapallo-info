@@ -149,7 +149,7 @@ export function BaseMapSelector({
         }}
         title={`Base Map: ${BASE_MAPS[currentBaseMap].name}`}
       >
-        {BASE_MAPS[currentBaseMap].icon}
+        🗺️
       </button>
 
       {/* Dropdown menu */}
