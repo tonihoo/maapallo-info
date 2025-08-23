@@ -103,6 +103,9 @@ export function LayerSwitcher({
               padding: "8px 12px",
               borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
               marginBottom: "4px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
             }}
           >
             <div
@@ -117,6 +120,28 @@ export function LayerSwitcher({
             >
               KARTTATASOT
             </div>
+            <button
+              onClick={() => setIsOpen(false)}
+              style={{
+                background: "none",
+                border: "none",
+                color: "white",
+                cursor: "pointer",
+                fontSize: "12px",
+                padding: "2px",
+                outline: "none",
+                opacity: 0.7,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = "1";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = "0.7";
+              }}
+              title="Close layer menu"
+            >
+              ✕
+            </button>
           </div>
 
           {layers.map((layer) => (
@@ -174,6 +199,7 @@ export function LayerSwitcher({
                 style={{
                   width: "16px",
                   height: "16px",
+                  minWidth: "16px",
                   borderRadius: "2px",
                   border: "1px solid rgba(255, 255, 255, 0.5)",
                   backgroundColor: layer.visible ? "#4caf50" : "transparent",
@@ -182,6 +208,7 @@ export function LayerSwitcher({
                   justifyContent: "center",
                   fontSize: "10px",
                   color: "white",
+                  flexShrink: 0,
                 }}
               >
                 {layer.visible ? "✓" : ""}

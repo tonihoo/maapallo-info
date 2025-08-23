@@ -35,6 +35,7 @@ export function MeasurementTool({
           color: "white",
           border: "1px solid rgba(255, 255, 255, 0.3)",
           borderRadius: "4px",
+          marginTop: "13px",
           cursor: "pointer",
           fontSize: "16px",
           display: "flex",

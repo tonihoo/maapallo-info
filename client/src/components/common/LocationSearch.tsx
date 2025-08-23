@@ -84,7 +84,7 @@ export function LocationSearch({
 
   const defaultStyle: React.CSSProperties = {
     position: "absolute",
-    bottom: isMobile ? "40px" : "50px", // Much higher on mobile to avoid Cesium controls
+    bottom: isMobile ? "25px" : "35px", // Much higher on mobile to avoid Cesium controls
     right: isMobile ? "20px" : "120px", // Closer to edge on mobile
     left: isMobile ? "20px" : "auto", // Full width minus margins on mobile
     zIndex: 2000,
