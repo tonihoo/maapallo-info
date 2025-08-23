@@ -262,7 +262,14 @@ export function App() {
 
       <Box sx={footerStyle}>
         <Typography variant="caption">
-          Kehitysmaantieteen yhdistys 2025
+          <a
+            href="https://kehmy.fi"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ textDecoration: "none", color: "black" }}
+          >
+            Kehitysmaantieteen yhdistys 2025
+          </a>
         </Typography>
       </Box>
 
