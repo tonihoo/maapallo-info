@@ -43,7 +43,7 @@ export function MeasurementTool({
           justifyContent: "center",
           outline: "none",
         }}
-        title={isActive ? "Stop measuring" : "Measure distance"}
+        title={isActive ? "Lopeta mittaus" : "Mittaa etäisyys"}
       >
         📏
       </button>
@@ -80,7 +80,7 @@ export function MeasurementTool({
                 padding: "2px",
                 outline: "none",
               }}
-              title="Clear measurement"
+              title="Lopeta mittaus"
             >
               ✕
             </button>

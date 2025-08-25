@@ -98,7 +98,6 @@ export function Map({
       <BaseMapSelector
         currentBaseMap={currentBaseMap}
         onBaseMapChange={handleBaseMapChange}
-        onHome={handleHome}
       />
 
       <LocationSearch onLocationSelect={handleLocationSelect} />
@@ -110,7 +109,11 @@ export function Map({
         currentMeasurement={currentMeasurement}
       />
 
-      <MapControls onZoom={handleZoom} onRotate={handleRotate} />
+      <MapControls
+        onHome={handleHome}
+        onZoom={handleZoom}
+        onRotate={handleRotate}
+      />
 
       <LayerSwitcher
         layers={[

@@ -3,9 +3,10 @@ import { useMediaQuery, useTheme } from "@mui/material";
 interface MapControlsProps {
   onZoom: (zoomIn: boolean) => void;
   onRotate: (direction: "left" | "right") => void;
+  onHome?: () => void;
 }
 
-export function MapControls({ onZoom, onRotate }: MapControlsProps) {
+export function MapControls({ onZoom, onRotate, onHome }: MapControlsProps) {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -42,27 +43,34 @@ export function MapControls({ onZoom, onRotate }: MapControlsProps) {
         zIndex: 1000,
       }}
     >
-      <button onClick={() => onZoom(true)} style={buttonStyle} title="Zoom In">
+      <button
+        onClick={onHome}
+        style={smallButtonStyle}
+        title="Palaa aloitusnäkymään"
+      >
+        🏠
+      </button>
+      <button onClick={() => onZoom(true)} style={buttonStyle} title="Lähennä">
         +
       </button>
       <button
         onClick={() => onZoom(false)}
         style={buttonStyle}
-        title="Zoom Out"
+        title="Loitonna"
       >
         −
       </button>
       <button
         onClick={() => onRotate("left")}
         style={smallButtonStyle}
-        title="Rotate Left"
+        title="Käännä vasemmalle"
       >
         ↶
       </button>
       <button
         onClick={() => onRotate("right")}
         style={smallButtonStyle}
-        title="Rotate Right"
+        title="Käännä oikealle"
       >
         ↷
       </button>

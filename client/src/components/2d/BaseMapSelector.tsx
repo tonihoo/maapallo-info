@@ -72,13 +72,11 @@ export type BaseMapKey = keyof typeof BASE_MAPS;
 interface BaseMapSelectorProps {
   currentBaseMap: BaseMapKey;
   onBaseMapChange: (baseMapKey: BaseMapKey) => void;
-  onHome: () => void;
 }
 
 export function BaseMapSelector({
   currentBaseMap,
   onBaseMapChange,
-  onHome,
 }: BaseMapSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -86,7 +84,7 @@ export function BaseMapSelector({
     <div
       style={{
         position: "absolute",
-        top: "150px",
+        top: "200px",
         right: "20px",
         zIndex: 1000,
         display: "flex",
@@ -94,29 +92,6 @@ export function BaseMapSelector({
         gap: "8px",
       }}
     >
-      {/* Home button */}
-      <button
-        onClick={onHome}
-        style={{
-          width: "40px",
-          height: "40px",
-          backgroundColor: "rgba(42, 42, 42, 0.8)",
-          color: "white",
-          border: "1px solid rgba(255, 255, 255, 0.3)",
-          borderRadius: "4px",
-          cursor: "pointer",
-          fontSize: "16px",
-          fontWeight: "normal",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          outline: "none",
-        }}
-        title="View Home"
-      >
-        🏠
-      </button>
-
       {/* Main button */}
       <button
         onClick={() => setIsOpen(!isOpen)}

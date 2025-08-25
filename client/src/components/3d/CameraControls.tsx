@@ -54,7 +54,7 @@ export function CameraControls({
       <button
         onClick={onHome}
         style={smallButtonStyle}
-        title="View Home"
+        title="Palaa aloitusnäkymään"
         disabled={disabled}
       >
         🏠
@@ -62,7 +62,7 @@ export function CameraControls({
       <button
         onClick={() => onZoom(true)}
         style={buttonStyle}
-        title="Zoom In"
+        title="Lähennä"
         disabled={disabled}
       >
         +
@@ -70,7 +70,7 @@ export function CameraControls({
       <button
         onClick={() => onZoom(false)}
         style={buttonStyle}
-        title="Zoom Out"
+        title="Loitonna"
         disabled={disabled}
       >
         −
@@ -78,7 +78,7 @@ export function CameraControls({
       <button
         onClick={() => onTiltAdjust("up")}
         style={smallButtonStyle}
-        title="Tilt Up"
+        title="Käännä ylöspäin"
         disabled={disabled}
       >
         ↑
@@ -86,7 +86,7 @@ export function CameraControls({
       <button
         onClick={() => onTiltAdjust("down")}
         style={smallButtonStyle}
-        title="Tilt Down"
+        title="Käännä alaspäin"
         disabled={disabled}
       >
         ↓
@@ -94,7 +94,7 @@ export function CameraControls({
       <button
         onClick={() => onRotate("left")}
         style={smallButtonStyle}
-        title="Rotate Left"
+        title="Käännä vasemmalle"
         disabled={disabled}
       >
         ↶
@@ -102,7 +102,7 @@ export function CameraControls({
       <button
         onClick={() => onRotate("right")}
         style={smallButtonStyle}
-        title="Rotate Right"
+        title="Käännä oikealle"
         disabled={disabled}
       >
         ↷

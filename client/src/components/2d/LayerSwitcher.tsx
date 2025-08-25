@@ -50,7 +50,7 @@ export function LayerSwitcher({
           outline: "none",
           position: "relative",
         }}
-        title={`Layers (${activeLayersCount} active)`}
+        title={`Karttakerrokset (${activeLayersCount} aktiivinen)`}
       >
         <svg
           width="22"
