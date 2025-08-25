@@ -91,6 +91,8 @@ export function HeaderMenu({
             backdropFilter: "blur(8px)",
           },
         }}
+        // Add inert attribute when Drawer is closed
+        {...(!isOpen ? { inert: "true" } : {})}
       >
         <Box sx={{ height: "100%", paddingTop: "16px" }}>
           <List>
@@ -144,9 +146,36 @@ export function HeaderMenu({
               </Box>
             </Collapse>
           </List>
-          {/* FeatureList remains for other features, but articles are now only in the sub-menu */}
+          {/* Preferences Menu Item - shown even when no features */}
+          <Divider sx={{ mx: 2, mb: 1 }} />
+          <MenuItem
+            onClick={() => {
+              setPreferencesOpen(true);
+              setIsOpen(false);
+            }}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              py: 1.5,
+              mx: 1,
+              color: "#666",
+              "&:hover": {
+                color: "#333",
+                backgroundColor: "rgba(0,0,0,0.04)",
+              },
+            }}
+          >
+            <SettingsIcon sx={{ fontSize: "1.2rem" }} />
+            <Typography variant="body2">Evästeasetukset</Typography>
+          </MenuItem>
         </Box>
       </Drawer>
+      {/* Add CookiePreferences dialog */}
+      <CookiePreferences
+        open={preferencesOpen}
+        onClose={() => setPreferencesOpen(false)}
+      />
     </>
   );
 }
