@@ -20,7 +20,7 @@ import ArticleIcon from "@mui/icons-material/Article";
 import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
 import { Settings as SettingsIcon } from "@mui/icons-material";
-import TietojaDialog from "./TietojaDialog";
+import SiteInfo from "./SiteInfo";
 
 interface Props {
   onSelectFeature: (id: number) => void;
@@ -145,7 +145,7 @@ export function HeaderMenu({
           </List>
         </Box>
       </Drawer>
-      <TietojaDialog open={infoOpen} onClose={() => setInfoOpen(false)} />
+      <SiteInfo open={infoOpen} onClose={() => setInfoOpen(false)} />
       {/* CookiePreferences dialog */}
       <CookiePreferences
         open={preferencesOpen}

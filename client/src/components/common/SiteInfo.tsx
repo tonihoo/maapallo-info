@@ -4,12 +4,12 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import Button from "@mui/material/Button";
 
-interface TietojaDialogProps {
+interface SiteInfoProps {
   open: boolean;
   onClose: () => void;
 }
 
-export default function TietojaDialog({ open, onClose }: TietojaDialogProps) {
+export default function SiteInfo({ open, onClose }: SiteInfoProps) {
   return (
     <Dialog
       open={open}
