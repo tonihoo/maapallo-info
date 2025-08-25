@@ -7,6 +7,10 @@ import {
   ListItemButton,
   ListItemText,
   Collapse,
+  MenuItem,
+  Paper,
+  Typography,
+  Divider,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import FeatureList from "./FeatureList";
@@ -16,7 +20,7 @@ import ArticleIcon from "@mui/icons-material/Article";
 import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
 import { Settings as SettingsIcon } from "@mui/icons-material";
-import { Box, MenuItem, Paper, Typography, Divider } from "@mui/material";
+import TietojaDialog from "./TietojaDialog";
 
 interface Props {
   onSelectFeature: (id: number) => void;
@@ -35,6 +39,7 @@ export function HeaderMenu({
 }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [preferencesOpen, setPreferencesOpen] = useState(false);
+  const [infoOpen, setInfoOpen] = useState(false);
   const [articlesOpen, setArticlesOpen] = useState(false);
 
   const handleToggle = () => {
@@ -97,37 +102,16 @@ export function HeaderMenu({
         <Box sx={{ height: "100%", paddingTop: "16px" }}>
           <List>
             {/* Tietoja */}
-            <ListItemButton
+            <MenuItem
               onClick={() => {
-                const infoWindow = window.open(
-                  "",
-                  "_blank",
-                  "width=480,height=220"
-                );
-                if (infoWindow) {
-                  infoWindow.document.write(`
-                    <html>
-                      <head>
-                        <title>Tietoja</title>
-                        <style>
-                          body { font-family: Arial, sans-serif; padding: 24px; background: #f9f9f9; }
-                          h2 { margin-top: 0; color: #2e7d32; }
-                          p { font-size: 16px; color: #333; }
-                        </style>
-                      </head>
-                      <body>
-                        <h2>Tietoja</h2>
-                        <p>Sivuston suunnittelusta, kehityksestä ja ylläpidosta vastaa Kehitysmaantieteen yhdistys.</p>
-                      </body>
-                    </html>
-                  `);
-                  infoWindow.document.close();
-                }
+                setInfoOpen(true);
+                setIsOpen(false);
               }}
+              sx={{ gap: 1 }}
             >
-              <InfoIcon sx={{ mr: 1 }} />
+              <InfoIcon sx={{ fontSize: "1.2rem" }} />
               <ListItemText primary="Tietoja" />
-            </ListItemButton>
+            </MenuItem>
             {/* Maapallo-lehden artikkeleita */}
             <ListItemButton onClick={() => setArticlesOpen(!articlesOpen)}>
               <ArticleIcon sx={{ mr: 1 }} />
@@ -145,29 +129,24 @@ export function HeaderMenu({
                 />
               </Box>
             </Collapse>
+            {/* Preferences Menu Item - shown even when no features */}
+            {/* <Divider sx={{ mx: 2, mb: 1 }} /> */}
+            <MenuItem
+              onClick={() => {
+                setPreferencesOpen(true);
+                setIsOpen(false);
+              }}
+              sx={{ gap: 1 }}
+            >
+              <SettingsIcon sx={{ fontSize: "1.2rem" }} />
+              <ListItemText primary="Evästeasetukset" />
+              {/* <Typography variant="body2">Evästeasetukset</Typography> */}
+            </MenuItem>
           </List>
-          {/* Preferences Menu Item - shown even when no features */}
-          {/* <Divider sx={{ mx: 2, mb: 1 }} /> */}
-          <MenuItem
-            onClick={() => {
-              setPreferencesOpen(true);
-              setIsOpen(false);
-            }}
-            sx={{
-              //   display: "flex",
-              //   alignItems: "center",
-              gap: 1,
-              //   py: 1.5,
-              //   mx: 1,
-            }}
-          >
-            <SettingsIcon sx={{ fontSize: "1.2rem" }} />
-            <ListItemText primary="Evästeasetukset" />
-            {/* <Typography variant="body2">Evästeasetukset</Typography> */}
-          </MenuItem>
         </Box>
       </Drawer>
-      {/* Add CookiePreferences dialog */}
+      <TietojaDialog open={infoOpen} onClose={() => setInfoOpen(false)} />
+      {/* CookiePreferences dialog */}
       <CookiePreferences
         open={preferencesOpen}
         onClose={() => setPreferencesOpen(false)}
