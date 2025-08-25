@@ -1,6 +1,7 @@
 from typing import Optional
 
 import crud
+from auth import require_auth
 from database import get_db
 from fastapi import APIRouter, Depends, HTTPException, Query
 from schemas import FeatureCreate, FeatureResponse, FeatureUpdate
@@ -42,67 +43,74 @@ async def get_feature(feature_id: int, db: AsyncSession = Depends(get_db)):
     return {"feature": feature}
 
 
-# @router.post("/", response_model=dict)
-# async def create_feature(
-#     feature: FeatureCreate, db: AsyncSession = Depends(get_db)
-# ):
-#     """Create a new feature"""
-#     try:
-#         created_feature = await crud.create_feature(
-#             db=db, feature_data=feature
-#         )
-#         return {
-#             "feature": created_feature,
-#             "message": "Feature created successfully",
-#         }
-#     except IntegrityError as e:
-#         await db.rollback()
-#         raise HTTPException(
-#             status_code=400, detail=f"Database integrity error: {str(e)}"
-#         )
-#     except Exception as e:
-#         await db.rollback()
-#         raise HTTPException(
-#             status_code=500, detail=f"Error creating feature: {str(e)}"
-#         )
+@router.post("/", response_model=dict)
+async def create_feature(
+    feature: FeatureCreate,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(require_auth),
+):
+    """Create a new feature (requires authentication)"""
+    try:
+        created_feature = await crud.create_feature(
+            db=db, feature_data=feature
+        )
+        return {
+            "feature": created_feature,
+            "message": "Feature created successfully",
+        }
+    except IntegrityError as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=400, detail=f"Database integrity error: {str(e)}"
+        )
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=500, detail=f"Error creating feature: {str(e)}"
+        )
 
 
-# @router.put("/{feature_id}", response_model=FeatureResponse)
-# async def update_feature(
-#     feature_id: int,
-#     feature_update: FeatureUpdate,
-#     db: AsyncSession = Depends(get_db),
-# ):
-#     """Update an existing feature"""
-#     try:
-#         updated_feature = await crud.update_feature(
-#             db=db, feature_id=feature_id, feature_update=feature_update
-#         )
-#         if updated_feature is None:
-#             raise HTTPException(status_code=404, detail="Feature not found")
-#         return updated_feature
-#     except IntegrityError as e:
-#         await db.rollback()
-#         raise HTTPException(
-#             status_code=400, detail=f"Database integrity error: {str(e)}"
-#         )
-#     except Exception as e:
-#         await db.rollback()
-#         raise HTTPException(
-#             status_code=500, detail=f"Error updating feature: {str(e)}"
-#         )
+@router.put("/{feature_id}", response_model=FeatureResponse)
+async def update_feature(
+    feature_id: int,
+    feature_update: FeatureUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(require_auth),
+):
+    """Update an existing feature (requires authentication)"""
+    try:
+        updated_feature = await crud.update_feature(
+            db=db, feature_id=feature_id, feature_update=feature_update
+        )
+        if updated_feature is None:
+            raise HTTPException(status_code=404, detail="Feature not found")
+        return updated_feature
+    except IntegrityError as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=400, detail=f"Database integrity error: {str(e)}"
+        )
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=500, detail=f"Error updating feature: {str(e)}"
+        )
 
 
-# @router.delete("/{feature_id}")
-# async def delete_feature(feature_id: int, db: AsyncSession = Depends(get_db)):
-#     """Delete a feature"""
-#     try:
-#         success = await crud.delete_feature(db=db, feature_id=feature_id)
-#         if not success:
-#             raise HTTPException(status_code=404, detail="Feature not found")
-#         return {"message": "Feature deleted successfully"}
-#     except Exception as e:
-#         await db.rollback()
-#         raise HTTPException(
-#             status_code=500, detail=f"Error deleting feature: {str(e)}"
-#         )
+@router.delete("/{feature_id}")
+async def delete_feature(
+    feature_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(require_auth),
+):
+    """Delete a feature (requires authentication)"""
+    try:
+        success = await crud.delete_feature(db=db, feature_id=feature_id)
+        if not success:
+            raise HTTPException(status_code=404, detail="Feature not found")
+        return {"message": "Feature deleted successfully"}
+    except Exception as e:
+        await db.rollback()
+        raise HTTPException(
+            status_code=500, detail=f"Error deleting feature: {str(e)}"
+        )

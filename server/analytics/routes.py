@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict
 
 import geoip2.database
+from auth import require_auth
 from database import get_db
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, ValidationError
@@ -108,7 +109,6 @@ async def get_or_create_session(
 
 
 @router.post("/pageview")
-@router.post("/pageview")
 async def track_pageview(
     request: Request,
     page_data: PageViewData,
@@ -174,8 +174,12 @@ async def track_event(
 
 
 @router.get("/stats")
-async def get_basic_stats(days: int = 30, db: AsyncSession = Depends(get_db)):
-    """Get basic analytics statistics (public endpoint)"""
+async def get_basic_stats(
+    days: int = 30,
+    db: AsyncSession = Depends(get_db),
+    current_user=Depends(require_auth),
+):
+    """Get basic analytics statistics (requires authentication)"""
 
     since_date = datetime.utcnow() - timedelta(days=days)
 

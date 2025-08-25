@@ -16,9 +16,14 @@ COPY client/ ./
 ARG CESIUM_ION_TOKEN
 ENV CESIUM_ION_TOKEN=${CESIUM_ION_TOKEN}
 
-# Build arguments for basic auth
+# Build arguments for basic auth (legacy)
 ARG BASIC_AUTH_USERNAME
 ARG BASIC_AUTH_PASSWORD
+
+# Build arguments for JWT authentication
+ARG ADMIN_USERNAME
+ARG ADMIN_PASSWORD
+ARG JWT_SECRET_KEY
 
 # Build the client application
 RUN npm run build
@@ -26,9 +31,8 @@ RUN npm run build
 # Production stage
 FROM python:3.11-alpine AS production
 
-# Build arguments for sensitive data (used only during build)
-ARG BASIC_AUTH_USERNAME
-ARG BASIC_AUTH_PASSWORD
+# Note: Sensitive environment variables should be passed at runtime, not build time
+# These will be provided through docker run -e or docker-compose environment sections
 
 # Set the working directory
 WORKDIR /app
@@ -59,8 +63,6 @@ COPY client/public/data/world.geojson ./static/data/
 ENV PYTHONPATH=/app
 ENV PORT=8080
 ENV ENVIRONMENT=production
-ENV BASIC_AUTH_USERNAME=${BASIC_AUTH_USERNAME}
-ENV BASIC_AUTH_PASSWORD=${BASIC_AUTH_PASSWORD}
 
 # Create non-root user for security
 RUN addgroup -g 1001 -S appgroup && \

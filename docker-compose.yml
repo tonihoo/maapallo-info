@@ -33,6 +33,10 @@ services:
       - PG_PASSWORD=DevPassword
       - PG_DB=db_dev
       - SERVER_PORT=3003
+      # Authentication (optional for development)
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-changeme}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-}
     depends_on:
       db:
         condition: service_healthy
