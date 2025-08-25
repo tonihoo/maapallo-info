@@ -27,8 +27,23 @@ export default function SiteInfo({ open, onClose }: SiteInfoProps) {
       <DialogContent
         sx={{ bgcolor: "#fafafa", fontSize: "16px", color: "#333" }}
       >
-        Sivuston suunnittelusta, kehityksestä ja ylläpidosta vastaa
-        Kehitysmaantieteen yhdistys.
+        <p>
+          Sivuston kehityksestä ja ylläpidosta vastaa{" "}
+          <a href="https://kehmy.fi">Kehitysmaantieteen yhdistys</a>.
+        </p>
+        <p>
+          Pohjakartat ja karttakerrosten aineistot ovat peräisin avoimista
+          lähteistä.
+        </p>
+        <p>Sivusto on rakennettu kokonaan avoimen lähdekoodin työkaluilla.</p>
+        <p>
+          Sivustoa kehitetään aktiivisesti ja siihen pyritään lisäämään useita
+          uusia toiminnallisuuksia lähitulevaisuudessa.
+        </p>
+        <p>
+          Palautetta ja parannusehdotuksia voi lähettää osoitteeseen
+          kehmy.ry@gmail.com.
+        </p>
       </DialogContent>
       <DialogActions sx={{ bgcolor: "#e8f5e9" }}>
         <Button onClick={onClose} variant="contained" color="success">
