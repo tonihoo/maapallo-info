@@ -1,14 +1,29 @@
 import { useState } from "react";
-import { IconButton, Drawer, Box } from "@mui/material";
+import {
+  IconButton,
+  Drawer,
+  Box,
+  List,
+  ListItemButton,
+  ListItemText,
+  Collapse,
+} from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import FeatureList from "./FeatureList";
 import { CookiePreferences } from "./CookiePreferences";
+import InfoIcon from "@mui/icons-material/Info";
+import ArticleIcon from "@mui/icons-material/Article";
+import ExpandLess from "@mui/icons-material/ExpandLess";
+import ExpandMore from "@mui/icons-material/ExpandMore";
+import { Settings as SettingsIcon } from "@mui/icons-material";
+import { Box, MenuItem, Paper, Typography, Divider } from "@mui/material";
 
 interface Props {
   onSelectFeature: (id: number) => void;
   selectedFeatureId?: number | null;
   refreshTrigger?: number;
   is3DMode?: boolean;
+  onPreferencesClick?: () => void;
 }
 
 export function HeaderMenu({
@@ -16,9 +31,11 @@ export function HeaderMenu({
   selectedFeatureId,
   refreshTrigger,
   is3DMode,
+  onPreferencesClick,
 }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [preferencesOpen, setPreferencesOpen] = useState(false);
+  const [articlesOpen, setArticlesOpen] = useState(false);
 
   const handleToggle = () => {
     setIsOpen(!isOpen);
@@ -61,7 +78,7 @@ export function HeaderMenu({
         <MenuIcon />
       </IconButton>
 
-      {/* Drawer with Feature List */}
+      {/* Drawer with Feature List and new menu items */}
       <Drawer
         anchor="left"
         open={isOpen}
@@ -76,21 +93,60 @@ export function HeaderMenu({
         }}
       >
         <Box sx={{ height: "100%", paddingTop: "16px" }}>
-          <FeatureList
-            onSelectFeature={handleFeatureSelect}
-            selectedFeatureId={selectedFeatureId}
-            refreshTrigger={refreshTrigger}
-            is3DMode={is3DMode}
-            onPreferencesClick={handlePreferencesClick}
-          />
+          <List>
+            {/* Tietoja */}
+            <ListItemButton
+              onClick={() => {
+                const infoWindow = window.open(
+                  "",
+                  "_blank",
+                  "width=480,height=220"
+                );
+                if (infoWindow) {
+                  infoWindow.document.write(`
+                    <html>
+                      <head>
+                        <title>Tietoja</title>
+                        <style>
+                          body { font-family: Arial, sans-serif; padding: 24px; background: #f9f9f9; }
+                          h2 { margin-top: 0; color: #2e7d32; }
+                          p { font-size: 16px; color: #333; }
+                        </style>
+                      </head>
+                      <body>
+                        <h2>Tietoja</h2>
+                        <p>Sivuston suunnittelusta, kehityksestä ja ylläpidosta vastaa Kehitysmaantieteen yhdistys.</p>
+                      </body>
+                    </html>
+                  `);
+                  infoWindow.document.close();
+                }
+              }}
+            >
+              <InfoIcon sx={{ mr: 1 }} />
+              <ListItemText primary="Tietoja" />
+            </ListItemButton>
+            {/* Maapallo-lehden artikkeleita */}
+            <ListItemButton onClick={() => setArticlesOpen(!articlesOpen)}>
+              <ArticleIcon sx={{ mr: 1 }} />
+              <ListItemText primary="Maapallo-lehden artikkeleita" />
+              {articlesOpen ? <ExpandLess /> : <ExpandMore />}
+            </ListItemButton>
+            <Collapse in={articlesOpen} timeout="auto" unmountOnExit>
+              <Box sx={{ bgcolor: "#d2eac7", py: 1, px: 2 }}>
+                <FeatureList
+                  onSelectFeature={handleFeatureSelect}
+                  selectedFeatureId={selectedFeatureId}
+                  refreshTrigger={refreshTrigger}
+                  is3DMode={is3DMode}
+                  // Removed onPreferencesClick from FeatureList
+                />
+              </Box>
+            </Collapse>
+          </List>
+          {/* FeatureList remains for other features, but articles are now only in the sub-menu */}
         </Box>
       </Drawer>
-
-      {/* Cookie Preferences Dialog */}
-      <CookiePreferences
-        open={preferencesOpen}
-        onClose={() => setPreferencesOpen(false)}
-      />
     </>
   );
 }
