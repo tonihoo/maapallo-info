@@ -3,14 +3,28 @@ from datetime import datetime, timedelta
 from typing import Any, Dict
 
 import geoip2.database
-from fastapi import APIRouter, Depends, Request
+from database import get_db
+from fastapi import APIRouter, Depends, HTTPException, Request
+from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_db
 from .models import AnalyticsSession, CustomEvent, PageView
 
-router = APIRouter(tags=["analytics"])
+# Define router once at the top
+router = APIRouter(prefix="/analytics", tags=["analytics"])
+
+
+# Request validation models
+class PageViewData(BaseModel):
+    path: str = Field(..., min_length=1, max_length=2048)
+    title: str | None = Field(default=None, max_length=512)
+    referrer: str | None = Field(default=None, max_length=2048)
+
+
+class EventData(BaseModel):
+    name: str = Field(..., min_length=1, max_length=128)
+    data: dict = Field(default_factory=dict)
 
 
 def get_country_from_ip(ip: str) -> str:
@@ -40,9 +54,8 @@ def get_client_ip(request: Request) -> str:
         return real_ip
 
     # Fallback to direct connection
-    if hasattr(request.client, "host"):
+    if request.client and hasattr(request.client, "host"):
         return request.client.host
-
     return "127.0.0.1"
 
 
@@ -70,8 +83,13 @@ async def get_or_create_session(
 
     if session:
         # Update last seen and page views
-        session.last_seen = datetime.utcnow()
-        session.page_views += 1
+        setattr(session, "last_seen", datetime.utcnow())
+        # Correctly increment SQLAlchemy column value
+        try:
+            current_views = int(getattr(session, "page_views", 0) or 0)
+        except Exception:
+            current_views = 0
+        setattr(session, "page_views", current_views + 1)
     else:
         # Create new session
         session = AnalyticsSession(
@@ -79,6 +97,8 @@ async def get_or_create_session(
             ip_hash=AnalyticsSession.hash_ip(ip),
             user_agent_hash=AnalyticsSession.hash_user_agent(user_agent),
             country=country,
+            last_seen=datetime.utcnow(),
+            page_views=1,
         )
         db.add(session)
 
@@ -88,13 +108,13 @@ async def get_or_create_session(
 
 
 @router.post("/pageview")
+@router.post("/pageview")
 async def track_pageview(
     request: Request,
-    page_data: Dict[str, Any],
+    page_data: PageViewData,
     db: AsyncSession = Depends(get_db),
 ):
     """Track a page view"""
-    # Check consent first
     if not check_consent(request):
         return {"status": "consent_required"}
 
@@ -103,22 +123,19 @@ async def track_pageview(
         user_agent = request.headers.get("user-agent", "")
         country = get_country_from_ip(ip)
 
-        # Get or create session
         session = await get_or_create_session(db, ip, user_agent, country)
 
-        # Create page view record
         page_view = PageView(
             session_id=session.id,
-            page_path=page_data.get("path", "/"),
-            page_title=page_data.get("title"),
-            referrer=page_data.get("referrer"),
+            page_path=page_data.path,
+            page_title=page_data.title,
+            referrer=page_data.referrer,
         )
-
         db.add(page_view)
         await db.commit()
-
         return {"status": "tracked", "session_id": str(session.id)}
-
+    except ValidationError as ve:
+        raise HTTPException(status_code=422, detail=ve.errors())
     except Exception as e:
         await db.rollback()
         return {"status": "error", "message": str(e)}
@@ -127,11 +144,10 @@ async def track_pageview(
 @router.post("/event")
 async def track_event(
     request: Request,
-    event_data: Dict[str, Any],
+    event_data: EventData,
     db: AsyncSession = Depends(get_db),
 ):
     """Track a custom event"""
-    # Check consent first
     if not check_consent(request):
         return {"status": "consent_required"}
 
@@ -140,30 +156,25 @@ async def track_event(
         user_agent = request.headers.get("user-agent", "")
         country = get_country_from_ip(ip)
 
-        # Get or create session
         session = await get_or_create_session(db, ip, user_agent, country)
 
-        # Create custom event record
         event = CustomEvent(
             session_id=session.id,
-            event_name=event_data.get("name", "unknown"),
-            event_data=event_data.get("data", {}),
+            event_name=event_data.name,
+            event_data=event_data.data,
         )
-
         db.add(event)
         await db.commit()
-
         return {"status": "tracked", "session_id": str(session.id)}
-
+    except ValidationError as ve:
+        raise HTTPException(status_code=422, detail=ve.errors())
     except Exception as e:
         await db.rollback()
         return {"status": "error", "message": str(e)}
 
 
 @router.get("/stats")
-async def get_basic_stats(
-    days: int = 30, db: AsyncSession = Depends(get_db)
-):
+async def get_basic_stats(days: int = 30, db: AsyncSession = Depends(get_db)):
     """Get basic analytics statistics (public endpoint)"""
 
     since_date = datetime.utcnow() - timedelta(days=days)
