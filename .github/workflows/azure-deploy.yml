@@ -41,8 +41,6 @@ jobs:
           tags: ${{ env.ACR_REGISTRY }}/${{ env.APP_NAME }}:${{ github.sha }}, ${{ env.ACR_REGISTRY }}/${{ env.APP_NAME }}:latest
           build-args: |
             CESIUM_ION_TOKEN=${{ secrets.CESIUM_ION_TOKEN }}
-            BASIC_AUTH_USERNAME=${{ secrets.BASIC_AUTH_USERNAME }}
-            BASIC_AUTH_PASSWORD=${{ secrets.BASIC_AUTH_PASSWORD }}
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
@@ -57,9 +55,26 @@ jobs:
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --name ${{ env.APP_NAME }} \
             --settings \
-              BASIC_AUTH_USERNAME="${{ secrets.BASIC_AUTH_USERNAME }}" \
-              BASIC_AUTH_PASSWORD="${{ secrets.BASIC_AUTH_PASSWORD }}" \
+              ADMIN_USERNAME="${{ secrets.ADMIN_USERNAME }}" \
+              ADMIN_PASSWORD="${{ secrets.ADMIN_PASSWORD }}" \
+              JWT_SECRET_KEY="${{ secrets.JWT_SECRET_KEY }}" \
+              CESIUM_ION_TOKEN="${{ secrets.CESIUM_ION_TOKEN }}" \
               ENVIRONMENT="production"
+
+          # Option 1: Use Azure's existing database secrets (recommended)
+          echo "✅ Using Azure Key Vault/App Configuration for database secrets (PG_*)"
+
+          # Option 2: Uncomment below if you want to use GitHub secrets for database
+          # az webapp config appsettings set \
+          #   --resource-group ${{ env.RESOURCE_GROUP }} \
+          #   --name ${{ env.APP_NAME }} \
+          #   --settings \
+          #     PG_HOST="${{ secrets.PG_HOST }}" \
+          #     PG_PORT="${{ secrets.PG_PORT }}" \
+          #     PG_DATABASE="${{ secrets.PG_DATABASE }}" \
+          #     PG_USER="${{ secrets.PG_USER }}" \
+          #     PG_PASS="${{ secrets.PG_PASS }}" \
+          #     PG_SSLMODE="${{ secrets.PG_SSLMODE }}"
 
       - name: Restart Web App to trigger migrations
         run: |

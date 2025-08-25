@@ -1,31 +1,32 @@
 # Multi-stage build for maapallo.info production deployment
 
 # Build stage for client
-FROM node:20-alpine AS client-build
+FROM node:18-alpine AS client-build
 
 WORKDIR /app/client
 
 # Copy client package files
 COPY client/package*.json ./
-RUN npm ci
+
+# Alternative approach: Use npm install if npm ci fails
+# Configure npm and try multiple approaches
+RUN npm config set registry https://registry.npmjs.org/ && \
+    npm config set fetch-timeout 120000 && \
+    npm config set fetch-retries 3 && \
+    npm config set fetch-retry-factor 2 && \
+    npm config set fetch-retry-mintimeout 10000 && \
+    npm config set fetch-retry-maxtimeout 60000 && \
+    (npm ci --verbose || npm install --verbose)
 
 # Copy client source code
 COPY client/ ./
 
-# Build argument for Cesium Ion token
+# Build argument for Cesium Ion token (needed at build time for webpack)
 ARG CESIUM_ION_TOKEN
 ENV CESIUM_ION_TOKEN=${CESIUM_ION_TOKEN}
 
-# Build arguments for basic auth (legacy)
-ARG BASIC_AUTH_USERNAME
-ARG BASIC_AUTH_PASSWORD
-
-# Build arguments for JWT authentication
-ARG ADMIN_USERNAME
-ARG ADMIN_PASSWORD
-ARG JWT_SECRET_KEY
-
 # Build the client application
+# Note: CESIUM_ION_TOKEN is required for webpack build process
 RUN npm run build
 
 # Production stage
