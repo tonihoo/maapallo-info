@@ -8,8 +8,6 @@ import {
   ListItemText,
   Collapse,
   MenuItem,
-  Paper,
-  Typography,
   Divider,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
@@ -19,15 +17,21 @@ import InfoIcon from "@mui/icons-material/Info";
 import ArticleIcon from "@mui/icons-material/Article";
 import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
-import { Settings as SettingsIcon } from "@mui/icons-material";
+import {
+  Settings as SettingsIcon,
+  Login as LoginIcon,
+  Logout as LogoutIcon,
+} from "@mui/icons-material";
 import SiteInfo from "./SiteInfo";
+import { LoginDialog } from "../auth/LoginDialog";
+import { useAppDispatch, useAppSelector } from "../../store/hooks";
+import { logout } from "../../store/slices/authSlice";
 
 interface Props {
   onSelectFeature: (id: number) => void;
   selectedFeatureId?: number | null;
   refreshTrigger?: number;
   is3DMode?: boolean;
-  onPreferencesClick?: () => void;
 }
 
 export function HeaderMenu({
@@ -35,12 +39,15 @@ export function HeaderMenu({
   selectedFeatureId,
   refreshTrigger,
   is3DMode,
-  onPreferencesClick,
 }: Props) {
+  const dispatch = useAppDispatch();
+  const { isAuthenticated, user } = useAppSelector((state) => state.auth);
+
   const [isOpen, setIsOpen] = useState(false);
   const [preferencesOpen, setPreferencesOpen] = useState(false);
   const [infoOpen, setInfoOpen] = useState(false);
   const [articlesOpen, setArticlesOpen] = useState(false);
+  const [loginDialogOpen, setLoginDialogOpen] = useState(false);
 
   const handleToggle = () => {
     setIsOpen(!isOpen);
@@ -51,9 +58,14 @@ export function HeaderMenu({
     setIsOpen(false); // Close menu after selection
   };
 
-  const handlePreferencesClick = () => {
-    setPreferencesOpen(true);
-    setIsOpen(false); // Close menu when opening preferences
+  const handleLoginClick = () => {
+    setLoginDialogOpen(true);
+    setIsOpen(false);
+  };
+
+  const handleLogout = () => {
+    dispatch(logout());
+    setIsOpen(false);
   };
 
   return (
@@ -125,12 +137,10 @@ export function HeaderMenu({
                   selectedFeatureId={selectedFeatureId}
                   refreshTrigger={refreshTrigger}
                   is3DMode={is3DMode}
-                  // Removed onPreferencesClick from FeatureList
                 />
               </Box>
             </Collapse>
             {/* Preferences Menu Item - shown even when no features */}
-            {/* <Divider sx={{ mx: 2, mb: 1 }} /> */}
             <MenuItem
               onClick={() => {
                 setPreferencesOpen(true);
@@ -140,8 +150,26 @@ export function HeaderMenu({
             >
               <SettingsIcon sx={{ fontSize: "1.2rem" }} />
               <ListItemText primary="Evästeasetukset" />
-              {/* <Typography variant="body2">Evästeasetukset</Typography> */}
             </MenuItem>
+
+            {/* Admin Login/Logout */}
+            <Divider sx={{ my: 1 }} />
+            {isAuthenticated ? (
+              <MenuItem onClick={handleLogout} sx={{ gap: 1 }}>
+                <LogoutIcon sx={{ fontSize: "1.2rem" }} />
+                <ListItemText
+                  primary="Kirjaudu ulos"
+                  secondary={
+                    user?.username && `Kirjautuneena: ${user.username}`
+                  }
+                />
+              </MenuItem>
+            ) : (
+              <MenuItem onClick={handleLoginClick} sx={{ gap: 1 }}>
+                <LoginIcon sx={{ fontSize: "1.2rem" }} />
+                <ListItemText primary="Ylläpito" />
+              </MenuItem>
+            )}
           </List>
         </Box>
       </Drawer>
@@ -150,6 +178,11 @@ export function HeaderMenu({
       <CookiePreferences
         open={preferencesOpen}
         onClose={() => setPreferencesOpen(false)}
+      />
+      {/* Login dialog */}
+      <LoginDialog
+        open={loginDialogOpen}
+        onClose={() => setLoginDialogOpen(false)}
       />
     </>
   );
