@@ -30,7 +30,7 @@ FROM python:3.11-alpine AS production
 ARG BASIC_AUTH_USERNAME
 ARG BASIC_AUTH_PASSWORD
 
-# Set working directory
+# Set the working directory
 WORKDIR /app
 
 # Install system dependencies

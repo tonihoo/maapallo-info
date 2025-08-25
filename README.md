@@ -1,11 +1,10 @@
 # Maapallo.info
 
-Location database for Maapallo magazine articles. The application allows you to view article locations on a map, browse the article list, and add new articles.
+Maapallo.info is a map based portal of global geospatial data related to human development, environment and other geographical phenomena.
 
-## 🚀 Live Application
+## Live Application
 
-✅ **Successfully deployed on Azure!**
-👉 **Visit**: https://maapallo.info
+https://maapallo.info
 
 ## Technical Implementation
 
@@ -202,25 +201,11 @@ docker compose exec server python run_migrations.py
 
 ### Frontend tests (Cypress E2E)
 
-```bash
-# Open Cypress testing environment
-cd client
-npx cypress open
-
-# Run tests from command line
-npx cypress run
-```
+To-Do
 
 ### Backend tests
 
-```bash
-# Run Python tests (if available)
-docker compose exec server python -m pytest
-
-# Or directly inside container
-docker compose exec server bash
-python -m pytest
-```
+To-Do
 
 ### API testing
 
@@ -274,7 +259,7 @@ docker compose exec server python -c "from migrate import check_migration_status
 - `PUT /api/v1/feature/{id}` - Update feature
 - `DELETE /api/v1/feature/{id}` - Delete feature
 
-**Documentation:** [http://localhost:3003/docs](http://localhost:3003/docs)
+**API Documentation:** [http://localhost:3003/docs](http://localhost:3003/docs)
 
 ### React Frontend
 
@@ -339,11 +324,9 @@ docker compose restart client
 
 ### Production URL ✅
 
-**The application is successfully deployed and running!**
-
-- **Frontend**: https://maapallo-info-app.azurewebsites.net/
-- **API Health**: https://maapallo-info-app.azurewebsites.net/api/v1/health/
-- **API Features**: https://maapallo-info-app.azurewebsites.net/api/v1/feature/
+- **Frontend**: https://maapallo.info/
+- **API Health**: https://maapallo.info/api/v1/health/
+- **API Features**: https://maapallo.info/api/v1/feature/
 
 For detailed deployment instructions, see [AZURE_DEPLOYMENT_SETUP.md](./AZURE_DEPLOYMENT_SETUP.md).
 
@@ -365,60 +348,3 @@ az webapp show --name maapallo-info-app --resource-group maapallo-info-group --q
 # Restart the app
 az webapp restart --name maapallo-info-app --resource-group maapallo-info-group
 ```
-
-### Current Status
-- ✅ **Container startup**: Fixed SSL connection issues
-- ✅ **Static files**: Cesium assets now properly served
-- ✅ **API endpoints**: Basic health check working
-- ⚠️ **Database**: Currently disabled for testing (returns empty features)
-
-### Setting Up Production Database
-
-To enable full functionality with a managed PostgreSQL database:
-
-```bash
-# Create Azure Database for PostgreSQL
-az postgres flexible-server create \
-  --resource-group maapallo-info-group \
-  --name maapallo-postgres \
-  --location "North Europe" \
-  --admin-user dbadmin \
-  --admin-password "YourSecurePassword123!" \
-  --sku-name Standard_B1ms \
-  --tier Burstable \
-  --version 13
-
-# Configure firewall for Azure services
-az postgres flexible-server firewall-rule create \
-  --resource-group maapallo-info-group \
-  --name maapallo-postgres \
-  --rule-name AllowAzureServices \
-  --start-ip-address 0.0.0.0 \
-  --end-ip-address 0.0.0.0
-
-# Update app environment variables
-az webapp config appsettings set --name maapallo-info-app \
-  --resource-group maapallo-info-group \
-  --settings \
-    PG_HOST="maapallo-postgres.postgres.database.azure.com" \
-    PG_USER="dbadmin" \
-    PG_PASS="YourSecurePassword123!" \
-    PG_DATABASE="postgres" \
-    PG_SSLMODE="require"
-```
-
-### Common Azure Issues
-
-**Database connection errors:**
-- Check that database environment variables are set correctly
-- Verify SSL configuration for production database
-- Ensure firewall rules allow Azure services
-
-**Container startup failures:**
-- Check GitHub Actions for build errors
-- Verify all GitHub secrets are configured
-- Check that Cesium Ion token is valid
-
-**Static files not loading:**
-- Verify client build completed successfully
-- Check that static files are copied to container
