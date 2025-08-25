@@ -1,3 +1,19 @@
+import { useState, useEffect } from "react";
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Typography,
+  Button,
+  Switch,
+  FormControlLabel,
+  Box,
+  Divider,
+  IconButton,
+  Alert,
+} from "@mui/material";
+import { Close as CloseIcon } from "@mui/icons-material";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
@@ -10,46 +26,58 @@ interface SiteInfoProps {
 }
 
 export default function SiteInfo({ open, onClose }: SiteInfoProps) {
+  const handleCancel = () => {
+    onClose();
+  };
   return (
     <Dialog
       open={open}
-      onClose={onClose}
-      aria-labelledby="info-dialog-title"
+      onClose={handleCancel}
       maxWidth="sm"
       fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: 2,
+          border: "2px solid #4caf50",
+        },
+      }}
     >
       <DialogTitle
-        id="info-dialog-title"
-        sx={{ bgcolor: "#e8f5e9", color: "#2e7d32", fontWeight: 600 }}
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          color: "#2e7d32",
+          pb: 1,
+        }}
       >
         Tietoja
+        <IconButton onClick={handleCancel} size="small">
+          <CloseIcon />
+        </IconButton>
       </DialogTitle>
-      <DialogContent
-        sx={{ bgcolor: "#fafafa", fontSize: "16px", color: "#333" }}
-      >
-        <p>
-          Sivuston kehityksestä ja ylläpidosta vastaa{" "}
-          <a href="https://kehmy.fi">Kehitysmaantieteen yhdistys</a>.
-        </p>
-        <p>
-          Pohjakartat ja karttakerrosten aineistot ovat peräisin avoimista
-          lähteistä.
-        </p>
-        <p>Sivusto on rakennettu kokonaan avoimen lähdekoodin työkaluilla.</p>
-        <p>
-          Sivustoa kehitetään aktiivisesti ja siihen pyritään lisäämään useita
-          uusia toiminnallisuuksia lähitulevaisuudessa.
-        </p>
-        <p>
-          Palautetta ja parannusehdotuksia voi lähettää osoitteeseen
-          kehmy.ry@gmail.com.
-        </p>
+
+      <DialogContent sx={{ pt: 2 }}>
+        <Typography variant="body1" gutterBottom>
+          <p>
+            Sivuston kehityksestä ja ylläpidosta vastaa{" "}
+            <a href="https://kehmy.fi">Kehitysmaantieteen yhdistys</a>.
+          </p>
+          <p>
+            Pohjakartat ja karttakerrosten aineistot ovat peräisin avoimista
+            lähteistä.
+          </p>
+          <p>Sivusto on rakennettu kokonaan avoimen lähdekoodin työkaluilla.</p>
+          <p>
+            Sivustoa kehitetään aktiivisesti ja siihen pyritään lisäämään useita
+            uusia toiminnallisuuksia ja aineistoja lähitulevaisuudessa.
+          </p>
+          <p>
+            Palautetta ja parannusehdotuksia voi lähettää osoitteeseen{" "}
+            <a href="mailto:kehmy.ry@gmail.com">kehmy.ry@gmail.com</a>.
+          </p>
+        </Typography>
       </DialogContent>
-      <DialogActions sx={{ bgcolor: "#e8f5e9" }}>
-        <Button onClick={onClose} variant="contained" color="success">
-          Sulje
-        </Button>
-      </DialogActions>
     </Dialog>
   );
 }
