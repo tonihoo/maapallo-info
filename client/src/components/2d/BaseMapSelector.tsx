@@ -5,7 +5,7 @@ import XYZ from "ol/source/XYZ";
 
 export const BASE_MAPS = {
   topo: {
-    name: "Topographic",
+    name: "Topografinen",
     icon: "🏔️",
     layer: () =>
       new TileLayer({
@@ -27,7 +27,7 @@ export const BASE_MAPS = {
       }),
   },
   satellite: {
-    name: "Satellite",
+    name: "Satelliitti",
     icon: "🌍",
     layer: () =>
       new TileLayer({
@@ -39,21 +39,8 @@ export const BASE_MAPS = {
         properties: { name: "satellite" },
       }),
   },
-  humanitarian: {
-    name: "Humanitarian",
-    icon: "🏥",
-    layer: () =>
-      new TileLayer({
-        source: new XYZ({
-          url: "https://tile-{a-c}.openstreetmap.fr/hot/{z}/{x}/{y}.png",
-          attributions:
-            '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, Tiles style by <a href="https://www.hotosm.org/" target="_blank">Humanitarian OpenStreetMap Team</a>',
-        }),
-        properties: { name: "humanitarian" },
-      }),
-  },
   cartoLight: {
-    name: "Light",
+    name: "Vaalea",
     icon: "🌕",
     layer: () =>
       new TileLayer({
@@ -66,7 +53,7 @@ export const BASE_MAPS = {
       }),
   },
   cartoDark: {
-    name: "Dark",
+    name: "Tumma",
     icon: "🌑",
     layer: () =>
       new TileLayer({
@@ -147,7 +134,7 @@ export function BaseMapSelector({
           justifyContent: "center",
           outline: "none",
         }}
-        title={`Base Map: ${BASE_MAPS[currentBaseMap].name}`}
+        title={`Pohjakartta: ${BASE_MAPS[currentBaseMap].name}`}
       >
         🗺️
       </button>
