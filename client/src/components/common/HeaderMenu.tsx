@@ -147,27 +147,23 @@ export function HeaderMenu({
             </Collapse>
           </List>
           {/* Preferences Menu Item - shown even when no features */}
-          <Divider sx={{ mx: 2, mb: 1 }} />
+          {/* <Divider sx={{ mx: 2, mb: 1 }} /> */}
           <MenuItem
             onClick={() => {
               setPreferencesOpen(true);
               setIsOpen(false);
             }}
             sx={{
-              display: "flex",
-              alignItems: "center",
+              //   display: "flex",
+              //   alignItems: "center",
               gap: 1,
-              py: 1.5,
-              mx: 1,
-              color: "#666",
-              "&:hover": {
-                color: "#333",
-                backgroundColor: "rgba(0,0,0,0.04)",
-              },
+              //   py: 1.5,
+              //   mx: 1,
             }}
           >
             <SettingsIcon sx={{ fontSize: "1.2rem" }} />
-            <Typography variant="body2">Evästeasetukset</Typography>
+            <ListItemText primary="Evästeasetukset" />
+            {/* <Typography variant="body2">Evästeasetukset</Typography> */}
           </MenuItem>
         </Box>
       </Drawer>
