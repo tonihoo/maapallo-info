@@ -68,9 +68,9 @@ ENV PYTHONPATH=/app
 ENV PORT=8080
 ENV ENVIRONMENT=production
 
-# Create non-root user for security
-RUN addgroup -g 1001 -S appgroup && \
-    adduser -S appuser -u 1001 -G appgroup
+# Create non-root user for security (Debian syntax)
+RUN groupadd -g 1001 appgroup && \
+    useradd -r -u 1001 -g appgroup -s /bin/false appuser
 
 # Change ownership of app directory
 RUN chown -R appuser:appgroup /app
