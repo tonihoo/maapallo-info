@@ -1,11 +1,13 @@
 import { configureStore } from "@reduxjs/toolkit";
 import mapReducer from "./slices/mapSlice";
 import featuresReducer from "./slices/featuresSlice";
+import authReducer from "./slices/authSlice";
 
 export const store = configureStore({
   reducer: {
     map: mapReducer,
     features: featuresReducer,
+    auth: authReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

@@ -10,7 +10,7 @@ import {
 } from "@mui/material";
 import { Map } from "./components/2d/Map";
 import { FeatureInfo } from "./components/common/FeatureInfo";
-import { HeaderMenu } from "./components/common/HeaderMenu";
+import { AppHeader } from "./components/common/AppHeader";
 import { CookieConsent } from "./components/common/CookieConsent";
 import { useAppDispatch, useAppSelector } from "./store/hooks";
 import {
@@ -21,6 +21,7 @@ import {
   setCesiumComponent,
 } from "./store/slices/mapSlice";
 import { fetchAllFeatures } from "./store/slices/featuresSlice";
+import { verifyStoredToken } from "./store/slices/authSlice";
 import {
   selectSelectedFeatureId,
   selectIs3DMode,
@@ -64,6 +65,11 @@ export function App() {
     // Start preloading after a short delay to not interfere with initial page load
     const timer = setTimeout(preloadCesium, 2000);
     return () => clearTimeout(timer);
+  }, [dispatch]);
+
+  // Initialize authentication on app start
+  useEffect(() => {
+    dispatch(verifyStoredToken());
   }, [dispatch]);
 
   // Track initial page view if analytics is enabled
@@ -232,7 +238,7 @@ export function App() {
           )}
         </Box>
 
-        <HeaderMenu
+        <AppHeader
           onSelectFeature={handleFeatureSelect}
           selectedFeatureId={selectedFeatureId}
           refreshTrigger={refreshTrigger}

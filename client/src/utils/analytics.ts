@@ -3,6 +3,8 @@
  * EU GDPR compliant - respects user cookie preferences
  */
 
+import { analyticsAPI } from "../services/apiService";
+
 export interface AnalyticsStats {
   period_days: number;
   total_pageviews: number;
@@ -44,7 +46,7 @@ class AnalyticsService {
   }
 
   /**
-   * Track page views
+   * Track a page view (respects consent)
    */
   async trackPageView(path: string, referrer?: string): Promise<void> {
     if (!this.analyticsEnabled) {
@@ -52,24 +54,14 @@ class AnalyticsService {
     }
 
     try {
-      const response = await fetch("/api/v1/analytics/pageview", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-analytics-consent": "true",
-        },
-        body: JSON.stringify({
-          path,
-          title: document.title,
-          referrer: referrer || document.referrer,
-        }),
+      const data = await analyticsAPI.trackPageview({
+        path,
+        title: document.title,
+        referrer: referrer || document.referrer,
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.session_id && !this.sessionId) {
-          this.sessionId = data.session_id;
-        }
+      if (data.session_id && !this.sessionId) {
+        this.sessionId = data.session_id;
       }
     } catch (error) {
       // Fail silently for analytics - don't disrupt user experience
@@ -89,16 +81,9 @@ class AnalyticsService {
     }
 
     try {
-      await fetch("/api/v1/analytics/event", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-analytics-consent": "true",
-        },
-        body: JSON.stringify({
-          name: eventName,
-          data: eventData,
-        }),
+      await analyticsAPI.trackEvent({
+        name: eventName,
+        data: eventData || {},
       });
     } catch (error) {
       console.debug("Analytics event tracking failed:", error);
