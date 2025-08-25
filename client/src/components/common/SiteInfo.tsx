@@ -60,21 +60,34 @@ export default function SiteInfo({ open, onClose }: SiteInfoProps) {
       <DialogContent sx={{ pt: 2 }}>
         <Typography variant="body1" gutterBottom>
           <p>
-            Maapallo.infon kehityksestä ja ylläpidosta vastaa{" "}
-            <a href="https://kehmy.fi">Kehitysmaantieteen yhdistys</a>.
+            Maapallo.info on karttaportaali, joka havainnollistaa
+            maantieteellisiä ilmiöitä erityisesti globaalin kehityksen ja
+            ympäristön näkökulmista. Portaalin suunnittelusta ja ylläpidosta
+            vastaa <a href="https://kehmy.fi">Kehitysmaantieteen yhdistys</a>.
           </p>
           <p>
             Pohjakartat ja karttakerrosten aineistot ovat peräisin avoimista
             lähteistä.
           </p>
-          <p>Sivusto on rakennettu avoimen lähdekoodin työkaluilla.</p>
           <p>
-            Sivustoa kehitetään aktiivisesti ja siihen pyritään lisäämään useita
-            uusia toiminnallisuuksia ja aineistoja lähitulevaisuudessa.
+            Portaalia kehitetään aktiivisesti ja siihen pyritään lisäämään
+            useita uusia toiminnallisuuksia ja aineistoja lähitulevaisuudessa.
           </p>
           <p>
             Palautetta ja parannusehdotuksia voi lähettää osoitteeseen{" "}
             <a href="mailto:kehmy.ry@gmail.com">kehmy.ry@gmail.com</a>.
+          </p>
+          <p>
+            Maapallo.info on rakennettu avoimen lähdekoodin työkaluilla ja sen
+            koodi on{" "}
+            <a
+              href="https://github.com/tonihoo/maapallo-info"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              GitHubissa
+            </a>
+            . Voit osallistua myös tekemällä oman pull requestin!
           </p>
         </Typography>
       </DialogContent>
