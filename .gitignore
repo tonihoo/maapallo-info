@@ -22,3 +22,10 @@ pip-delete-this-directory.txt
 # Cypress
 cypress/videos
 cypress/screenshots
+
+# Large data files - don't commit to git
+client/public/data/*.geojson
+server/*.geojson
+
+# Import scripts generate temporary files
+server/pop_density_data.geojson

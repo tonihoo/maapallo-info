@@ -163,6 +163,15 @@ app.include_router(
     analytics_router, prefix="/api/v1/analytics", tags=["analytics"]
 )
 
+# Add population density API
+try:
+    from population_density_api import router as population_router
+    app.include_router(population_router, tags=["layers"])
+    print("✅ Population density API loaded")
+except ImportError as e:
+    print(f"⚠️  Population density API not available: {e}")
+    print("    Run the data import script first")
+
 # Serve static files in production
 if settings.is_production:
     static_dir = os.path.join(os.path.dirname(__file__), "static")
