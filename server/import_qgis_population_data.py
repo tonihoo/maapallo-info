@@ -22,6 +22,7 @@ async def import_population_data():
 
     # Use the same database configuration as the main app
     from config import settings
+
     engine = create_async_engine(settings.database_url, echo=False)
 
     # Load GeoJSON data from the file we copied to the container

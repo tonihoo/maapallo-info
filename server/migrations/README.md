@@ -7,6 +7,7 @@ This folder contains SQL migration files for the Maapallo.info database.
 - `0001_create_feature_table.sql` - Creates the main feature table with PostGIS geometry support
 - `0002_add_test_data.sql` - Adds sample data for development and testing
 - `0003_create_analytics_tables.sql` - Creates privacy-focused analytics tables (sessions, page views, custom events)
+- `0004_add_population_density_2022.sql` - Creates table for population density by country data imported from QGIS
 
 ## Running Migrations
 

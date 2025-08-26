@@ -166,6 +166,7 @@ app.include_router(
 # Add population density API
 try:
     from population_density_api import router as population_router
+
     app.include_router(population_router, tags=["layers"])
     print("✅ Population density API loaded")
 except ImportError as e:
