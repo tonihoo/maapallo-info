@@ -13,7 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-router = APIRouter(prefix="/api/v1/migrate", tags=["migrations"])
+router = APIRouter(tags=["migrations"])
 
 logger = logging.getLogger(__name__)
 

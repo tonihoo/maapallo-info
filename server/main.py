@@ -167,7 +167,9 @@ app.include_router(
 try:
     from routes.migrate import router as migrate_router
 
-    app.include_router(migrate_router, tags=["migrations"])
+    app.include_router(
+        migrate_router, prefix="/api/v1/migrate", tags=["migrations"]
+    )
     print("✅ Migration API loaded")
 except ImportError as e:
     print(f"⚠️  Migration API not available: {e}")
