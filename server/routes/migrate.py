@@ -33,7 +33,7 @@ MIGRATIONS = {
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
-        
+
         CREATE INDEX IF NOT EXISTS idx_features_geom
         ON features USING GIST (geom);
         CREATE INDEX IF NOT EXISTS idx_features_category
@@ -55,7 +55,7 @@ MIGRATIONS = {
             country VARCHAR(2),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
-        
+
         CREATE TABLE IF NOT EXISTS page_views (
             id SERIAL PRIMARY KEY,
             session_id VARCHAR(255) REFERENCES analytics_sessions(session_id),
@@ -64,7 +64,7 @@ MIGRATIONS = {
             referrer VARCHAR(2048),
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
-        
+
         CREATE TABLE IF NOT EXISTS custom_events (
             id SERIAL PRIMARY KEY,
             session_id VARCHAR(255) REFERENCES analytics_sessions(session_id),
@@ -72,7 +72,7 @@ MIGRATIONS = {
             event_data JSONB,
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
-        
+
         CREATE INDEX IF NOT EXISTS idx_page_views_session
         ON page_views (session_id);
         CREATE INDEX IF NOT EXISTS idx_page_views_timestamp
@@ -106,6 +106,11 @@ MIGRATIONS = {
                 "pop_density_by_country_2022_num.geojson"
             ),
             "/home/site/wwwroot/pop_density_by_country_2022_num.geojson",
+            (
+                "/opt/python/current/app/server/"
+                "pop_density_by_country_2022_num.geojson"
+            ),
+            "/opt/python/current/app/pop_density_by_country_2022_num.geojson",
             "/app/pop_density_data.geojson",
         ],
     },
@@ -149,9 +154,7 @@ async def list_migrations():
 
 
 @router.post("/run/{migration_id}")
-async def run_migration(
-    migration_id: str, db: AsyncSession = Depends(get_db)
-):
+async def run_migration(migration_id: str, db: AsyncSession = Depends(get_db)):
     """Run a specific migration"""
     if migration_id not in MIGRATIONS:
         raise HTTPException(
