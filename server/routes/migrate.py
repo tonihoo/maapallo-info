@@ -160,8 +160,17 @@ async def run_migration(
     migration = MIGRATIONS[migration_id]
 
     try:
-        # Execute the migration SQL
-        await db.execute(text(migration["sql"]))
+        # Split SQL statements and execute them separately
+        sql_statements = [
+            stmt.strip()
+            for stmt in migration["sql"].split(";")
+            if stmt.strip()
+        ]
+
+        for sql_stmt in sql_statements:
+            if sql_stmt:
+                await db.execute(text(sql_stmt))
+
         await db.commit()
 
         return {
