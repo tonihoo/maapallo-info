@@ -5,6 +5,7 @@ import { useAppSelector, useAppDispatch } from "../../store/hooks";
 import { setLayerVisibility } from "../../store/slices/mapSlice";
 import { useAdultLiteracyLayer } from "../useAdultLiteracyLayer";
 import { usePopulationDensityLayer } from "../usePopulationDensityLayer";
+import { useIntactForestsLayer } from "../useIntactForestsLayer";
 
 interface UseLayerVisibilityProps {
   worldBoundariesLayerRef: React.RefObject<VectorLayer<VectorSource> | null>;
@@ -29,6 +30,11 @@ export function useLayerVisibility({
     visible: layerVisibility.populationDensity,
   });
 
+  // Intact forests layer hook
+  const intactForestsLayer = useIntactForestsLayer({
+    visible: layerVisibility.intactForests,
+  });
+
   const handleLayerVisibilityChange = useCallback(
     (layerId: string, visible: boolean) => {
       // Update Redux state
@@ -48,6 +54,8 @@ export function useLayerVisibility({
         adultLiteracyLayer.setVisible(visible);
       } else if (layerId === "populationDensity") {
         populationDensityLayer.setVisible(visible);
+      } else if (layerId === "intactForests") {
+        intactForestsLayer.setVisible(visible);
       }
     },
     [
@@ -56,6 +64,7 @@ export function useLayerVisibility({
       oceanCurrentsLayerRef,
       adultLiteracyLayer,
       populationDensityLayer,
+      intactForestsLayer,
     ]
   );
 
@@ -64,5 +73,6 @@ export function useLayerVisibility({
     handleLayerVisibilityChange,
     adultLiteracyLayer,
     populationDensityLayer,
+    intactForestsLayer,
   };
 }

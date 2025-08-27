@@ -23,17 +23,25 @@ interface PopulationDensityLayer {
   getLayer: () => VectorLayer<VectorSource>;
 }
 
+interface IntactForestsLayer {
+  setVisible: (visible: boolean) => void;
+  getLayer: () => VectorLayer<VectorSource>;
+  layerRef: React.RefObject<VectorLayer<VectorSource> | null>;
+}
+
 interface UseLayerEffectsProps {
   worldBoundariesLayerRef: React.RefObject<VectorLayer<VectorSource> | null>;
   oceanCurrentsLayerRef: React.RefObject<VectorLayer<VectorSource> | null>;
   adultLiteracyLayer: AdultLiteracyLayer;
   populationDensityLayer: PopulationDensityLayer;
+  intactForestsLayer: IntactForestsLayer;
   olView: View;
   layerVisibility: {
     worldBoundaries: boolean;
     oceanCurrents: boolean;
     adultLiteracy: boolean;
     populationDensity: boolean;
+    intactForests: boolean;
   };
 }
 
@@ -42,6 +50,7 @@ export function useLayerEffects({
   oceanCurrentsLayerRef,
   adultLiteracyLayer,
   populationDensityLayer,
+  intactForestsLayer,
   olView,
   layerVisibility,
 }: UseLayerEffectsProps) {
@@ -69,12 +78,29 @@ export function useLayerEffects({
   // Update adult literacy layer visibility when state changes
   useEffect(() => {
     adultLiteracyLayer.setVisible(layerVisibility.adultLiteracy);
+    // Force redraw for production environments
+    if (adultLiteracyLayer.layerRef?.current) {
+      adultLiteracyLayer.layerRef.current.changed();
+    }
   }, [layerVisibility.adultLiteracy, adultLiteracyLayer]);
 
   // Update population density layer visibility when state changes
   useEffect(() => {
     populationDensityLayer.setVisible(layerVisibility.populationDensity);
+    // Force redraw for production environments
+    if (populationDensityLayer.layerRef?.current) {
+      populationDensityLayer.layerRef.current.changed();
+    }
   }, [layerVisibility.populationDensity, populationDensityLayer]);
+
+  // Update intact forests layer visibility when state changes
+  useEffect(() => {
+    intactForestsLayer.setVisible(layerVisibility.intactForests);
+    // Force redraw for production environments
+    if (intactForestsLayer.layerRef?.current) {
+      intactForestsLayer.layerRef.current.changed();
+    }
+  }, [layerVisibility.intactForests, intactForestsLayer]);
 
   // Update world boundaries style when zoom changes (for labels)
   useEffect(() => {

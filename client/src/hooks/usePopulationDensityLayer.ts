@@ -82,12 +82,6 @@ export function usePopulationDensityLayer({
       }
       const geoJsonData = await response.json();
 
-      console.log(
-        "📊 Loaded population density GeoJSON with",
-        geoJsonData.features.length,
-        "features"
-      );
-
       // Create layer
       const source = new VectorSource();
       const layer = new VectorLayer({
@@ -126,6 +120,8 @@ export function usePopulationDensityLayer({
   const setVisible = useCallback((isVisible: boolean) => {
     if (layerRef.current) {
       layerRef.current.setVisible(isVisible);
+      // Force redraw to ensure the change is rendered
+      layerRef.current.changed();
     }
   }, []);
 
@@ -133,6 +129,8 @@ export function usePopulationDensityLayer({
   useEffect(() => {
     if (layerRef.current) {
       layerRef.current.setVisible(visible);
+      // Force redraw to ensure the change is rendered, especially in production
+      layerRef.current.changed();
     }
   }, [visible]);
 

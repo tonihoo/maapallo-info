@@ -274,6 +274,8 @@ export function useAdultLiteracyLayer({ visible }: UseAdultLiteracyLayerProps) {
   const setVisible = useCallback((isVisible: boolean) => {
     if (layerRef.current) {
       layerRef.current.setVisible(isVisible);
+      // Force redraw to ensure the change is rendered
+      layerRef.current.changed();
     }
   }, []);
 

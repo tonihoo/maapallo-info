@@ -9,6 +9,7 @@ interface LayerVisibility {
   articleLocators: boolean;
   adultLiteracy: boolean;
   populationDensity: boolean;
+  intactForests: boolean;
 }
 
 interface CesiumMapProps {
@@ -51,6 +52,7 @@ const initialState: MapState = {
     articleLocators: false,
     adultLiteracy: false,
     populationDensity: false,
+    intactForests: false,
   },
   isMeasuring: false,
   currentMeasurement: "",

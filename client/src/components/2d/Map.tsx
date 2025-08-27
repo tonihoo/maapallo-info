@@ -126,6 +126,12 @@ export function Map({
             visible: layerVisibility.oceanCurrents,
           },
           {
+            id: "intactForests",
+            name: "Luonnontilaiset metsät",
+            description: "Luonnontilaiset metsäalueet 2020",
+            visible: layerVisibility.intactForests,
+          },
+          {
             id: "worldBoundaries",
             name: "Valtioiden rajat",
             description: "Valtioiden rajat ja nimet",

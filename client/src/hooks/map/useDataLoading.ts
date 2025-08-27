@@ -18,6 +18,12 @@ interface PopulationDensityLayer {
   layerRef: React.RefObject<VectorLayer<VectorSource> | null>;
 }
 
+interface IntactForestsLayer {
+  getLayer: () => Promise<VectorLayer<VectorSource> | null>;
+  setVisible: (visible: boolean) => void;
+  layerRef: React.RefObject<VectorLayer<VectorSource> | null>;
+}
+
 interface UseDataLoadingProps {
   olMap: OlMap;
   worldBoundariesLayerRef: React.RefObject<VectorLayer<VectorSource> | null>;
@@ -26,6 +32,8 @@ interface UseDataLoadingProps {
   adultLiteracyLayerAddedRef: React.RefObject<boolean>;
   populationDensityLayer: PopulationDensityLayer;
   populationDensityLayerAddedRef: React.RefObject<boolean>;
+  intactForestsLayer: IntactForestsLayer;
+  intactForestsLayerAddedRef: React.RefObject<boolean>;
 }
 
 export function useDataLoading({
@@ -36,6 +44,8 @@ export function useDataLoading({
   adultLiteracyLayerAddedRef,
   populationDensityLayer,
   populationDensityLayerAddedRef,
+  intactForestsLayer,
+  intactForestsLayerAddedRef,
 }: UseDataLoadingProps) {
   // Load world boundaries
   const loadWorldBoundaries = useCallback(async () => {
@@ -178,6 +188,33 @@ export function useDataLoading({
       };
     }
   }, [olMap, populationDensityLayer, populationDensityLayerAddedRef]);
+
+  // Load intact forests layer when map is ready (only once)
+  useEffect(() => {
+    if (olMap && !intactForestsLayerAddedRef.current) {
+      const timer = setTimeout(async () => {
+        const layer = await intactForestsLayer.getLayer();
+        if (layer) {
+          // Check if layer is already in the map
+          const existingLayers = olMap.getLayers().getArray();
+          const layerExists = existingLayers.some(
+            (existingLayer) => existingLayer === layer
+          );
+
+          if (!layerExists) {
+            // Insert at position 3 (after base map, adult literacy, and population density, before world boundaries)
+            const layers = olMap.getLayers();
+            layers.insertAt(3, layer);
+            intactForestsLayerAddedRef.current = true;
+          }
+        }
+      }, 100);
+
+      return () => {
+        clearTimeout(timer);
+      };
+    }
+  }, [olMap, intactForestsLayer, intactForestsLayerAddedRef]);
 
   return {
     // No return values needed - this hook manages side effects only

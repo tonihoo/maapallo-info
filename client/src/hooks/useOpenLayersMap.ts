@@ -48,6 +48,7 @@ export function useOpenLayersMap({
     handleLayerVisibilityChange,
     adultLiteracyLayer,
     populationDensityLayer,
+    intactForestsLayer,
   } = useLayerVisibility({
     worldBoundariesLayerRef,
     oceanCurrentsLayerRef,
@@ -58,6 +59,9 @@ export function useOpenLayersMap({
 
   // Flag to track if population density layer has been added
   const populationDensityLayerAddedRef = useRef<boolean>(false);
+
+  // Flag to track if intact forests layer has been added
+  const intactForestsLayerAddedRef = useRef<boolean>(false);
 
   // Map view management
   const { olView, handleZoom, handleRotate, handleHome, handleLocationSelect } =
@@ -125,6 +129,8 @@ export function useOpenLayersMap({
     adultLiteracyLayerAddedRef,
     populationDensityLayer,
     populationDensityLayerAddedRef,
+    intactForestsLayer,
+    intactForestsLayerAddedRef,
   });
 
   // Layer effects management
@@ -133,12 +139,14 @@ export function useOpenLayersMap({
     oceanCurrentsLayerRef,
     adultLiteracyLayer,
     populationDensityLayer,
+    intactForestsLayer,
     olView,
     layerVisibility: {
       worldBoundaries: layerVisibility.worldBoundaries,
       oceanCurrents: layerVisibility.oceanCurrents,
       adultLiteracy: layerVisibility.adultLiteracy,
       populationDensity: layerVisibility.populationDensity,
+      intactForests: layerVisibility.intactForests,
     },
   });
 
