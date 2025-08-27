@@ -47,7 +47,7 @@ export const PopulationDensityLegend: React.FC<
           color: "#333",
         }}
       >
-        Väestötiheys 2022
+        Väestöntiheys (hlöä/km2)
       </h3>
       <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
         {legendData.map((item, index) => (
@@ -84,7 +84,7 @@ export const PopulationDensityLegend: React.FC<
             margin: 0,
           }}
         >
-          Lähde: Maapallo.info API (2022)
+          Lähde: Maailmanpankki (2022)
         </p>
       </div>
     </div>
