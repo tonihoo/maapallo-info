@@ -4,6 +4,7 @@ import VectorSource from "ol/source/Vector";
 import { useAppSelector, useAppDispatch } from "../../store/hooks";
 import { setLayerVisibility } from "../../store/slices/mapSlice";
 import { useAdultLiteracyLayer } from "../useAdultLiteracyLayer";
+import { usePopulationDensityLayer } from "../usePopulationDensityLayer";
 
 interface UseLayerVisibilityProps {
   worldBoundariesLayerRef: React.RefObject<VectorLayer<VectorSource> | null>;
@@ -23,10 +24,20 @@ export function useLayerVisibility({
     visible: layerVisibility.adultLiteracy,
   });
 
+  // Population density layer hook
+  const populationDensityLayer = usePopulationDensityLayer({
+    visible: layerVisibility.populationDensity,
+  });
+
   const handleLayerVisibilityChange = useCallback(
     (layerId: string, visible: boolean) => {
       // Update Redux state
-      dispatch(setLayerVisibility({ layerId: layerId as keyof typeof layerVisibility, visible }));
+      dispatch(
+        setLayerVisibility({
+          layerId: layerId as keyof typeof layerVisibility,
+          visible,
+        })
+      );
 
       // Update actual OpenLayers layer visibility
       if (layerId === "worldBoundaries" && worldBoundariesLayerRef.current) {
@@ -35,14 +46,23 @@ export function useLayerVisibility({
         oceanCurrentsLayerRef.current.setVisible(visible);
       } else if (layerId === "adultLiteracy") {
         adultLiteracyLayer.setVisible(visible);
+      } else if (layerId === "populationDensity") {
+        populationDensityLayer.setVisible(visible);
       }
     },
-    [dispatch, worldBoundariesLayerRef, oceanCurrentsLayerRef, adultLiteracyLayer]
+    [
+      dispatch,
+      worldBoundariesLayerRef,
+      oceanCurrentsLayerRef,
+      adultLiteracyLayer,
+      populationDensityLayer,
+    ]
   );
 
   return {
     layerVisibility,
     handleLayerVisibilityChange,
     adultLiteracyLayer,
+    populationDensityLayer,
   };
 }

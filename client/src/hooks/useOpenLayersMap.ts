@@ -43,14 +43,21 @@ export function useOpenLayersMap({
   const oceanCurrentsLayerRef = useRef<VectorLayer<VectorSource> | null>(null);
 
   // Layer visibility management
-  const { layerVisibility, handleLayerVisibilityChange, adultLiteracyLayer } =
-    useLayerVisibility({
-      worldBoundariesLayerRef,
-      oceanCurrentsLayerRef,
-    });
+  const {
+    layerVisibility,
+    handleLayerVisibilityChange,
+    adultLiteracyLayer,
+    populationDensityLayer,
+  } = useLayerVisibility({
+    worldBoundariesLayerRef,
+    oceanCurrentsLayerRef,
+  });
 
   // Flag to track if adult literacy layer has been added
   const adultLiteracyLayerAddedRef = useRef<boolean>(false);
+
+  // Flag to track if population density layer has been added
+  const populationDensityLayerAddedRef = useRef<boolean>(false);
 
   // Map view management
   const { olView, handleZoom, handleRotate, handleHome, handleLocationSelect } =
@@ -116,6 +123,8 @@ export function useOpenLayersMap({
     oceanCurrentsLayerRef,
     adultLiteracyLayer,
     adultLiteracyLayerAddedRef,
+    populationDensityLayer,
+    populationDensityLayerAddedRef,
   });
 
   // Layer effects management
@@ -123,11 +132,13 @@ export function useOpenLayersMap({
     worldBoundariesLayerRef,
     oceanCurrentsLayerRef,
     adultLiteracyLayer,
+    populationDensityLayer,
     olView,
     layerVisibility: {
       worldBoundaries: layerVisibility.worldBoundaries,
       oceanCurrents: layerVisibility.oceanCurrents,
       adultLiteracy: layerVisibility.adultLiteracy,
+      populationDensity: layerVisibility.populationDensity,
     },
   });
 
@@ -158,5 +169,6 @@ export function useOpenLayersMap({
     layerVisibility,
     handleLayerVisibilityChange,
     adultLiteracyLegendData: adultLiteracyLayer.getLegendData(),
+    populationDensityLegendData: populationDensityLayer.getLegendData(),
   };
 }

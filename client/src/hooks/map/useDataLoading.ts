@@ -11,12 +11,21 @@ interface AdultLiteracyLayer {
   layerRef: React.RefObject<VectorLayer<VectorSource> | null>;
 }
 
+interface PopulationDensityLayer {
+  getLayer: () => Promise<VectorLayer<VectorSource> | null>;
+  setVisible: (visible: boolean) => void;
+  getLegendData: () => unknown;
+  layerRef: React.RefObject<VectorLayer<VectorSource> | null>;
+}
+
 interface UseDataLoadingProps {
   olMap: OlMap;
   worldBoundariesLayerRef: React.RefObject<VectorLayer<VectorSource> | null>;
   oceanCurrentsLayerRef: React.RefObject<VectorLayer<VectorSource> | null>;
   adultLiteracyLayer: AdultLiteracyLayer;
   adultLiteracyLayerAddedRef: React.RefObject<boolean>;
+  populationDensityLayer: PopulationDensityLayer;
+  populationDensityLayerAddedRef: React.RefObject<boolean>;
 }
 
 export function useDataLoading({
@@ -25,6 +34,8 @@ export function useDataLoading({
   oceanCurrentsLayerRef,
   adultLiteracyLayer,
   adultLiteracyLayerAddedRef,
+  populationDensityLayer,
+  populationDensityLayerAddedRef,
 }: UseDataLoadingProps) {
   // Load world boundaries
   const loadWorldBoundaries = useCallback(async () => {
@@ -140,6 +151,33 @@ export function useDataLoading({
       };
     }
   }, [olMap, adultLiteracyLayer, adultLiteracyLayerAddedRef]);
+
+  // Load population density layer when map is ready (only once)
+  useEffect(() => {
+    if (olMap && !populationDensityLayerAddedRef.current) {
+      const timer = setTimeout(async () => {
+        const layer = await populationDensityLayer.getLayer();
+        if (layer) {
+          // Check if layer is already in the map
+          const existingLayers = olMap.getLayers().getArray();
+          const layerExists = existingLayers.some(
+            (existingLayer) => existingLayer === layer
+          );
+
+          if (!layerExists) {
+            // Insert at position 2 (after base map and adult literacy, before world boundaries)
+            const layers = olMap.getLayers();
+            layers.insertAt(2, layer);
+            populationDensityLayerAddedRef.current = true;
+          }
+        }
+      }, 100);
+
+      return () => {
+        clearTimeout(timer);
+      };
+    }
+  }, [olMap, populationDensityLayer, populationDensityLayerAddedRef]);
 
   return {
     // No return values needed - this hook manages side effects only

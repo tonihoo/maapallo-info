@@ -23,6 +23,7 @@ services:
       dockerfile: Dockerfile
     volumes:
       - ./server:/app:delegated
+      - ./client:/app/client:delegated  # Mount client directory for data access
     ports:
       - "127.0.0.1:3003:3003"
     environment:

@@ -8,6 +8,7 @@ interface LayerVisibility {
   oceanCurrents: boolean;
   articleLocators: boolean;
   adultLiteracy: boolean;
+  populationDensity: boolean;
 }
 
 interface CesiumMapProps {
@@ -49,6 +50,7 @@ const initialState: MapState = {
     oceanCurrents: false,
     articleLocators: false,
     adultLiteracy: false,
+    populationDensity: false,
   },
   isMeasuring: false,
   currentMeasurement: "",

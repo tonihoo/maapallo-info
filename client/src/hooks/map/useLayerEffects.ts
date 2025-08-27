@@ -13,15 +13,27 @@ interface AdultLiteracyLayer {
   getLayer: () => VectorLayer<VectorSource>;
 }
 
+interface PopulationDensityLayer {
+  setVisible: (visible: boolean) => void;
+  getLegendData: () => Array<{
+    color: string;
+    label: string;
+    range: [number, number] | null;
+  }>;
+  getLayer: () => VectorLayer<VectorSource>;
+}
+
 interface UseLayerEffectsProps {
   worldBoundariesLayerRef: React.RefObject<VectorLayer<VectorSource> | null>;
   oceanCurrentsLayerRef: React.RefObject<VectorLayer<VectorSource> | null>;
   adultLiteracyLayer: AdultLiteracyLayer;
+  populationDensityLayer: PopulationDensityLayer;
   olView: View;
   layerVisibility: {
     worldBoundaries: boolean;
     oceanCurrents: boolean;
     adultLiteracy: boolean;
+    populationDensity: boolean;
   };
 }
 
@@ -29,6 +41,7 @@ export function useLayerEffects({
   worldBoundariesLayerRef,
   oceanCurrentsLayerRef,
   adultLiteracyLayer,
+  populationDensityLayer,
   olView,
   layerVisibility,
 }: UseLayerEffectsProps) {
@@ -57,6 +70,11 @@ export function useLayerEffects({
   useEffect(() => {
     adultLiteracyLayer.setVisible(layerVisibility.adultLiteracy);
   }, [layerVisibility.adultLiteracy, adultLiteracyLayer]);
+
+  // Update population density layer visibility when state changes
+  useEffect(() => {
+    populationDensityLayer.setVisible(layerVisibility.populationDensity);
+  }, [layerVisibility.populationDensity, populationDensityLayer]);
 
   // Update world boundaries style when zoom changes (for labels)
   useEffect(() => {

@@ -12,6 +12,7 @@ import { MapControls } from "./MapControls";
 import { MeasurementTool } from "./MeasurementTool";
 import { LayerSwitcher } from "./LayerSwitcher";
 import { AdultLiteracyLegend } from "./AdultLiteracyLegend";
+import { PopulationDensityLegend } from "./PopulationDensityLegend";
 import { useOpenLayersMap } from "../../hooks/useOpenLayersMap";
 
 interface Props {
@@ -47,6 +48,7 @@ export function Map({
     layerVisibility,
     handleLayerVisibilityChange,
     adultLiteracyLegendData,
+    populationDensityLegendData,
   } = useOpenLayersMap({
     features,
     selectedFeatureId: selectedFeatureId || null,
@@ -137,6 +139,12 @@ export function Map({
             visible: layerVisibility.adultLiteracy,
           },
           {
+            id: "populationDensity",
+            name: "Väestöntiheys",
+            description: "Väestöntiheys maittain 2022 (henkeä/km²)",
+            visible: layerVisibility.populationDensity,
+          },
+          {
             id: "articleLocators",
             name: "Artikkelien kohteet",
             description: "Maapallo-lehden artikkelien kohdealueet",
@@ -157,6 +165,11 @@ export function Map({
       <AdultLiteracyLegend
         visible={layerVisibility.adultLiteracy}
         legendData={staticLegendData}
+      />
+
+      <PopulationDensityLegend
+        visible={layerVisibility.populationDensity}
+        legendData={populationDensityLegendData}
       />
     </div>
   );
