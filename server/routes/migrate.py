@@ -105,6 +105,7 @@ MIGRATIONS = {
                 "/home/site/wwwroot/server/"
                 "pop_density_by_country_2022_num.geojson"
             ),
+            "/home/site/wwwroot/pop_density_by_country_2022_num.geojson",
             "/app/pop_density_data.geojson",
         ],
     },
