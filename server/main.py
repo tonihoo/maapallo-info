@@ -163,6 +163,15 @@ app.include_router(
     analytics_router, prefix="/api/v1/analytics", tags=["analytics"]
 )
 
+# Add admin router
+try:
+    from routes.admin import router as admin_router
+
+    app.include_router(admin_router, tags=["admin"])
+    print("✅ Admin API loaded")
+except ImportError as e:
+    print(f"⚠️  Admin API not available: {e}")
+
 # Add population density API
 try:
     from population_density_api import router as population_router
