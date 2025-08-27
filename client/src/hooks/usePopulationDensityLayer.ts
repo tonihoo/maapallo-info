@@ -107,8 +107,6 @@ export function usePopulationDensityLayer({
       source.addFeatures(features);
       layerRef.current = layer;
 
-      console.log("✅ Population density layer created successfully with", features.length, "features");
-
       return layer;
     } catch (error) {
       console.error("❌ Failed to create population density layer:", error);
