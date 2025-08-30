@@ -3,7 +3,7 @@ name: Build, Test and Deploy to Azure
 on:
   push:
     branches:
-      - main # Changed from master to main
+      - main
 
 env:
   ACR_REGISTRY: maapalloregistry.azurecr.io

@@ -15,7 +15,15 @@ The application consists of four components:
 - **Database**: PostgreSQL + PostGIS database (port 5432)
 - **PgAdmin**: Database administration interface (port 5050)
 
-## Initial Setup
+## Security & Environment Variables
+
+This project uses environment variables for sensitive configuration:
+
+- Copy `.env.example` to `.env` for local development
+- Configure GitHub Secrets for production deployment
+- Never commit `.env` files to version control
+
+## Local Setup
 
 ### 1. Clone repository and navigate to folder
 
