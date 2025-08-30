@@ -2,10 +2,6 @@
 
 Maapallo.info is a map based portal of global geospatial data related to human development, environment and other geographical phenomena.
 
-## Live Application
-
-https://maapallo.info
-
 ## Technical Implementation
 
 The application consists of four components:
