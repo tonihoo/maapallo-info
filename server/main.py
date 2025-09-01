@@ -157,9 +157,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix="/api/v1", tags=["auth"])
 app.include_router(health.router, prefix="/api/v1", tags=["health"])
 app.include_router(feature.router, prefix="/api/v1/feature", tags=["features"])
-app.include_router(
-    analytics_router, prefix="/api/v1/analytics", tags=["analytics"]
-)
+app.include_router(analytics_router, prefix="/api/v1", tags=["analytics"])
 
 # Add migration router
 try:
