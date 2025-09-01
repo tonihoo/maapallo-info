@@ -76,14 +76,14 @@ jobs:
           #     PG_PASS="${{ secrets.PG_PASS }}" \
           #     PG_SSLMODE="${{ secrets.PG_SSLMODE }}"
 
+          echo "Configuring startup command to run migrations..."
+          az webapp config set \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.APP_NAME }} \
+            --startup-file "bash startup.sh"
+
       - name: Restart Web App to trigger migrations
         run: |
-          echo "Restarting web app to ensure migrations run on startup..."
+          echo "Restarting web app to trigger startup script with migrations..."
           az webapp restart --name ${{ env.APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }}
-          echo "✅ Web app restarted - migrations will run automatically on startup"
-
-      - name: Run Database Migrations
-        run: |
-          echo "Running database migrations..."
-          az webapp ssh --resource-group ${{ env.RESOURCE_GROUP }} --name ${{ env.APP_NAME }} --command "cd /home/site/wwwroot && python server/run_migrations.py"
-          echo "✅ Migrations completed"
+          echo "✅ Web app restarted - migrations will run via startup.sh"
