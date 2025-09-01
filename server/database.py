@@ -1,4 +1,5 @@
 import logging
+import os
 
 from config import settings
 from geoalchemy2 import Geometry
@@ -17,6 +18,11 @@ engine = create_async_engine(
     settings.database_url,
     echo=settings.log_level == "debug",
     pool_pre_ping=True,
+    # Tuning for cloud platforms (reduce stale connections & bursts)
+    pool_recycle=int(os.getenv("DB_POOL_RECYCLE", "300")),  # seconds
+    pool_size=int(os.getenv("DB_POOL_SIZE", "5")),
+    max_overflow=int(os.getenv("DB_MAX_OVERFLOW", "5")),
+    pool_timeout=int(os.getenv("DB_POOL_TIMEOUT", "30")),  # seconds
 )
 
 # Create async session factory

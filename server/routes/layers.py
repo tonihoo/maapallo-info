@@ -87,6 +87,18 @@ async def list_layers(db: AsyncSession = Depends(get_db)):
         rows = result.mappings().all()
         return {"layers": [dict(r) for r in rows]}
     except Exception as e:
+        # Graceful degrade: intermittent DB errors should not break UI
+        if any(
+            s in str(e).lower()
+            for s in [
+                "connection",
+                "timeout",
+                "closed",
+                "terminating connection",
+                "cannot connect",
+            ]
+        ):
+            return {"layers": [], "note": "db_unavailable"}
         raise HTTPException(
             status_code=500, detail=f"Database error: {str(e)}"
         )
@@ -183,6 +195,18 @@ async def get_layer_geojson(
     except HTTPException:
         raise
     except Exception as e:
+        # Graceful degrade for transient DB errors
+        if any(
+            s in str(e).lower()
+            for s in [
+                "connection",
+                "timeout",
+                "closed",
+                "terminating connection",
+                "cannot connect",
+            ]
+        ):
+            return {"type": "FeatureCollection", "features": []}
         raise HTTPException(
             status_code=500, detail=f"Database error: {str(e)}"
         )

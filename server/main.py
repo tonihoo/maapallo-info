@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from routes import auth, feature, health
+from starlette.middleware.gzip import GZipMiddleware
 
 
 def verify_basic_auth(credentials: str) -> bool:
@@ -152,6 +153,40 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# GZip large responses (GeoJSON, static assets, API JSON)
+app.add_middleware(GZipMiddleware, minimum_size=1024)
+
+# Add lightweight cache headers for static assets and data
+
+
+@app.middleware("http")
+async def cache_headers_middleware(request: Request, call_next):
+    response = await call_next(request)
+
+    path = request.url.path
+    cache_exts = (
+        ".js",
+        ".css",
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".svg",
+        ".ico",
+        ".json",
+        ".geojson",
+        ".wasm",
+    )
+    if (
+        path.startswith("/data/")
+        or path.startswith("/cesium/")
+        or any(path.endswith(ext) for ext in cache_exts)
+    ):
+        # Default 1 day caching for static-ish content
+        if "cache-control" not in response.headers:
+            response.headers["Cache-Control"] = "public, max-age=86400"
+    return response
+
 
 # Include routers
 app.include_router(auth.router, prefix="/api/v1", tags=["auth"])
