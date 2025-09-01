@@ -6,7 +6,6 @@ import Fill from "ol/style/Fill";
 import Stroke from "ol/style/Stroke";
 import Style from "ol/style/Style";
 import { FeatureLike } from "ol/Feature";
-import { fetchWithRetry } from "../utils/fetchWithRetry";
 
 interface LiteracyData {
   [countryCode: string]: {
@@ -50,157 +49,16 @@ export function useAdultLiteracyLayer({ visible }: UseAdultLiteracyLayerProps) {
     return "rgba(200, 200, 200, 0.5)";
   }, []);
 
-  // Create country code to name mapping for better matching
-  const countryCodeMapping = useCallback(() => {
-    return {
-      AE: "United Arab Emirates",
-      AW: "Aruba",
-      BA: "Bosnia and Herzegovina",
-      BD: "Bangladesh",
-      BH: "Bahrain",
-      BN: "Brunei",
-      CG: "Republic of the Congo",
-      CR: "Costa Rica",
-      CV: "Cape Verde",
-      EC: "Ecuador",
-      KH: "Cambodia",
-      KW: "Kuwait",
-      MV: "Maldives",
-      QA: "Qatar",
-      SV: "El Salvador",
-      TH: "Thailand",
-      TM: "Turkmenistan",
-      UZ: "Uzbekistan",
-      US: "United States of America",
-      GB: "United Kingdom",
-      RU: "Russia",
-      CN: "China",
-      IN: "India",
-      BR: "Brazil",
-      DE: "Germany",
-      FR: "France",
-      IT: "Italy",
-      ES: "Spain",
-      MX: "Mexico",
-      CA: "Canada",
-      AU: "Australia",
-      ZA: "South Africa",
-      EG: "Egypt",
-      NG: "Nigeria",
-      KE: "Kenya",
-      GH: "Ghana",
-      MA: "Morocco",
-      TN: "Tunisia",
-      DZ: "Algeria",
-      ET: "Ethiopia",
-      UG: "Uganda",
-      TZ: "Tanzania",
-      ZW: "Zimbabwe",
-      BW: "Botswana",
-      ZM: "Zambia",
-      MW: "Malawi",
-      MZ: "Mozambique",
-      MG: "Madagascar",
-      AO: "Angola",
-      CD: "Democratic Republic of the Congo",
-      CF: "Central African Republic",
-      TD: "Chad",
-      NE: "Niger",
-      ML: "Mali",
-      BF: "Burkina Faso",
-      SN: "Senegal",
-      GN: "Guinea",
-      SL: "Sierra Leone",
-      LR: "Liberia",
-      CI: "Ivory Coast",
-      GW: "Guinea-Bissau",
-      GM: "Gambia",
-      MR: "Mauritania",
-    };
-  }, []);
-
-  // Style function for the literacy layer
-  const styleFunction = useCallback(
-    (feature: FeatureLike) => {
-      const countryName = feature.get("name") || "";
-
-      // Try to match country by name and code mapping
-      let literacyRate: number | null = null;
-      const codeMapping = countryCodeMapping();
-
-      // Method 1: Try code mapping first (most accurate)
-      for (const [code, info] of Object.entries(literacyDataRef.current)) {
-        const mappedName = codeMapping[code as keyof typeof codeMapping];
-        if (
-          mappedName &&
-          mappedName.toLowerCase() === countryName.toLowerCase()
-        ) {
-          literacyRate = info.rate;
-          break;
-        }
-      }
-
-      // Method 2: Try exact name match
-      if (literacyRate === null) {
-        for (const [, info] of Object.entries(literacyDataRef.current)) {
-          if (info.name.toLowerCase() === countryName.toLowerCase()) {
-            literacyRate = info.rate;
-            break;
-          }
-        }
-      }
-
-      // Method 3: Try fuzzy matching as fallback
-      if (literacyRate === null) {
-        for (const [, info] of Object.entries(literacyDataRef.current)) {
-          if (
-            countryName.toLowerCase().includes(info.name.toLowerCase()) ||
-            info.name.toLowerCase().includes(countryName.toLowerCase())
-          ) {
-            literacyRate = info.rate;
-            break;
-          }
-        }
-      }
-
-      // Style based on literacy rate
-      let fillColor = "rgba(200, 200, 200, 0.3)"; // Default gray for no data
-      let strokeColor = "rgba(255, 255, 255, 0.8)";
-      let strokeWidth = 0.5;
-
-      if (literacyRate !== null) {
-        fillColor = getColorForRate(literacyRate);
-        strokeColor = "rgba(255, 255, 255, 0.9)";
-        strokeWidth = 0.8;
-      }
-
-      return new Style({
-        fill: new Fill({
-          color: fillColor,
-        }),
-        stroke: new Stroke({
-          color: strokeColor,
-          width: strokeWidth,
-        }),
-      });
-    },
-    [getColorForRate, countryCodeMapping]
-  );
-
   // Load literacy data
   const loadLiteracyData = useCallback(async () => {
     try {
-      const res = await fetchWithRetry(
-        "/data/world_development_indicators.geojson",
-        { method: "GET" },
-        3,
-        400,
-        20000
+      const response = await fetch(
+        "/data/world_development_indicators.geojson"
       );
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
+      if (!response.ok) {
+        throw new Error("HTTP error! status: " + response.status);
       }
-      const data = (await res.json()) as WDICollection;
+      const data = (await response.json()) as WDICollection;
 
       // Extract recent literacy data (2020-2023)
       const recentYears = ["2020", "2021", "2022", "2023"];
@@ -224,13 +82,45 @@ export function useAdultLiteracyLayer({ visible }: UseAdultLiteracyLayerProps) {
       }
 
       literacyDataRef.current = literacyMap;
-
       return literacyMap;
     } catch (error) {
-      console.error("❌ Failed to load literacy data:", error);
+      console.error("Failed to load literacy data:", error);
       return {};
     }
   }, []);
+
+  // Style function for the literacy layer
+  const styleFunction = useCallback(
+    (feature: FeatureLike) => {
+      const countryName = feature.get("name") || "";
+      let literacyRate: number | null = null;
+
+      // Try to match country by name
+      for (const [, info] of Object.entries(literacyDataRef.current)) {
+        if (info.name.toLowerCase() === countryName.toLowerCase()) {
+          literacyRate = info.rate;
+          break;
+        }
+      }
+
+      // Style based on literacy rate
+      let fillColor = "rgba(200, 200, 200, 0.3)";
+      let strokeColor = "rgba(255, 255, 255, 0.8)";
+      let strokeWidth = 0.5;
+
+      if (literacyRate !== null) {
+        fillColor = getColorForRate(literacyRate);
+        strokeColor = "rgba(255, 255, 255, 0.9)";
+        strokeWidth = 0.8;
+      }
+
+      return new Style({
+        fill: new Fill({ color: fillColor }),
+        stroke: new Stroke({ color: strokeColor, width: strokeWidth }),
+      });
+    },
+    [getColorForRate]
+  );
 
   // Create and load the layer
   const createLayer = useCallback(async () => {
@@ -239,17 +129,11 @@ export function useAdultLiteracyLayer({ visible }: UseAdultLiteracyLayerProps) {
       await loadLiteracyData();
 
       // Load world boundaries
-      const res = await fetchWithRetry(
-        "/data/world.geojson",
-        { method: "GET" },
-        3,
-        400,
-        20000
-      );
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
+      const response = await fetch("/data/world.geojson");
+      if (!response.ok) {
+        throw new Error("HTTP error! status: " + response.status);
       }
-      const worldData = (await res.json()) as unknown;
+      const worldData = await response.json();
 
       // Create layer
       const source = new VectorSource();
@@ -257,23 +141,23 @@ export function useAdultLiteracyLayer({ visible }: UseAdultLiteracyLayerProps) {
         source: source,
         style: styleFunction,
         visible: visible,
-        zIndex: 1, // Above base map but below world boundaries
+        zIndex: 1,
       });
 
       // Add features
       const format = new GeoJSON();
-      const features = format.readFeatures(worldData as object, {
+      const features = format.readFeatures(worldData, {
         dataProjection: "EPSG:4326",
         featureProjection: "EPSG:3857",
       });
 
       source.addFeatures(features);
-      console.info(`✅ Adult literacy world features: ${features.length}`);
+      console.info("Adult literacy world features: " + features.length);
       layerRef.current = layer;
 
       return layer;
     } catch (error) {
-      console.error("❌ Failed to create adult literacy layer:", error);
+      console.error("Failed to create adult literacy layer:", error);
       return null;
     }
   }, [loadLiteracyData, styleFunction, visible]);
@@ -290,7 +174,6 @@ export function useAdultLiteracyLayer({ visible }: UseAdultLiteracyLayerProps) {
   const setVisible = useCallback((isVisible: boolean) => {
     if (layerRef.current) {
       layerRef.current.setVisible(isVisible);
-      // Force redraw to ensure the change is rendered
       layerRef.current.changed();
     }
   }, []);

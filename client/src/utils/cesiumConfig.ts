@@ -42,7 +42,10 @@ export const initializeCesiumConfig = () => {
     }
   };
 
-  if (CESIUM_ION_TOKEN && CESIUM_ION_TOKEN !== "YOUR_NEW_CESIUM_ION_TOKEN_HERE") {
+  if (
+    CESIUM_ION_TOKEN &&
+    CESIUM_ION_TOKEN !== "YOUR_NEW_CESIUM_ION_TOKEN_HERE"
+  ) {
     setToken(CESIUM_ION_TOKEN);
   } else {
     // Fetch token from server if not provided at build time

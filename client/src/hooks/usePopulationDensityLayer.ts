@@ -6,7 +6,6 @@ import Fill from "ol/style/Fill";
 import Stroke from "ol/style/Stroke";
 import Style from "ol/style/Style";
 import { FeatureLike } from "ol/Feature";
-import { fetchWithRetry } from "../utils/fetchWithRetry";
 
 interface UsePopulationDensityLayerProps {
   visible: boolean;
@@ -75,17 +74,13 @@ export function usePopulationDensityLayer({
   const createLayer = useCallback(async () => {
     try {
       // Load population density GeoJSON (already contains geometry + data)
-      const res = await fetchWithRetry(
-        "/data/pop_density_by_country_2022_num.geojson",
-        { method: "GET" },
-        3,
-        400,
-        20000
+      const response = await fetch(
+        "/data/pop_density_by_country_2022_num.geojson"
       );
-      if (!res.ok) {
-        throw new Error(`HTTP error! status: ${res.status}`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-      const geoJsonData = (await res.json()) as unknown;
+      const geoJsonData = await response.json();
 
       // Create layer
       const source = new VectorSource();
@@ -96,15 +91,17 @@ export function usePopulationDensityLayer({
         zIndex: 1, // Above base map but below world boundaries
       });
 
-      // Add features from the population density GeoJSON
+            // Add features from the population density GeoJSON
       const format = new GeoJSON();
-      const features = format.readFeatures(geoJsonData as object, {
+      const features = format.readFeatures(geoJsonData, {
         dataProjection: "EPSG:4326",
         featureProjection: "EPSG:3857",
       });
 
       source.addFeatures(features);
-      console.info(`✅ Population density features loaded: ${features.length}`);
+      console.info(
+        `✅ Population density features loaded: ${features.length}`
+      );
       layerRef.current = layer;
 
       return layer;
