@@ -1,5 +1,4 @@
 import os
-import secrets
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -24,7 +23,14 @@ class UserInDB(User):
 
 
 # Security configuration
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", secrets.token_urlsafe(32))
+# Use a stable default in development to avoid invalidating
+# tokens on reloads.
+_env_secret = os.getenv("JWT_SECRET_KEY")
+SECRET_KEY = (
+    _env_secret
+    if (_env_secret and _env_secret.strip())
+    else "dev-insecure-jwt-secret-change-in-prod"
+)
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24  # 24 hours
 
@@ -51,7 +57,8 @@ def get_user(username: str) -> Optional[UserInDB]:
     admin_password_hash = os.getenv("ADMIN_PASSWORD_HASH")
 
     if not admin_password_hash:
-        # If no hash is provided, create one from plain password (for development)
+        # If no hash is provided, create one from plain password
+        # (for development only)
         admin_password = os.getenv("ADMIN_PASSWORD", "changeme")
         admin_password_hash = get_password_hash(admin_password)
 
@@ -111,6 +118,9 @@ async def get_current_user(
             raise credentials_exception
         token_data = TokenData(username=username)
     except jwt.PyJWTError:
+        raise credentials_exception
+
+    if token_data.username is None:
         raise credentials_exception
 
     user = get_user(username=token_data.username)

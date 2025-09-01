@@ -59,6 +59,7 @@ async def run_all_migrations():
         "0003_create_analytics_tables.sql",
         "0004_add_population_density_2022.sql",
         "0005_import_population_density_data.sql",
+        "0006_create_geo_layers.sql",
     ]
 
     success_count = 0

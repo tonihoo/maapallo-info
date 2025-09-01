@@ -120,6 +120,33 @@ MIGRATIONS = {
         CREATE INDEX IF NOT EXISTS idx_climate_year ON climate_data (year);
         """,
     },
+    "0006_create_geo_layers": {
+        "description": "Create generic geo_layers and geo_features tables",
+        "sql": """
+        CREATE TABLE IF NOT EXISTS geo_layers (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(128) UNIQUE NOT NULL,
+            title VARCHAR(255),
+            geom_type VARCHAR(32) DEFAULT 'GEOMETRY',
+            srid INTEGER DEFAULT 4326,
+            metadata JSONB,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS geo_features (
+            id SERIAL PRIMARY KEY,
+            layer_id INTEGER NOT NULL REFERENCES geo_layers(id)
+                ON DELETE CASCADE,
+            properties JSONB,
+            geom GEOMETRY(GEOMETRY, 4326) NOT NULL
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_geo_features_layer
+        ON geo_features (layer_id);
+        CREATE INDEX IF NOT EXISTS idx_geo_features_geom
+        ON geo_features USING GIST (geom);
+        """,
+    },
 }
 
 
@@ -236,5 +263,6 @@ def _get_table_name_for_migration(migration_id: str) -> Optional[str]:
         "0003_create_analytics_tables": "analytics_sessions",
         "0004_add_population_density_2022": "pop_density_by_country_2022_num",
         "0005_add_climate_data": "climate_data",
+        "0006_create_geo_layers": "geo_layers",
     }
     return table_mapping.get(migration_id)

@@ -1,8 +1,6 @@
 import base64
 import os
-import secrets
 from contextlib import asynccontextmanager
-from typing import Tuple
 
 import uvicorn
 from analytics.routes import router as analytics_router
@@ -192,6 +190,15 @@ try:
 except ImportError as e:
     print(f"⚠️  Population density API not available: {e}")
     print("    Run the data import script first")
+
+# Add generic layers router
+try:
+    from routes.layers import router as layers_router
+
+    app.include_router(layers_router, tags=["layers"])
+    print("✅ Generic Layers API loaded")
+except ImportError as e:
+    print(f"⚠️  Generic Layers API not available: {e}")
 
 # Serve static files in production
 if settings.is_production:

@@ -34,14 +34,42 @@ export function useIntactForestsLayer({ visible }: UseIntactForestsLayerProps) {
   // Create and load the layer
   const createLayer = useCallback(async () => {
     try {
-      // Load intact forests GeoJSON
-      const response = await fetch(
-        "/data/intact-forest-landscapes-simplified-2020.geojson"
-      );
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      // Try backend API by resolving the actual layer name from list first
+      let geoJsonData: unknown | null = null;
+      try {
+        const listRes = await fetch("/api/v1/layers/list");
+        if (listRes.ok) {
+          type LayerRow = { name: string; title?: string | null };
+          const list = (await listRes.json()) as { layers?: LayerRow[] };
+          const norm = (s: string) =>
+            s.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+          const layers = Array.isArray(list.layers) ? list.layers : [];
+          // Best-effort match by name/title
+          const candidate =
+            layers.find((l) => {
+              const n = norm(l.name);
+              const t = l.title ? norm(l.title) : "";
+              return (
+                n.includes("intact") ||
+                t.includes("intact") ||
+                n === "ifl" ||
+                t === "ifl"
+              );
+            }) || layers[0];
+          if (candidate && candidate.name) {
+            const apiRes = await fetch(
+              `/api/v1/layers/geojson/${encodeURIComponent(candidate.name)}`
+            );
+            if (apiRes.ok) {
+              geoJsonData = (await apiRes.json()) as unknown;
+            }
+          }
+        }
+      } catch (e) {
+        // ignore and render empty layer below
       }
-      const geoJsonData = await response.json();
+
+      // No static fallback: if API not available, render empty collection
 
       // Create layer
       const source = new VectorSource();
@@ -54,10 +82,23 @@ export function useIntactForestsLayer({ visible }: UseIntactForestsLayerProps) {
 
       // Add features from the intact forests GeoJSON
       const format = new GeoJSON();
-      const features = format.readFeatures(geoJsonData, {
-        dataProjection: "EPSG:4326",
-        featureProjection: "EPSG:3857",
-      });
+      const hasFeaturesArray = (() => {
+        const v = geoJsonData as unknown;
+        if (v && typeof v === "object") {
+          const f = (v as { features?: unknown }).features;
+          return Array.isArray(f);
+        }
+        return false;
+      })();
+      const features = format.readFeatures(
+        hasFeaturesArray && geoJsonData
+          ? (geoJsonData as object)
+          : { type: "FeatureCollection", features: [] },
+        {
+          dataProjection: "EPSG:4326",
+          featureProjection: "EPSG:3857",
+        }
+      );
 
       source.addFeatures(features);
       layerRef.current = layer;

@@ -28,7 +28,7 @@ async def get_population_density_2022(
                 """
                 SELECT jsonb_build_object(
                     'type', 'FeatureCollection',
-                    'features', jsonb_agg(
+                    'features', COALESCE(jsonb_agg(
                         jsonb_build_object(
                             'type', 'Feature',
                             'properties', jsonb_build_object(
@@ -38,10 +38,10 @@ async def get_population_density_2022(
                             ),
                             'geometry', ST_AsGeoJSON(geom)::jsonb
                         )
-                    )
+                    ), '[]'::jsonb)
                 ) as geojson
                 FROM pop_density_by_country_2022_num
-                WHERE pop_density_2022_num IS NOT NULL
+                WHERE pop_density_2022_num IS NOT NULL AND geom IS NOT NULL
             """
             )
 
