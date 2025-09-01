@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<deployment>
+  <id>f48b24b3c5eba9f5f049fce1af08ecd6943aac021756753875418</id>
+  <author>tonihoo</author>
+  <deployer>GitHub</deployer>
+  <authorEmail />
+  <message>{"type":"Deployment","sha":"f48b24b3c5eba9f5f049fce1af08ecd6943aac02","repoName":"tonihoo/maapallo-info","actor":"tonihoo","slotName":"production"}</message>
+  <progress />
+  <status>Success</status>
+  <statusText />
+  <lastSuccessEndTime>2025-09-01T19:11:17.1747146Z</lastSuccessEndTime>
+  <receivedTime>2025-09-01T19:11:17.1747146Z</receivedTime>
+  <startTime>2025-09-01T19:11:17.1747146Z</startTime>
+  <endTime>2025-09-01T19:11:17.1747146Z</endTime>
+  <complete>True</complete>
+  <is_temp>False</is_temp>
+  <is_readonly>True</is_readonly>
+  <buildSummary />
+</deployment>

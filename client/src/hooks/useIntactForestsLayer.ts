@@ -105,7 +105,18 @@ export function useIntactForestsLayer({ visible }: UseIntactForestsLayerProps) {
         // ignore and render empty layer below
       }
 
-      // No static fallback: if API not available, render empty collection
+      // Fallback to static file if API not available or returned no data
+      if (!geoJsonData) {
+        try {
+          const response = await fetch("/data/intact-forest-landscapes-simplified-2020.geojson");
+          if (response.ok) {
+            geoJsonData = await response.json();
+            console.info("✅ IFL: Using static file fallback");
+          }
+        } catch (error) {
+          console.warn("⚠️ IFL: Static file fallback failed:", error);
+        }
+      }
 
       // Create layer
       const source = new VectorSource();

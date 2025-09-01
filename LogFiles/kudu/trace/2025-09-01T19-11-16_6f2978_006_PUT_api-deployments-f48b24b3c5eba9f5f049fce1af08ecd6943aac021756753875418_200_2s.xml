@@ -1,0 +1,7 @@
+<step title="Incoming Request" date="2025-09-01T19:11:16.456" instance="6f2978" url="/api/deployments/f48b24b3c5eba9f5f049fce1af08ecd6943aac021756753875418" method="PUT" type="request" pid="769,1,20" Host="maapallo-info-app.scm.azurewebsites.net" User-Agent="GITHUBACTIONS_DeployWebAppToAzure_1c305b653398070ce2fc69a8e365ae22827e2c8d8af048cbee6de33e72108b46" Authorization="Bea..." Content-Type="application/json; charset=utf-8" Content-Length="306" X-ARR-LOG-ID="5cd462ac-598e-41ed-a87c-8d17cf29f3f6" CLIENT-IP="40.76.119.211:43032" X-SITE-DEPLOYMENT-ID="maapallo-info-app" WAS-DEFAULT-HOSTNAME="maapallo-info-app.scm.azurewebsites.net" X-Forwarded-Proto="https" X-AppService-Proto="https" X-Forwarded-TlsVersion="1.3" X-WAWS-Unencoded-URL="/api/deployments/f48b24b3c5eba9f5f049fce1af08ecd6943aac021756753875418" X-Client-IP="40.76.119.211" X-Client-Port="43032" >
+  <step title="Cleanup Xml Logs" date="2025-09-01T19:11:16.460" /><!-- duration: 6ms -->
+  <step title="DeploymentService.Deploy(id)" date="2025-09-01T19:11:17.165" >
+    <step title="DeploymentService.Create(id)" date="2025-09-01T19:11:17.175" /><!-- duration: 1204ms -->
+  </step><!-- duration: 1223ms -->
+  <step title="Outgoing response" date="2025-09-01T19:11:18.453" type="response" statusCode="200" statusText="OK" /><!-- duration: 10ms -->
+</step><!-- duration: 2009ms -->
