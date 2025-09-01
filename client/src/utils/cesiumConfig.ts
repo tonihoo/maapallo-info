@@ -7,15 +7,16 @@ declare const CESIUM_BASE_URL: string;
 export const initializeCesiumConfig = () => {
   // Set up Cesium base URL
   if (typeof window !== "undefined") {
+    const w = window as unknown as { CESIUM_BASE_URL?: string } & Window;
     try {
       // Set the base URL for Cesium
-      (window as any).CESIUM_BASE_URL =
+      w.CESIUM_BASE_URL =
         typeof CESIUM_BASE_URL !== "undefined"
           ? CESIUM_BASE_URL
           : "/node_modules/cesium/Build/Cesium/";
     } catch (error) {
       console.warn("Could not set CESIUM_BASE_URL:", error);
-      (window as any).CESIUM_BASE_URL = "/node_modules/cesium/Build/Cesium/";
+      w.CESIUM_BASE_URL = "/node_modules/cesium/Build/Cesium/";
     }
   }
 
@@ -34,12 +35,23 @@ export const initializeCesiumConfig = () => {
     );
   }
 
-  // Set the Cesium Ion access token
-  if (
-    CESIUM_ION_TOKEN &&
-    CESIUM_ION_TOKEN !== "YOUR_NEW_CESIUM_ION_TOKEN_HERE"
-  ) {
-    Cesium.Ion.defaultAccessToken = CESIUM_ION_TOKEN;
+  // Set the Cesium Ion access token (build-time) or fetch from server at runtime
+  const setToken = (token: string) => {
+    if (token && token !== "YOUR_NEW_CESIUM_ION_TOKEN_HERE") {
+      Cesium.Ion.defaultAccessToken = token;
+    }
+  };
+
+  if (CESIUM_ION_TOKEN && CESIUM_ION_TOKEN !== "YOUR_NEW_CESIUM_ION_TOKEN_HERE") {
+    setToken(CESIUM_ION_TOKEN);
+  } else {
+    // Fetch token from server if not provided at build time
+    fetch("/api/v1/config/public")
+      .then((r) => (r.ok ? r.json() : { cesiumIonToken: "" }))
+      .then((cfg) => {
+        if (cfg?.cesiumIonToken) setToken(cfg.cesiumIonToken);
+      })
+      .catch(() => undefined);
   }
 };
 

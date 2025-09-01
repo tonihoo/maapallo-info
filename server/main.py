@@ -40,17 +40,9 @@ async def simple_auth_middleware(request: Request, call_next):
     if settings.environment == "development":
         return await call_next(request)
 
-    # Debug logging for production
-    print(f"🔍 Auth middleware - Path: {request.url.path}")
-    print(f"🔍 Environment: {settings.environment}")
-
-    # Check if environment variables are set
+    # Fetch credentials only once; avoid noisy logs in production
     valid_username = os.getenv("BASIC_AUTH_USERNAME")
     valid_password = os.getenv("BASIC_AUTH_PASSWORD")
-    print(
-        f"🔍 Auth env vars - Username set: {bool(valid_username)}, "
-        f"Password set: {bool(valid_password)}"
-    )
 
     # Only protect the main page and HTML routes
     path = request.url.path
@@ -89,14 +81,7 @@ async def simple_auth_middleware(request: Request, call_next):
             valid_username = os.getenv("BASIC_AUTH_USERNAME")
             valid_password = os.getenv("BASIC_AUTH_PASSWORD")
 
-            print(
-                f"🔍 Auth attempt - User: {username}, "
-                f"Valid: {valid_username}"
-            )
-            print(f"🔍 Password match: {password == valid_password}")
-
             if username != valid_username or password != valid_password:
-                print("❌ Auth failed - invalid credentials")
                 return HTMLResponse(
                     content="""<!DOCTYPE html>
 <html><head><title>Invalid Credentials</title></head>
@@ -106,10 +91,7 @@ async def simple_auth_middleware(request: Request, call_next):
                         "WWW-Authenticate": 'Basic realm="Maapallo.info"'
                     },
                 )
-
-            print("✅ Auth successful")
-        except Exception as e:
-            print(f"❌ Auth exception: {str(e)}")
+        except Exception:
             return HTMLResponse(
                 content="""<!DOCTYPE html>
 <html><head><title>Authentication Error</title></head>
@@ -165,24 +147,16 @@ async def cache_headers_middleware(request: Request, call_next):
     response = await call_next(request)
 
     path = request.url.path
-    cache_exts = (
-        ".js",
-        ".css",
-        ".png",
-        ".jpg",
-        ".jpeg",
-        ".svg",
-        ".ico",
-        ".json",
-        ".geojson",
-        ".wasm",
-    )
-    if (
-        path.startswith("/data/")
-        or path.startswith("/cesium/")
-        or any(path.endswith(ext) for ext in cache_exts)
-    ):
-        # Default 1 day caching for static-ish content
+    # Set strong caching for Cesium engine assets and hashed JS/CSS bundles
+    if path.startswith("/cesium/") or path.endswith((".js", ".css")):
+        if "cache-control" not in response.headers:
+            response.headers["Cache-Control"] = (
+                "public, max-age=31536000, immutable"
+            )
+        return response
+
+    # Shorter cache for data so content updates propagate
+    if path.startswith("/data/") or path.endswith((".json", ".geojson")):
         if "cache-control" not in response.headers:
             response.headers["Cache-Control"] = "public, max-age=86400"
     return response
@@ -193,6 +167,13 @@ app.include_router(auth.router, prefix="/api/v1", tags=["auth"])
 app.include_router(health.router, prefix="/api/v1", tags=["health"])
 app.include_router(feature.router, prefix="/api/v1/feature", tags=["features"])
 app.include_router(analytics_router, prefix="/api/v1", tags=["analytics"])
+try:
+    from routes.config import router as config_router
+
+    app.include_router(config_router)
+    print("✅ Config API loaded")
+except ImportError as e:
+    print(f"⚠️  Config API not available: {e}")
 
 # Add migration router
 try:
