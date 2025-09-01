@@ -40,8 +40,6 @@ export const UserMenu: React.FC = () => {
   };
 
   const handleAnalyticsClick = () => {
-    // TODO: Open analytics dialog/page
-    console.log("Analytics clicked");
     handleMenuClose();
   };
 

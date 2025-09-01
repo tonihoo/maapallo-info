@@ -1,8 +1,10 @@
 import os
 from datetime import datetime, timedelta
-from typing import Any, Dict
 
-import geoip2.database
+try:
+    import geoip2.database as geoip2_database  # type: ignore
+except ImportError:
+    geoip2_database = None  # type: ignore
 from auth import require_auth
 from database import get_db
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -33,8 +35,8 @@ def get_country_from_ip(ip: str) -> str:
     try:
         # You can download GeoLite2-Country.mmdb from MaxMind for free
         geoip_path = os.getenv("GEOIP_DATABASE_PATH")
-        if geoip_path and os.path.exists(geoip_path):
-            with geoip2.database.Reader(geoip_path) as reader:
+        if geoip_path and os.path.exists(geoip_path) and geoip2_database:
+            with geoip2_database.Reader(geoip_path) as reader:
                 response = reader.country(ip)
                 return response.country.iso_code or "FI"
     except Exception:
