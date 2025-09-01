@@ -3,8 +3,8 @@ set -e
 
 echo "🔄 Starting application startup..."
 
-# Navigate to server directory
-cd /home/site/wwwroot/server
+# Navigate to application directory (mapped to /home/site/wwwroot in Azure)
+cd /home/site/wwwroot
 
 # Run database migrations
 echo "🗄️  Running database migrations..."
@@ -19,5 +19,4 @@ fi
 
 # Start the FastAPI server
 echo "🚀 Starting FastAPI server..."
-cd /home/site/wwwroot
-exec python -m uvicorn server.main:app --host 0.0.0.0 --port 8000
+exec python -m uvicorn main:app --host 0.0.0.0 --port 8080
