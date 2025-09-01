@@ -34,6 +34,9 @@ interface UseDataLoadingProps {
   populationDensityLayerAddedRef: React.RefObject<boolean>;
   intactForestsLayer: IntactForestsLayer;
   intactForestsLayerAddedRef: React.RefObject<boolean>;
+  adultLiteracyVisible: boolean;
+  populationDensityVisible: boolean;
+  intactForestsVisible: boolean;
 }
 
 export function useDataLoading({
@@ -46,15 +49,20 @@ export function useDataLoading({
   populationDensityLayerAddedRef,
   intactForestsLayer,
   intactForestsLayerAddedRef,
+  adultLiteracyVisible,
+  populationDensityVisible,
+  intactForestsVisible,
 }: UseDataLoadingProps) {
   // Load world boundaries
   const loadWorldBoundaries = useCallback(async () => {
     try {
-      const response = await fetch("/data/world.geojson");
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const geojsonData = await response.json();
+      const { fetchJsonWithRetry } = await import("../../utils/fetchRetry");
+      const geojsonData = (await fetchJsonWithRetry(
+        "/data/world.geojson",
+        undefined,
+        2,
+        250
+      )) as object;
 
       if (worldBoundariesLayerRef.current) {
         const source = worldBoundariesLayerRef.current.getSource();
@@ -84,11 +92,13 @@ export function useDataLoading({
   // Load ocean currents
   const loadOceanCurrents = useCallback(async () => {
     try {
-      const response = await fetch("/data/ocean-currents.geojson");
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const geojsonData = await response.json();
+      const { fetchJsonWithRetry } = await import("../../utils/fetchRetry");
+      const geojsonData = (await fetchJsonWithRetry(
+        "/data/ocean-currents.geojson",
+        undefined,
+        2,
+        250
+      )) as object;
 
       if (oceanCurrentsLayerRef.current) {
         const source = oceanCurrentsLayerRef.current.getSource();
@@ -162,6 +172,30 @@ export function useDataLoading({
     }
   }, [olMap, adultLiteracyLayer, adultLiteracyLayerAddedRef]);
 
+  // Ensure adult literacy layer is created/added when toggled on later
+  useEffect(() => {
+    (async () => {
+      if (
+        olMap &&
+        adultLiteracyVisible &&
+        !adultLiteracyLayerAddedRef.current
+      ) {
+        const layer = await adultLiteracyLayer.getLayer();
+        if (layer) {
+          const layers = olMap.getLayers();
+          layers.insertAt(2, layer);
+          adultLiteracyLayerAddedRef.current = true;
+          adultLiteracyLayer.setVisible(true);
+        }
+      }
+    })();
+  }, [
+    olMap,
+    adultLiteracyVisible,
+    adultLiteracyLayer,
+    adultLiteracyLayerAddedRef,
+  ]);
+
   // Load population density layer when map is ready (only once)
   useEffect(() => {
     if (olMap && !populationDensityLayerAddedRef.current) {
@@ -189,6 +223,30 @@ export function useDataLoading({
     }
   }, [olMap, populationDensityLayer, populationDensityLayerAddedRef]);
 
+  // Ensure population density layer is created/added when toggled on later
+  useEffect(() => {
+    (async () => {
+      if (
+        olMap &&
+        populationDensityVisible &&
+        !populationDensityLayerAddedRef.current
+      ) {
+        const layer = await populationDensityLayer.getLayer();
+        if (layer) {
+          const layers = olMap.getLayers();
+          layers.insertAt(3, layer);
+          populationDensityLayerAddedRef.current = true;
+          populationDensityLayer.setVisible(true);
+        }
+      }
+    })();
+  }, [
+    olMap,
+    populationDensityVisible,
+    populationDensityLayer,
+    populationDensityLayerAddedRef,
+  ]);
+
   // Load intact forests layer when map is ready (only once)
   useEffect(() => {
     if (olMap && !intactForestsLayerAddedRef.current) {
@@ -215,6 +273,30 @@ export function useDataLoading({
       };
     }
   }, [olMap, intactForestsLayer, intactForestsLayerAddedRef]);
+
+  // Ensure intact forests layer is created/added when toggled on later
+  useEffect(() => {
+    (async () => {
+      if (
+        olMap &&
+        intactForestsVisible &&
+        !intactForestsLayerAddedRef.current
+      ) {
+        const layer = await intactForestsLayer.getLayer();
+        if (layer) {
+          const layers = olMap.getLayers();
+          layers.insertAt(4, layer);
+          intactForestsLayerAddedRef.current = true;
+          intactForestsLayer.setVisible(true);
+        }
+      }
+    })();
+  }, [
+    olMap,
+    intactForestsVisible,
+    intactForestsLayer,
+    intactForestsLayerAddedRef,
+  ]);
 
   return {
     // No return values needed - this hook manages side effects only

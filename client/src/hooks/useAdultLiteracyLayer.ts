@@ -6,6 +6,7 @@ import Fill from "ol/style/Fill";
 import Stroke from "ol/style/Stroke";
 import Style from "ol/style/Style";
 import { FeatureLike } from "ol/Feature";
+import { fetchWithRetry } from "../utils/fetchWithRetry";
 
 interface LiteracyData {
   [countryCode: string]: {
@@ -30,6 +31,10 @@ const LITERACY_COLOR_SCALE = [
   { color: "#e31a1c", label: "0-19%", range: [0, 19] },
   { color: "rgba(200, 200, 200, 0.5)", label: "Ei dataa", range: null },
 ];
+
+interface WDICollection {
+  features: Array<{ properties: Record<string, unknown> }>;
+}
 
 export function useAdultLiteracyLayer({ visible }: UseAdultLiteracyLayerProps) {
   const layerRef = useRef<VectorLayer<VectorSource> | null>(null);
@@ -185,30 +190,34 @@ export function useAdultLiteracyLayer({ visible }: UseAdultLiteracyLayerProps) {
   // Load literacy data
   const loadLiteracyData = useCallback(async () => {
     try {
-      const response = await fetch(
-        "/data/world_development_indicators.geojson"
+      const res = await fetchWithRetry(
+        "/data/world_development_indicators.geojson",
+        { method: "GET" },
+        3,
+        400,
+        20000
       );
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
       }
-      const data = await response.json();
+      const data = (await res.json()) as WDICollection;
 
       // Extract recent literacy data (2020-2023)
       const recentYears = ["2020", "2021", "2022", "2023"];
       const literacyMap: LiteracyData = {};
 
       for (const feature of data.features) {
-        const props = feature.properties;
-        const year = props.year;
-        const country = props.country;
-        const literacy = props.adult_literacy_rate;
+        const props = feature.properties as Record<string, unknown>;
+        const year = props.year as string;
+        const country = props.country as string;
+        const literacy = props.adult_literacy_rate as number | null;
 
         if (recentYears.includes(year) && literacy !== null) {
           if (!literacyMap[country] || year > literacyMap[country].year) {
             literacyMap[country] = {
               rate: literacy,
               year: year,
-              name: props.country_title_en || country,
+              name: (props.country_title_en as string) || country,
             };
           }
         }
@@ -230,11 +239,17 @@ export function useAdultLiteracyLayer({ visible }: UseAdultLiteracyLayerProps) {
       await loadLiteracyData();
 
       // Load world boundaries
-      const response = await fetch("/data/world.geojson");
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      const res = await fetchWithRetry(
+        "/data/world.geojson",
+        { method: "GET" },
+        3,
+        400,
+        20000
+      );
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
       }
-      const worldData = await response.json();
+      const worldData = (await res.json()) as unknown;
 
       // Create layer
       const source = new VectorSource();
@@ -247,12 +262,13 @@ export function useAdultLiteracyLayer({ visible }: UseAdultLiteracyLayerProps) {
 
       // Add features
       const format = new GeoJSON();
-      const features = format.readFeatures(worldData, {
+      const features = format.readFeatures(worldData as object, {
         dataProjection: "EPSG:4326",
         featureProjection: "EPSG:3857",
       });
 
       source.addFeatures(features);
+      console.info(`✅ Adult literacy world features: ${features.length}`);
       layerRef.current = layer;
 
       return layer;

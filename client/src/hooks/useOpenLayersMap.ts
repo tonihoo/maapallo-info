@@ -131,6 +131,9 @@ export function useOpenLayersMap({
     populationDensityLayerAddedRef,
     intactForestsLayer,
     intactForestsLayerAddedRef,
+    adultLiteracyVisible: layerVisibility.adultLiteracy,
+    populationDensityVisible: layerVisibility.populationDensity,
+    intactForestsVisible: layerVisibility.intactForests,
   });
 
   // Layer effects management

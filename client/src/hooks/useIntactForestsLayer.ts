@@ -5,6 +5,7 @@ import VectorSource from "ol/source/Vector";
 import Fill from "ol/style/Fill";
 import Stroke from "ol/style/Stroke";
 import Style from "ol/style/Style";
+import { fetchWithRetry } from "../utils/fetchWithRetry";
 
 interface UseIntactForestsLayerProps {
   visible: boolean;
@@ -37,10 +38,19 @@ export function useIntactForestsLayer({ visible }: UseIntactForestsLayerProps) {
       // Try backend API by resolving the actual layer name from list first
       let geoJsonData: unknown | null = null;
       try {
-        const listRes = await fetch("/api/v1/layers/list");
+        const listRes = await fetchWithRetry(
+          "/api/v1/layers/list",
+          { method: "GET" },
+          3,
+          400,
+          15000
+        );
         if (listRes.ok) {
           type LayerRow = { name: string; title?: string | null };
-          const list = (await listRes.json()) as { layers?: LayerRow[] };
+          const list = (await listRes.json()) as {
+            layers?: LayerRow[];
+            note?: string;
+          };
           const norm = (s: string) =>
             s.toLowerCase().replace(/[^a-z0-9]+/g, "_");
           const layers = Array.isArray(list.layers) ? list.layers : [];
@@ -56,12 +66,38 @@ export function useIntactForestsLayer({ visible }: UseIntactForestsLayerProps) {
                 t === "ifl"
               );
             }) || layers[0];
+          const shouldRetryDb = list.note === "db_unavailable";
           if (candidate && candidate.name) {
-            const apiRes = await fetch(
-              `/api/v1/layers/geojson/${encodeURIComponent(candidate.name)}`
-            );
-            if (apiRes.ok) {
-              geoJsonData = (await apiRes.json()) as unknown;
+            const fetchGeo = async () => {
+              const res = await fetchWithRetry(
+                `/api/v1/layers/geojson/${encodeURIComponent(candidate.name)}`,
+                { method: "GET" },
+                3,
+                400,
+                30000
+              );
+              if (res.ok) {
+                return (await res.json()) as unknown;
+              }
+              return null;
+            };
+            geoJsonData = await fetchGeo();
+            // If DB was unavailable or empty features returned, retry once
+            type FC = { type: string; features?: unknown[] };
+            const empty = (() => {
+              if (
+                geoJsonData &&
+                typeof geoJsonData === "object" &&
+                (geoJsonData as FC).features &&
+                Array.isArray((geoJsonData as FC).features)
+              ) {
+                return ((geoJsonData as FC).features as unknown[]).length === 0;
+              }
+              return false;
+            })();
+            if (shouldRetryDb || empty) {
+              await new Promise((r) => setTimeout(r, 1200));
+              geoJsonData = await fetchGeo();
             }
           }
         }
@@ -101,6 +137,7 @@ export function useIntactForestsLayer({ visible }: UseIntactForestsLayerProps) {
       );
 
       source.addFeatures(features);
+      console.info(`✅ IFL features loaded: ${features.length}`);
       layerRef.current = layer;
 
       return layer;
