@@ -81,12 +81,12 @@ jobs:
           echo "Running migrations via API endpoint..."
           # Wait for app to be available
           sleep 30
-          
+
           # Try to run migrations via API
           curl -X POST "https://${{ env.APP_NAME }}.azurewebsites.net/api/v1/admin/migrate" \
             -H "Content-Type: application/json" \
             -d '{"username": "${{ secrets.ADMIN_USERNAME }}", "password": "${{ secrets.ADMIN_PASSWORD }}"}' || echo "Migration endpoint call failed - app may not be ready yet"
-          
+
           echo "Restarting web app..."
           az webapp restart --name ${{ env.APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }}
           echo "✅ Web app restarted - using direct uvicorn startup"
