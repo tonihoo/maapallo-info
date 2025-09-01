@@ -24,6 +24,7 @@ import {
 } from "@mui/icons-material";
 import SiteInfo from "./SiteInfo";
 import { LoginDialog } from "../auth/LoginDialog";
+import { AdminImportDialog } from "../admin/AdminImportDialog";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { logout } from "../../store/slices/authSlice";
 
@@ -48,6 +49,7 @@ export function HeaderMenu({
   const [infoOpen, setInfoOpen] = useState(false);
   const [articlesOpen, setArticlesOpen] = useState(false);
   const [loginDialogOpen, setLoginDialogOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   const handleToggle = () => {
     setIsOpen(!isOpen);
@@ -170,6 +172,18 @@ export function HeaderMenu({
                 <ListItemText primary="Ylläpito" />
               </MenuItem>
             )}
+            {isAuthenticated && (
+              <MenuItem
+                onClick={() => {
+                  setImportDialogOpen(true);
+                  setIsOpen(false);
+                }}
+                sx={{ gap: 1 }}
+              >
+                <SettingsIcon sx={{ fontSize: "1.2rem" }} />
+                <ListItemText primary="Tuo GeoJSON (Admin)" />
+              </MenuItem>
+            )}
           </List>
         </Box>
       </Drawer>
@@ -183,6 +197,10 @@ export function HeaderMenu({
       <LoginDialog
         open={loginDialogOpen}
         onClose={() => setLoginDialogOpen(false)}
+      />
+      <AdminImportDialog
+        open={importDialogOpen}
+        onClose={() => setImportDialogOpen(false)}
       />
     </>
   );

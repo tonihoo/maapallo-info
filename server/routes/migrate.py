@@ -1,12 +1,10 @@
 """
 General migration system for Maapallo.info
-Handles database schema changes and data imports for any layer type
+Handles database schema changes. (Data imports are handled by the Admin API.)
 """
 
-import json
 import logging
-from pathlib import Path
-from typing import Dict, Optional
+from typing import Optional
 
 from database import get_db
 from fastapi import APIRouter, Depends, HTTPException
@@ -100,19 +98,6 @@ MIGRATIONS = {
         CREATE INDEX IF NOT EXISTS idx_pop_density_iso
         ON pop_density_by_country_2022_num ("ISO_A3");
         """,
-        "data_files": [
-            (
-                "/home/site/wwwroot/server/"
-                "pop_density_by_country_2022_num.geojson"
-            ),
-            "/home/site/wwwroot/pop_density_by_country_2022_num.geojson",
-            (
-                "/opt/python/current/app/server/"
-                "pop_density_by_country_2022_num.geojson"
-            ),
-            "/opt/python/current/app/pop_density_by_country_2022_num.geojson",
-            "/app/pop_density_data.geojson",
-        ],
     },
     # Future migrations can be added here
     "0005_add_climate_data": {
@@ -140,13 +125,12 @@ MIGRATIONS = {
 
 @router.get("/")
 async def list_migrations():
-    """List all available migrations"""
+    """List all available migrations (schema only)"""
     return {
         "migrations": [
             {
                 "id": migration_id,
                 "description": migration_data["description"],
-                "has_data_files": "data_files" in migration_data,
             }
             for migration_id, migration_data in MIGRATIONS.items()
         ]
@@ -188,58 +172,6 @@ async def run_migration(migration_id: str, db: AsyncSession = Depends(get_db)):
         await db.rollback()
         raise HTTPException(
             status_code=500, detail=f"Migration failed: {str(e)}"
-        )
-
-
-@router.post("/import-data/{migration_id}")
-async def import_migration_data(
-    migration_id: str, db: AsyncSession = Depends(get_db)
-):
-    """Import data for a specific migration"""
-    if migration_id not in MIGRATIONS:
-        raise HTTPException(
-            status_code=404, detail=f"Migration {migration_id} not found"
-        )
-
-    migration = MIGRATIONS[migration_id]
-
-    if "data_files" not in migration:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Migration {migration_id} has no data import capability",
-        )
-
-    # Find the data file
-    data_file = None
-    for file_path in migration["data_files"]:
-        if Path(file_path).exists():
-            data_file = Path(file_path)
-            break
-
-    if not data_file:
-        return {
-            "status": "error",
-            "message": "No data file found",
-            "searched_paths": migration["data_files"],
-        }
-
-    try:
-        # Load and import data based on migration type
-        if migration_id == "0004_add_population_density_2022":
-            result = await _import_population_density_data(data_file, db)
-        else:
-            # Add handlers for other migrations here
-            raise HTTPException(
-                status_code=501,
-                detail=f"Data import not implemented for {migration_id}",
-            )
-
-        return result
-
-    except Exception as e:
-        await db.rollback()
-        raise HTTPException(
-            status_code=500, detail=f"Data import failed: {str(e)}"
         )
 
 
@@ -295,103 +227,6 @@ async def migration_status(db: AsyncSession = Depends(get_db)):
             }
 
     return {"migration_status": status}
-
-
-async def _import_population_density_data(
-    data_file: Path, db: AsyncSession
-) -> Dict:
-    """Import population density data from GeoJSON"""
-    logger.info(f"Loading population density data from: {data_file}")
-
-    with open(data_file, "r", encoding="utf-8") as f:
-        geojson_data = json.load(f)
-
-    features = geojson_data.get("features", [])
-    if not features:
-        return {"status": "error", "message": "No features found in GeoJSON"}
-
-    # Clear existing data
-    await db.execute(text("DELETE FROM pop_density_by_country_2022_num"))
-
-    success_count = 0
-    error_count = 0
-
-    for feature in features:
-        try:
-            properties = feature.get("properties", {})
-            geometry = feature.get("geometry")
-
-            if not geometry:
-                error_count += 1
-                continue
-
-            name = properties.get("NAME")
-            iso_a3 = properties.get("ISO_A3")
-            pop_density = properties.get("pop_density_2022_num")
-
-            # Convert geometry to JSON string for PostGIS
-            geom_json = json.dumps(geometry)
-
-            query = text(
-                """
-                INSERT INTO pop_density_by_country_2022_num (
-                    "NAME", "ISO_A3", pop_density_2022_num, geom
-                ) VALUES (
-                    :name, :iso_a3, :pop_density,
-                    ST_GeomFromGeoJSON(:geom_json)
-                )
-            """
-            )
-
-            await db.execute(
-                query,
-                {
-                    "name": name,
-                    "iso_a3": iso_a3,
-                    "pop_density": pop_density,
-                    "geom_json": geom_json,
-                },
-            )
-
-            success_count += 1
-
-        except Exception as e:
-            error_count += 1
-            logger.error(f"Failed to import feature: {e}")
-
-    await db.commit()
-
-    # Get statistics
-    result = await db.execute(
-        text(
-            """
-        SELECT
-            COUNT(*) as total,
-            MIN(pop_density_2022_num) as min_density,
-            MAX(pop_density_2022_num) as max_density,
-            AVG(pop_density_2022_num) as avg_density
-        FROM pop_density_by_country_2022_num
-        WHERE pop_density_2022_num IS NOT NULL
-    """
-        )
-    )
-
-    row = result.fetchone()
-    stats = {
-        "total_countries": row[0] if row else 0,
-        "min_density": float(row[1]) if row and row[1] else None,
-        "max_density": float(row[2]) if row and row[2] else None,
-        "avg_density": float(row[3]) if row and row[3] else None,
-    }
-
-    return {
-        "status": "success",
-        "message": f"Imported {success_count} countries, {error_count} errors",
-        "success_count": success_count,
-        "error_count": error_count,
-        "statistics": stats,
-        "file_used": str(data_file),
-    }
 
 
 def _get_table_name_for_migration(migration_id: str) -> Optional[str]:

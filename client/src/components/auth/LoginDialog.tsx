@@ -9,7 +9,6 @@ import {
   Alert,
   Box,
   CircularProgress,
-  Typography,
 } from "@mui/material";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import { login, clearError } from "../../store/slices/authSlice";
@@ -62,9 +61,7 @@ export const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogTitle>
-        <Typography variant="h6">Admin Login</Typography>
-      </DialogTitle>
+      <DialogTitle>Admin Login</DialogTitle>
 
       <form onSubmit={handleSubmit}>
         <DialogContent>
