@@ -35,6 +35,9 @@ export function useIntactForestsLayer({ visible }: UseIntactForestsLayerProps) {
   // Create and load the layer
   const createLayer = useCallback(async () => {
     try {
+      // Initialize geoJsonData
+      let geoJsonData: unknown = null;
+      
       // TEMPORARY PERFORMANCE FIX: Skip database layer loading
       // This prevents the slow database query that's causing site performance issues
       // TODO: Optimize the database query and re-enable
