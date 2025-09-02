@@ -6,6 +6,7 @@ import Fill from "ol/style/Fill";
 import Stroke from "ol/style/Stroke";
 import Style from "ol/style/Style";
 import { FeatureLike } from "ol/Feature";
+import { useLayerCache } from "./map/useLayerCache";
 
 interface LiteracyData {
   [countryCode: string]: {
@@ -38,6 +39,7 @@ interface WDICollection {
 export function useAdultLiteracyLayer({ visible }: UseAdultLiteracyLayerProps) {
   const layerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const literacyDataRef = useRef<LiteracyData>({});
+  const { getCachedGeoJson } = useLayerCache();
 
   // Color scale for literacy rates (0-100%)
   const getColorForRate = useCallback((rate: number): string => {
@@ -128,12 +130,8 @@ export function useAdultLiteracyLayer({ visible }: UseAdultLiteracyLayerProps) {
       // Load literacy data first
       await loadLiteracyData();
 
-      // Load world boundaries
-      const response = await fetch("/data/world.geojson");
-      if (!response.ok) {
-        throw new Error("HTTP error! status: " + response.status);
-      }
-      const worldData = await response.json();
+      // Load world boundaries using cache
+      const worldData = await getCachedGeoJson("/data/world.geojson");
 
       // Create layer
       const source = new VectorSource();
@@ -160,7 +158,7 @@ export function useAdultLiteracyLayer({ visible }: UseAdultLiteracyLayerProps) {
       console.error("Failed to create adult literacy layer:", error);
       return null;
     }
-  }, [loadLiteracyData, styleFunction, visible]);
+  }, [loadLiteracyData, styleFunction, visible, getCachedGeoJson]);
 
   // Get layer instance
   const getLayer = useCallback(async () => {

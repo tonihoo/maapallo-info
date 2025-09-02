@@ -6,6 +6,7 @@ import Fill from "ol/style/Fill";
 import Stroke from "ol/style/Stroke";
 import Style from "ol/style/Style";
 import { FeatureLike } from "ol/Feature";
+import { useLayerCache } from "./map/useLayerCache";
 
 interface UsePopulationDensityLayerProps {
   visible: boolean;
@@ -25,6 +26,7 @@ export function usePopulationDensityLayer({
   visible,
 }: UsePopulationDensityLayerProps) {
   const layerRef = useRef<VectorLayer<VectorSource> | null>(null);
+  const { getCachedGeoJson } = useLayerCache();
 
   // Color scale for population density
   const getColorForDensity = useCallback((density: number): string => {
@@ -73,14 +75,10 @@ export function usePopulationDensityLayer({
   // Create and load the layer
   const createLayer = useCallback(async () => {
     try {
-      // Load population density GeoJSON (already contains geometry + data)
-      const response = await fetch(
+      // Load population density GeoJSON using cache
+      const geoJsonData = await getCachedGeoJson(
         "/data/pop_density_by_country_2022_num.geojson"
       );
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const geoJsonData = await response.json();
 
       // Create layer
       const source = new VectorSource();
@@ -107,7 +105,7 @@ export function usePopulationDensityLayer({
       console.error("❌ Failed to create population density layer:", error);
       return null;
     }
-  }, [styleFunction, visible]);
+  }, [styleFunction, visible, getCachedGeoJson]);
 
   // Get layer instance
   const getLayer = useCallback(async () => {

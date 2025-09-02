@@ -6,6 +6,7 @@ import Fill from "ol/style/Fill";
 import Stroke from "ol/style/Stroke";
 import Style from "ol/style/Style";
 // import { fetchWithRetry } from "../utils/fetchWithRetry"; // Temporarily disabled
+import { useLayerCache } from "./map/useLayerCache";
 
 interface UseIntactForestsLayerProps {
   visible: boolean;
@@ -13,6 +14,7 @@ interface UseIntactForestsLayerProps {
 
 export function useIntactForestsLayer({ visible }: UseIntactForestsLayerProps) {
   const layerRef = useRef<VectorLayer<VectorSource> | null>(null);
+  const { getCachedGeoJson } = useLayerCache();
 
   // Style function for the intact forests layer - green color scheme
   const styleFunction = useCallback(() => {
@@ -37,7 +39,7 @@ export function useIntactForestsLayer({ visible }: UseIntactForestsLayerProps) {
     try {
       // Initialize geoJsonData
       let geoJsonData: unknown = null;
-      
+
       // TEMPORARY PERFORMANCE FIX: Skip database layer loading
       // This prevents the slow database query that's causing site performance issues
       // TODO: Optimize the database query and re-enable
@@ -114,13 +116,10 @@ export function useIntactForestsLayer({ visible }: UseIntactForestsLayerProps) {
       // Fallback to static file if API not available or returned no data
       if (!geoJsonData) {
         try {
-          const response = await fetch(
+          geoJsonData = await getCachedGeoJson(
             "/data/intact-forest-landscapes-simplified-2020.geojson"
           );
-          if (response.ok) {
-            geoJsonData = await response.json();
-            console.info("✅ IFL: Using static file fallback");
-          }
+          console.info("✅ IFL: Using static file fallback");
         } catch (error) {
           console.warn("⚠️ IFL: Static file fallback failed:", error);
         }
@@ -164,7 +163,7 @@ export function useIntactForestsLayer({ visible }: UseIntactForestsLayerProps) {
       console.error("❌ Failed to create intact forests layer:", error);
       return null;
     }
-  }, [styleFunction, visible]);
+  }, [styleFunction, visible, getCachedGeoJson]);
 
   // Get layer instance
   const getLayer = useCallback(async () => {

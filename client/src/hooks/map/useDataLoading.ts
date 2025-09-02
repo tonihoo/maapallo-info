@@ -3,6 +3,7 @@ import { Map as OlMap } from "ol";
 import { GeoJSON } from "ol/format";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
+import { useLayerCache } from "./useLayerCache";
 
 interface AdultLiteracyLayer {
   getLayer: () => Promise<VectorLayer<VectorSource> | null>;
@@ -53,16 +54,39 @@ export function useDataLoading({
   populationDensityVisible,
   intactForestsVisible,
 }: UseDataLoadingProps) {
+  const { preloadGeoJson, getCachedGeoJson } = useLayerCache();
+
+  // Preload all geojson data in parallel when map is initialized
+  const preloadAllData = useCallback(async () => {
+    try {
+      console.log("🚀 Starting parallel preload of all geojson data...");
+      const startTime = Date.now();
+
+      // Preload all geojson files in parallel using array
+      await preloadGeoJson([
+        "/data/world.geojson",
+        "/data/ocean-currents.geojson",
+        "/data/pop_density_by_country_2022_num.geojson",
+        "/data/intact-forest-landscapes-simplified-2020.geojson"
+      ]);
+
+      const loadTime = Date.now() - startTime;
+      console.log(`✅ All geojson data preloaded in ${loadTime}ms`);
+    } catch (error) {
+      console.warn("⚠️ Error during parallel preload:", error);
+    }
+  }, [preloadGeoJson]);
+
+  // Start preloading immediately when map is ready
+  useEffect(() => {
+    if (olMap) {
+      preloadAllData();
+    }
+  }, [olMap, preloadAllData]);
   // Load world boundaries
   const loadWorldBoundaries = useCallback(async () => {
     try {
-      const { fetchJsonWithRetry } = await import("../../utils/fetchRetry");
-      const geojsonData = (await fetchJsonWithRetry(
-        "/data/world.geojson",
-        undefined,
-        2,
-        250
-      )) as object;
+      const geojsonData = await getCachedGeoJson("/data/world.geojson");
 
       if (worldBoundariesLayerRef.current) {
         const source = worldBoundariesLayerRef.current.getSource();
@@ -87,18 +111,12 @@ export function useDataLoading({
     } catch (error) {
       console.warn("❌ Failed to load world boundaries:", error);
     }
-  }, [worldBoundariesLayerRef]);
+  }, [worldBoundariesLayerRef, getCachedGeoJson]);
 
   // Load ocean currents
   const loadOceanCurrents = useCallback(async () => {
     try {
-      const { fetchJsonWithRetry } = await import("../../utils/fetchRetry");
-      const geojsonData = (await fetchJsonWithRetry(
-        "/data/ocean-currents.geojson",
-        undefined,
-        2,
-        250
-      )) as object;
+      const geojsonData = await getCachedGeoJson("/data/ocean-currents.geojson");
 
       if (oceanCurrentsLayerRef.current) {
         const source = oceanCurrentsLayerRef.current.getSource();
@@ -121,7 +139,7 @@ export function useDataLoading({
     } catch (error) {
       console.warn("❌ Failed to load ocean currents:", error);
     }
-  }, [oceanCurrentsLayerRef]);
+  }, [oceanCurrentsLayerRef, getCachedGeoJson]);
 
   // Load world boundaries when map is ready
   useEffect(() => {
