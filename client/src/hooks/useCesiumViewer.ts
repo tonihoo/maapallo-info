@@ -29,7 +29,7 @@ export function useCesiumViewer({
 
   const isPointOnVisibleHemisphere = useCallback(
     (longitude: number, latitude: number): boolean => {
-      if (!viewerRef.current) return true;
+      if (!viewerRef.current?.scene?.camera) return true;
 
       const camera = viewerRef.current.scene.camera;
       const cameraPosition = camera.positionWC;
@@ -164,12 +164,16 @@ export function useCesiumViewer({
   }, []);
 
   const setupCameraControls = useCallback((viewer: Cesium.Viewer) => {
+    if (!viewer?.scene?.camera) return;
+
     const controller = viewer.scene.screenSpaceCameraController;
     controller.minimumZoomDistance = LIMITS_AND_DURATIONS.zoom.min;
     controller.maximumZoomDistance = LIMITS_AND_DURATIONS.zoom.max;
     controller.enableCollisionDetection = false;
 
     viewer.scene.postRender.addEventListener(() => {
+      if (!viewer?.scene?.camera) return;
+
       const height = viewer.scene.camera.positionCartographic.height;
       if (
         height > LIMITS_AND_DURATIONS.zoom.max ||
@@ -319,17 +323,20 @@ export function useCesiumViewer({
         viewer.scene.globe.preloadSiblings = false;
 
         setupCameraControls(viewer);
-        await loadCountryBoundaries(viewer);
+        // Disabled country boundaries layer for performance
+        // await loadCountryBoundaries(viewer);
 
-        viewer.scene.camera.changed.addEventListener(() => {
-          if (cameraChangeTimeoutRef.current) {
-            clearTimeout(cameraChangeTimeoutRef.current);
-          }
-          cameraChangeTimeoutRef.current = setTimeout(
-            () => updateMarkerVisibility(featuresRef),
-            100
-          );
-        });
+        if (viewer?.scene?.camera) {
+          viewer.scene.camera.changed.addEventListener(() => {
+            if (cameraChangeTimeoutRef.current) {
+              clearTimeout(cameraChangeTimeoutRef.current);
+            }
+            cameraChangeTimeoutRef.current = setTimeout(
+              () => updateMarkerVisibility(featuresRef),
+              100
+            );
+          });
+        }
 
         viewerRef.current = viewer;
         setLoading(false);
