@@ -88,7 +88,7 @@ export function useFeatureManagement({
       let featuresLayerIndex = -1;
       for (let i = 0; i < layers.length; i++) {
         const layer = layers[i];
-        if (layer instanceof VectorLayer && layer.getZIndex() === 20) {
+        if (layer instanceof VectorLayer && layer.getZIndex() === 40) {
           featuresLayerIndex = i;
           break;
         }
@@ -167,7 +167,7 @@ export function useFeatureManagement({
     let featuresLayer = null;
     for (let i = 0; i < layers.length; i++) {
       const layer = layers[i];
-      if (layer instanceof VectorLayer && layer.getZIndex() === 20) {
+      if (layer instanceof VectorLayer && layer.getZIndex() === 40) {
         featuresLayer = layer;
         break;
       }

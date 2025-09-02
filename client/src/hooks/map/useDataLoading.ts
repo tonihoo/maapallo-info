@@ -158,7 +158,7 @@ export function useDataLoading({
           );
 
           if (!layerExists) {
-            // Insert at position 1 (after base map, before world boundaries)
+            // Insert at position 1 - Adult literacy base layer
             const layers = olMap.getLayers();
             layers.insertAt(1, layer);
             adultLiteracyLayerAddedRef.current = true;
@@ -183,7 +183,7 @@ export function useDataLoading({
         const layer = await adultLiteracyLayer.getLayer();
         if (layer) {
           const layers = olMap.getLayers();
-          layers.insertAt(2, layer);
+          layers.insertAt(1, layer); // Adult literacy base layer
           adultLiteracyLayerAddedRef.current = true;
           adultLiteracyLayer.setVisible(true);
         }
@@ -209,7 +209,7 @@ export function useDataLoading({
           );
 
           if (!layerExists) {
-            // Insert at position 2 (after base map and adult literacy, before world boundaries)
+            // Insert at position 2 - Population density above adult literacy
             const layers = olMap.getLayers();
             layers.insertAt(2, layer);
             populationDensityLayerAddedRef.current = true;
@@ -234,7 +234,7 @@ export function useDataLoading({
         const layer = await populationDensityLayer.getLayer();
         if (layer) {
           const layers = olMap.getLayers();
-          layers.insertAt(3, layer);
+          layers.insertAt(2, layer); // Population density above adult literacy
           populationDensityLayerAddedRef.current = true;
           populationDensityLayer.setVisible(true);
         }
@@ -260,7 +260,7 @@ export function useDataLoading({
           );
 
           if (!layerExists) {
-            // Insert at position 3 (after base map, adult literacy, and population density, before world boundaries)
+            // Insert at position 3 - Intact forests above population density
             const layers = olMap.getLayers();
             layers.insertAt(3, layer);
             intactForestsLayerAddedRef.current = true;
@@ -285,7 +285,7 @@ export function useDataLoading({
         const layer = await intactForestsLayer.getLayer();
         if (layer) {
           const layers = olMap.getLayers();
-          layers.insertAt(4, layer);
+          layers.insertAt(3, layer); // Intact forests above population density
           intactForestsLayerAddedRef.current = true;
           intactForestsLayer.setVisible(true);
         }

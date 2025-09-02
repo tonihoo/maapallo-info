@@ -141,7 +141,7 @@ export function useAdultLiteracyLayer({ visible }: UseAdultLiteracyLayerProps) {
         source: source,
         style: styleFunction,
         visible: visible,
-        zIndex: 1,
+        zIndex: 10, // Adult literacy - base data layer
       });
 
       // Add features
@@ -174,7 +174,12 @@ export function useAdultLiteracyLayer({ visible }: UseAdultLiteracyLayerProps) {
   const setVisible = useCallback((isVisible: boolean) => {
     if (layerRef.current) {
       layerRef.current.setVisible(isVisible);
+      // Force layer redraw and clear any cached tiles
       layerRef.current.changed();
+      const source = layerRef.current.getSource();
+      if (source) {
+        source.changed();
+      }
     }
   }, []);
 

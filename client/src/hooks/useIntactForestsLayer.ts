@@ -108,7 +108,9 @@ export function useIntactForestsLayer({ visible }: UseIntactForestsLayerProps) {
       // Fallback to static file if API not available or returned no data
       if (!geoJsonData) {
         try {
-          const response = await fetch("/data/intact-forest-landscapes-simplified-2020.geojson");
+          const response = await fetch(
+            "/data/intact-forest-landscapes-simplified-2020.geojson"
+          );
           if (response.ok) {
             geoJsonData = await response.json();
             console.info("✅ IFL: Using static file fallback");
@@ -124,7 +126,7 @@ export function useIntactForestsLayer({ visible }: UseIntactForestsLayerProps) {
         source: source,
         style: styleFunction,
         visible: visible,
-        zIndex: 2, // Above other layers but below world boundaries
+        zIndex: 30, // Intact forests - above population density
       });
 
       // Add features from the intact forests GeoJSON
@@ -170,8 +172,12 @@ export function useIntactForestsLayer({ visible }: UseIntactForestsLayerProps) {
   const setVisible = useCallback((isVisible: boolean) => {
     if (layerRef.current) {
       layerRef.current.setVisible(isVisible);
-      // Force redraw to ensure the change is rendered
+      // Force layer redraw and clear any cached tiles
       layerRef.current.changed();
+      const source = layerRef.current.getSource();
+      if (source) {
+        source.changed();
+      }
     }
   }, []);
 
@@ -179,8 +185,12 @@ export function useIntactForestsLayer({ visible }: UseIntactForestsLayerProps) {
   useEffect(() => {
     if (layerRef.current) {
       layerRef.current.setVisible(visible);
-      // Force redraw to ensure the change is rendered, especially in production
+      // Force layer redraw and clear any cached tiles
       layerRef.current.changed();
+      const source = layerRef.current.getSource();
+      if (source) {
+        source.changed();
+      }
     }
   }, [visible]);
 

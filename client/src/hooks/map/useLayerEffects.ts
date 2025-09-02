@@ -78,18 +78,28 @@ export function useLayerEffects({
   // Update adult literacy layer visibility when state changes
   useEffect(() => {
     adultLiteracyLayer.setVisible(layerVisibility.adultLiteracy);
-    // Force redraw for production environments
+    // Force redraw for production environments and clear layer cache
     if (adultLiteracyLayer.layerRef?.current) {
-      adultLiteracyLayer.layerRef.current.changed();
+      const layer = adultLiteracyLayer.layerRef.current;
+      layer.changed();
+      const source = layer.getSource();
+      if (source) {
+        source.changed();
+      }
     }
   }, [layerVisibility.adultLiteracy, adultLiteracyLayer]);
 
   // Update population density layer visibility when state changes
   useEffect(() => {
     populationDensityLayer.setVisible(layerVisibility.populationDensity);
-    // Force redraw for production environments
+    // Force redraw for production environments and clear layer cache
     if (populationDensityLayer.layerRef?.current) {
-      populationDensityLayer.layerRef.current.changed();
+      const layer = populationDensityLayer.layerRef.current;
+      layer.changed();
+      const source = layer.getSource();
+      if (source) {
+        source.changed();
+      }
     }
   }, [layerVisibility.populationDensity, populationDensityLayer]);
 

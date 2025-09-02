@@ -95,7 +95,7 @@ export function useOpenLayersMap({
       const layers = olMap.getLayers().getArray();
       for (let i = 0; i < layers.length; i++) {
         const layer = layers[i];
-        if (layer instanceof VectorLayer && layer.getZIndex() === 20) {
+        if (layer instanceof VectorLayer && layer.getZIndex() === 40) {
           layer.setStyle(styleFunction);
           break;
         }

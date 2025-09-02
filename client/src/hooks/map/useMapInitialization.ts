@@ -56,7 +56,7 @@ export function useMapInitialization({
           stroke: new Stroke({ color: "#ff9900", width: 2 }),
         }),
       }),
-      zIndex: 25, // Measurement layer always on top
+      zIndex: 50, // Measurement layer always on top
     });
 
     // Create world boundaries layer with country labels
@@ -100,7 +100,7 @@ export function useMapInitialization({
         });
       },
       visible: true,
-      zIndex: 10, // Ensure country borders and names appear above literacy layer
+      zIndex: 35, // Above all data layers but below article locators
     });
 
     // Store reference to world boundaries layer
@@ -166,7 +166,7 @@ export function useMapInitialization({
         });
       },
       visible: true, // Initially visible based on default layer visibility
-      zIndex: 12, // Above world boundaries but below article locators
+      zIndex: 32, // Above data layers but below world boundaries
     });
 
     // Store reference to ocean currents layer
@@ -188,7 +188,7 @@ export function useMapInitialization({
         new VectorLayer({
           source: new VectorSource(),
           style: styleFunction || new Style(), // Use provided style or default
-          zIndex: 20, // Features layer on top of article locators
+          zIndex: 40, // Article locators layer above all data layers
         }),
         measureLayer, // Add measurement layer on top
       ],

@@ -88,10 +88,10 @@ export function usePopulationDensityLayer({
         source: source,
         style: styleFunction,
         visible: visible,
-        zIndex: 1, // Above base map but below world boundaries
+        zIndex: 20, // Population density - above adult literacy
       });
 
-            // Add features from the population density GeoJSON
+      // Add features from the population density GeoJSON
       const format = new GeoJSON();
       const features = format.readFeatures(geoJsonData, {
         dataProjection: "EPSG:4326",
@@ -99,9 +99,7 @@ export function usePopulationDensityLayer({
       });
 
       source.addFeatures(features);
-      console.info(
-        `✅ Population density features loaded: ${features.length}`
-      );
+      console.info(`✅ Population density features loaded: ${features.length}`);
       layerRef.current = layer;
 
       return layer;
@@ -123,8 +121,12 @@ export function usePopulationDensityLayer({
   const setVisible = useCallback((isVisible: boolean) => {
     if (layerRef.current) {
       layerRef.current.setVisible(isVisible);
-      // Force redraw to ensure the change is rendered
+      // Force layer redraw and clear any cached tiles
       layerRef.current.changed();
+      const source = layerRef.current.getSource();
+      if (source) {
+        source.changed();
+      }
     }
   }, []);
 
@@ -132,8 +134,12 @@ export function usePopulationDensityLayer({
   useEffect(() => {
     if (layerRef.current) {
       layerRef.current.setVisible(visible);
-      // Force redraw to ensure the change is rendered, especially in production
+      // Force layer redraw and clear any cached tiles
       layerRef.current.changed();
+      const source = layerRef.current.getSource();
+      if (source) {
+        source.changed();
+      }
     }
   }, [visible]);
 
