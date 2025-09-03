@@ -79,7 +79,7 @@ export function usePopulationDensityLayer({
     if (isLoadingRef.current) {
       // Layer is already being created, wait for completion
       while (isLoadingRef.current) {
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise((resolve) => setTimeout(resolve, 50));
       }
       return layerRef.current;
     }
@@ -94,9 +94,10 @@ export function usePopulationDensityLayer({
       );
 
       // Create layer with initial visibility from current state or pending state
-      const initialVisibility = pendingVisibilityRef.current !== null 
-        ? pendingVisibilityRef.current 
-        : visible;
+      const initialVisibility =
+        pendingVisibilityRef.current !== null
+          ? pendingVisibilityRef.current
+          : visible;
 
       // Create layer
       const source = new VectorSource();
@@ -122,14 +123,17 @@ export function usePopulationDensityLayer({
       pendingVisibilityRef.current = null;
       isLoadingRef.current = false;
 
-      console.log("✅ Population density layer created with visibility:", initialVisibility);
+      console.log(
+        "✅ Population density layer created with visibility:",
+        initialVisibility
+      );
       return layer;
     } catch (error) {
       console.error("Failed to create population density layer:", error);
       isLoadingRef.current = false;
       return null;
     }
-  }, [styleFunction, visible, getCachedGeoJson]);  // Get layer instance
+  }, [styleFunction, visible, getCachedGeoJson]); // Get layer instance
   const getLayer = useCallback(async () => {
     if (!layerRef.current) {
       return await createLayer();
@@ -155,14 +159,11 @@ export function usePopulationDensityLayer({
       // Layer doesn't exist yet, store the desired visibility state
       pendingVisibilityRef.current = isVisible;
       console.log("📝 Population density layer visibility pending:", isVisible);
-      
-      // If layer is not currently loading and user wants it visible, trigger loading
-      if (isVisible && !isLoadingRef.current) {
-        console.log("🚀 Triggering population density layer creation due to visibility toggle");
-        createLayer();
-      }
+
+      // Don't trigger layer creation here - let useDataLoading handle it
+      // The layer will be created when needed and visibility will be applied then
     }
-  }, [createLayer]);
+  }, []);
 
   // Update visibility when the visible prop changes
   useEffect(() => {

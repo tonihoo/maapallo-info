@@ -196,36 +196,28 @@ export function useAdultLiteracyLayer({ visible }: UseAdultLiteracyLayerProps) {
   }, [createLayer]);
 
   // Update visibility
-  const setVisible = useCallback(
-    (isVisible: boolean) => {
-      if (layerRef.current) {
-        // Layer exists, apply visibility immediately
-        layerRef.current.setVisible(isVisible);
-        console.log("✅ Adult literacy layer visibility set to:", isVisible);
-        // Force layer redraw and clear any cached tiles
-        layerRef.current.changed();
-        const source = layerRef.current.getSource();
-        if (source) {
-          source.changed();
-        }
-        // Clear any pending state since we applied it
-        pendingVisibilityRef.current = null;
-      } else {
-        // Layer doesn't exist yet, store the desired visibility state
-        pendingVisibilityRef.current = isVisible;
-        console.log("📝 Adult literacy layer visibility pending:", isVisible);
-
-        // If layer is not currently loading and user wants it visible, trigger loading
-        if (isVisible && !isLoadingRef.current) {
-          console.log(
-            "🚀 Triggering adult literacy layer creation due to visibility toggle"
-          );
-          createLayer();
-        }
+  const setVisible = useCallback((isVisible: boolean) => {
+    if (layerRef.current) {
+      // Layer exists, apply visibility immediately
+      layerRef.current.setVisible(isVisible);
+      console.log("✅ Adult literacy layer visibility set to:", isVisible);
+      // Force layer redraw and clear any cached tiles
+      layerRef.current.changed();
+      const source = layerRef.current.getSource();
+      if (source) {
+        source.changed();
       }
-    },
-    [createLayer]
-  );
+      // Clear any pending state since we applied it
+      pendingVisibilityRef.current = null;
+    } else {
+      // Layer doesn't exist yet, store the desired visibility state
+      pendingVisibilityRef.current = isVisible;
+      console.log("📝 Adult literacy layer visibility pending:", isVisible);
+
+      // Don't trigger layer creation here - let useDataLoading handle it
+      // The layer will be created when needed and visibility will be applied then
+    }
+  }, []);
 
   // Get legend data
   const getLegendData = useCallback(() => {

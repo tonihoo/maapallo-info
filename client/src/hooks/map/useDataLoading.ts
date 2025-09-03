@@ -67,7 +67,7 @@ export function useDataLoading({
         "/data/world.geojson",
         "/data/ocean-currents.geojson",
         "/data/pop_density_by_country_2022_num.geojson",
-        "/data/intact-forest-landscapes-simplified-2020.geojson"
+        "/data/intact-forest-landscapes-simplified-2020.geojson",
       ]);
 
       const loadTime = Date.now() - startTime;
@@ -116,7 +116,9 @@ export function useDataLoading({
   // Load ocean currents
   const loadOceanCurrents = useCallback(async () => {
     try {
-      const geojsonData = await getCachedGeoJson("/data/ocean-currents.geojson");
+      const geojsonData = await getCachedGeoJson(
+        "/data/ocean-currents.geojson"
+      );
 
       if (oceanCurrentsLayerRef.current) {
         const source = oceanCurrentsLayerRef.current.getSource();
@@ -200,9 +202,19 @@ export function useDataLoading({
       ) {
         const layer = await adultLiteracyLayer.getLayer();
         if (layer) {
-          const layers = olMap.getLayers();
-          layers.insertAt(1, layer); // Adult literacy base layer
-          adultLiteracyLayerAddedRef.current = true;
+          // Check if layer is already in the map to prevent duplicates
+          const existingLayers = olMap.getLayers().getArray();
+          const layerExists = existingLayers.some(
+            (existingLayer) => existingLayer === layer
+          );
+
+          if (!layerExists) {
+            const layers = olMap.getLayers();
+            layers.insertAt(1, layer); // Adult literacy base layer
+            adultLiteracyLayerAddedRef.current = true;
+          }
+
+          // Always ensure visibility is correct
           adultLiteracyLayer.setVisible(true);
         }
       }
@@ -251,9 +263,19 @@ export function useDataLoading({
       ) {
         const layer = await populationDensityLayer.getLayer();
         if (layer) {
-          const layers = olMap.getLayers();
-          layers.insertAt(2, layer); // Population density above adult literacy
-          populationDensityLayerAddedRef.current = true;
+          // Check if layer is already in the map to prevent duplicates
+          const existingLayers = olMap.getLayers().getArray();
+          const layerExists = existingLayers.some(
+            (existingLayer) => existingLayer === layer
+          );
+
+          if (!layerExists) {
+            const layers = olMap.getLayers();
+            layers.insertAt(2, layer); // Population density above adult literacy
+            populationDensityLayerAddedRef.current = true;
+          }
+
+          // Always ensure visibility is correct
           populationDensityLayer.setVisible(true);
         }
       }
@@ -302,9 +324,19 @@ export function useDataLoading({
       ) {
         const layer = await intactForestsLayer.getLayer();
         if (layer) {
-          const layers = olMap.getLayers();
-          layers.insertAt(3, layer); // Intact forests above population density
-          intactForestsLayerAddedRef.current = true;
+          // Check if layer is already in the map to prevent duplicates
+          const existingLayers = olMap.getLayers().getArray();
+          const layerExists = existingLayers.some(
+            (existingLayer) => existingLayer === layer
+          );
+
+          if (!layerExists) {
+            const layers = olMap.getLayers();
+            layers.insertAt(3, layer); // Intact forests above population density
+            intactForestsLayerAddedRef.current = true;
+          }
+
+          // Always ensure visibility is correct
           intactForestsLayer.setVisible(true);
         }
       }

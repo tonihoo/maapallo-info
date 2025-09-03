@@ -41,7 +41,7 @@ export function useIntactForestsLayer({ visible }: UseIntactForestsLayerProps) {
     if (isLoadingRef.current) {
       // Layer is already being created, wait for completion
       while (isLoadingRef.current) {
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise((resolve) => setTimeout(resolve, 50));
       }
       return layerRef.current;
     }
@@ -139,9 +139,10 @@ export function useIntactForestsLayer({ visible }: UseIntactForestsLayerProps) {
       }
 
       // Create layer with initial visibility from current state or pending state
-      const initialVisibility = pendingVisibilityRef.current !== null 
-        ? pendingVisibilityRef.current 
-        : visible;
+      const initialVisibility =
+        pendingVisibilityRef.current !== null
+          ? pendingVisibilityRef.current
+          : visible;
 
       // Create layer
       const source = new VectorSource();
@@ -174,14 +175,17 @@ export function useIntactForestsLayer({ visible }: UseIntactForestsLayerProps) {
 
       source.addFeatures(features);
       console.info(`✅ IFL features loaded: ${features.length}`);
-      
+
       // Clear pending visibility state since layer is now created
       pendingVisibilityRef.current = null;
       isLoadingRef.current = false;
-      
+
       layerRef.current = layer;
 
-      console.log("✅ Intact forests layer created with visibility:", layer.getVisible());
+      console.log(
+        "✅ Intact forests layer created with visibility:",
+        layer.getVisible()
+      );
       return layer;
     } catch (error) {
       console.error("❌ Failed to create intact forests layer:", error);
@@ -216,14 +220,11 @@ export function useIntactForestsLayer({ visible }: UseIntactForestsLayerProps) {
       // Layer doesn't exist yet, store the desired visibility state
       pendingVisibilityRef.current = isVisible;
       console.log("📝 Intact forests layer visibility pending:", isVisible);
-      
-      // If layer is not currently loading and user wants it visible, trigger loading
-      if (isVisible && !isLoadingRef.current) {
-        console.log("🚀 Triggering intact forests layer creation due to visibility toggle");
-        createLayer();
-      }
+
+      // Don't trigger layer creation here - let useDataLoading handle it
+      // The layer will be created when needed and visibility will be applied then
     }
-  }, [createLayer]);
+  }, []);
 
   // Update visibility when the visible prop changes
   useEffect(() => {
