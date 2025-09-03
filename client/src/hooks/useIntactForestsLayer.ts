@@ -15,6 +15,8 @@ interface UseIntactForestsLayerProps {
 export function useIntactForestsLayer({ visible }: UseIntactForestsLayerProps) {
   const layerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const { getCachedGeoJson } = useLayerCache();
+  const pendingVisibilityRef = useRef<boolean | null>(null);
+  const isLoadingRef = useRef<boolean>(false);
 
   // Style function for the intact forests layer - green color scheme
   const styleFunction = useCallback(() => {
@@ -36,7 +38,18 @@ export function useIntactForestsLayer({ visible }: UseIntactForestsLayerProps) {
 
   // Create and load the layer
   const createLayer = useCallback(async () => {
+    if (isLoadingRef.current) {
+      // Layer is already being created, wait for completion
+      while (isLoadingRef.current) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      return layerRef.current;
+    }
+
     try {
+      isLoadingRef.current = true;
+      console.log("🔄 Creating intact forests layer...");
+
       // Initialize geoJsonData
       let geoJsonData: unknown = null;
 
@@ -125,12 +138,17 @@ export function useIntactForestsLayer({ visible }: UseIntactForestsLayerProps) {
         }
       }
 
+      // Create layer with initial visibility from current state or pending state
+      const initialVisibility = pendingVisibilityRef.current !== null 
+        ? pendingVisibilityRef.current 
+        : visible;
+
       // Create layer
       const source = new VectorSource();
       const layer = new VectorLayer({
         source: source,
         style: styleFunction,
-        visible: visible,
+        visible: initialVisibility,
         zIndex: 30, // Intact forests - above population density
       });
 
@@ -156,11 +174,18 @@ export function useIntactForestsLayer({ visible }: UseIntactForestsLayerProps) {
 
       source.addFeatures(features);
       console.info(`✅ IFL features loaded: ${features.length}`);
+      
+      // Clear pending visibility state since layer is now created
+      pendingVisibilityRef.current = null;
+      isLoadingRef.current = false;
+      
       layerRef.current = layer;
 
+      console.log("✅ Intact forests layer created with visibility:", layer.getVisible());
       return layer;
     } catch (error) {
       console.error("❌ Failed to create intact forests layer:", error);
+      isLoadingRef.current = false;
       return null;
     }
   }, [styleFunction, visible, getCachedGeoJson]);
@@ -176,15 +201,29 @@ export function useIntactForestsLayer({ visible }: UseIntactForestsLayerProps) {
   // Update visibility
   const setVisible = useCallback((isVisible: boolean) => {
     if (layerRef.current) {
+      // Layer exists, apply visibility immediately
       layerRef.current.setVisible(isVisible);
+      console.log("✅ Intact forests layer visibility set to:", isVisible);
       // Force layer redraw and clear any cached tiles
       layerRef.current.changed();
       const source = layerRef.current.getSource();
       if (source) {
         source.changed();
       }
+      // Clear any pending state since we applied it
+      pendingVisibilityRef.current = null;
+    } else {
+      // Layer doesn't exist yet, store the desired visibility state
+      pendingVisibilityRef.current = isVisible;
+      console.log("📝 Intact forests layer visibility pending:", isVisible);
+      
+      // If layer is not currently loading and user wants it visible, trigger loading
+      if (isVisible && !isLoadingRef.current) {
+        console.log("🚀 Triggering intact forests layer creation due to visibility toggle");
+        createLayer();
+      }
     }
-  }, []);
+  }, [createLayer]);
 
   // Update visibility when the visible prop changes
   useEffect(() => {

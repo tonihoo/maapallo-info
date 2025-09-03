@@ -40,6 +40,8 @@ export function useAdultLiteracyLayer({ visible }: UseAdultLiteracyLayerProps) {
   const layerRef = useRef<VectorLayer<VectorSource> | null>(null);
   const literacyDataRef = useRef<LiteracyData>({});
   const { getCachedGeoJson } = useLayerCache();
+  const pendingVisibilityRef = useRef<boolean | null>(null);
+  const isLoadingRef = useRef<boolean>(false);
 
   // Color scale for literacy rates (0-100%)
   const getColorForRate = useCallback((rate: number): string => {
@@ -126,19 +128,35 @@ export function useAdultLiteracyLayer({ visible }: UseAdultLiteracyLayerProps) {
 
   // Create and load the layer
   const createLayer = useCallback(async () => {
+    if (isLoadingRef.current) {
+      // Layer is already being created, wait for completion
+      while (isLoadingRef.current) {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+      return layerRef.current;
+    }
+
     try {
+      isLoadingRef.current = true;
+      console.log("🔄 Creating adult literacy layer...");
+
       // Load literacy data first
       await loadLiteracyData();
 
       // Load world boundaries using cache
       const worldData = await getCachedGeoJson("/data/world.geojson");
 
-      // Create layer
+      // Create layer with initial visibility from current state or pending state
+      const initialVisibility =
+        pendingVisibilityRef.current !== null
+          ? pendingVisibilityRef.current
+          : visible;
+
       const source = new VectorSource();
       const layer = new VectorLayer({
         source: source,
         style: styleFunction,
-        visible: visible,
+        visible: initialVisibility,
         zIndex: 10, // Adult literacy - base data layer
       });
 
@@ -153,9 +171,18 @@ export function useAdultLiteracyLayer({ visible }: UseAdultLiteracyLayerProps) {
       console.info("Adult literacy world features: " + features.length);
       layerRef.current = layer;
 
+      // Clear pending visibility state since layer is now created
+      pendingVisibilityRef.current = null;
+      isLoadingRef.current = false;
+
+      console.log(
+        "✅ Adult literacy layer created with visibility:",
+        initialVisibility
+      );
       return layer;
     } catch (error) {
       console.error("Failed to create adult literacy layer:", error);
+      isLoadingRef.current = false;
       return null;
     }
   }, [loadLiteracyData, styleFunction, visible, getCachedGeoJson]);
@@ -169,17 +196,36 @@ export function useAdultLiteracyLayer({ visible }: UseAdultLiteracyLayerProps) {
   }, [createLayer]);
 
   // Update visibility
-  const setVisible = useCallback((isVisible: boolean) => {
-    if (layerRef.current) {
-      layerRef.current.setVisible(isVisible);
-      // Force layer redraw and clear any cached tiles
-      layerRef.current.changed();
-      const source = layerRef.current.getSource();
-      if (source) {
-        source.changed();
+  const setVisible = useCallback(
+    (isVisible: boolean) => {
+      if (layerRef.current) {
+        // Layer exists, apply visibility immediately
+        layerRef.current.setVisible(isVisible);
+        console.log("✅ Adult literacy layer visibility set to:", isVisible);
+        // Force layer redraw and clear any cached tiles
+        layerRef.current.changed();
+        const source = layerRef.current.getSource();
+        if (source) {
+          source.changed();
+        }
+        // Clear any pending state since we applied it
+        pendingVisibilityRef.current = null;
+      } else {
+        // Layer doesn't exist yet, store the desired visibility state
+        pendingVisibilityRef.current = isVisible;
+        console.log("📝 Adult literacy layer visibility pending:", isVisible);
+
+        // If layer is not currently loading and user wants it visible, trigger loading
+        if (isVisible && !isLoadingRef.current) {
+          console.log(
+            "🚀 Triggering adult literacy layer creation due to visibility toggle"
+          );
+          createLayer();
+        }
       }
-    }
-  }, []);
+    },
+    [createLayer]
+  );
 
   // Get legend data
   const getLegendData = useCallback(() => {
