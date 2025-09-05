@@ -2,7 +2,54 @@ services:
   client:
     build:
       context: .
-      dockerfile: client/Dockerfile.dev
+      dockerfile  geoserver:
+    build:
+      context: ./geoserver
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:8081:8080"
+    environment:
+      - GEOSERVER_ADMIN_USER=admin
+      - GEOSERVER_ADMIN_PASSWORD=geoserver
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=db_dev
+      - POSTGRES_USER=db_dev_user
+      - POSTGRES_PASS=DevPassword
+      - GEOSERVER_CSRF_DISABLED=true
+      - JAVA_OPTS=-Xms512m -Xmx1024m -XX:+UseParallelGC -DGEOSERVER_CSRF_DISABLED=true
+    volumes:
+      - geoserver-data:/opt/geoserver/data_dir
+      - ./client/public/data:/opt/geoserver/data_dir/data/source:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: curl --fail http://localhost:8080/geoserver/web/ || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    restart: unless-stopped
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin-data:/var/lib/pgladmin
+    depends_on:
+      - db
+    restart: unless-stopped
+
+
+volumes:
+  db-volume:
+  geoserver-data:
+  pgladmin-data:e.dev
     volumes:
       - ./client:/app/client:delegated
       - /app/client/node_modules
@@ -17,7 +64,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-
   server:
     build:
       context: ./server
@@ -47,41 +93,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-
-  geoserver:
-    build:
-      context: ./geoserver
-      dockerfile: Dockerfile
-    ports:
-      - "127.0.0.1:8081:8080"
-    environment:
-      - GEOSERVER_ADMIN_USER=admin
-      - GEOSERVER_ADMIN_PASSWORD=geoserver
-      - POSTGRES_HOST=db
-      - POSTGRES_PORT=5432
-      - POSTGRES_DB=db_dev
-      - POSTGRES_USER=db_dev_user
-      - POSTGRES_PASS=DevPassword
-      - GEOSERVER_CSRF_DISABLED=true
-      # Enable CORS for frontend integration
-      - GEOSERVER_CORS_ENABLED=true
-      - GEOSERVER_CORS_ALLOWED_ORIGINS=http://localhost:8080
-    volumes:
-      - geoserver-data:/opt/geoserver/data_dir
-      # Mount upload directory for easy file imports
-      - ./geoserver/uploads:/opt/geoserver/uploads
-      - ./client/public/data:/opt/geoserver/source_data:ro
-    depends_on:
-      db:
-        condition: service_healthy
-    healthcheck:
-      test: curl --fail http://localhost:8080/geoserver/web/ || exit 1
-      interval: 30s
-      timeout: 10s
-      retries: 10
-      start_period: 60s
-    restart: unless-stopped
-
   db:
     image: postgis/postgis:13-3.3-alpine
     restart: always
@@ -98,7 +109,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
-
   pgadmin:
     image: dpage/pgadmin4:latest
     environment:
@@ -108,12 +118,12 @@ services:
     ports:
       - "5050:80"
     volumes:
-      - pgadmin-data:/var/lib/pgadmin
+      - pgadmin-data:/var/lib/pgladmin
     depends_on:
       - db
     restart: unless-stopped
 
+
 volumes:
   db-volume:
   pgadmin-data:
-  geoserver-data:
