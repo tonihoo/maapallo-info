@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Box,
   Paper,
@@ -7,11 +7,13 @@ import {
   Tooltip,
   useMediaQuery,
   useTheme,
+  Button,
 } from "@mui/material";
 import { Map } from "./components/2d/Map";
 import { FeatureInfo } from "./components/common/FeatureInfo";
 import { AppHeader } from "./components/common/AppHeader";
 import { CookieConsent } from "./components/common/CookieConsent";
+import GeoServerTest from "./components/GeoServerTest";
 import { useAppDispatch, useAppSelector } from "./store/hooks";
 import {
   setSelectedFeatureId,
@@ -36,6 +38,7 @@ import { analytics } from "./utils/analytics";
 export function App() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const [showGeoServerTest, setShowGeoServerTest] = useState(false);
 
   // Redux state
   const dispatch = useAppDispatch();
@@ -174,33 +177,88 @@ export function App() {
         </Typography>
         {!isMobile && <Box sx={{ width: "40px" }} />}
       </Box>
-
-      <Tooltip title={is3DMode ? "2D kartta" : "3D maapallo"}>
-        <IconButton
-          onClick={toggleMapModeHandler}
-          size="small"
-          sx={{
-            position: "absolute",
-            top: isMobile ? "2px" : "70px",
-            right: isMobile ? "20px" : "10px",
-            zIndex: 1001,
-            backgroundColor: "rgba(255, 255, 255, 0.9)",
-            color: is3DMode ? "#ffb34c" : "#4caf50",
-            fontSize: isMobile ? "18px" : "24px",
-            fontWeight: "bold",
-            width: isMobile ? "38px" : "64px",
-            height: isMobile ? "38px" : "64px",
-            "&:hover": {
-              backgroundColor: "rgba(255, 255, 255, 1)",
-              color: is3DMode ? "#e89d2b" : "#388e3c",
-            },
-            boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-          }}
-        >
-          {is3DMode ? "2D" : "3D"}
-        </IconButton>
+      {/* 3D/2D Toggle Button */}
+      <Tooltip
+        title={
+          is3DMode
+            ? "Vaihda 2D-karttanäkymään"
+            : cesiumPreloaded
+              ? "Vaihda 3D-karttanäkymään"
+              : "3D-kartta latautuu..."
+        }
+      >
+        <span>
+          <IconButton
+            onClick={toggleMapModeHandler}
+            disabled={!cesiumPreloaded}
+            size="small"
+            sx={{
+              position: "absolute",
+              top: isMobile ? "2px" : "70px",
+              right: isMobile ? "20px" : "10px",
+              zIndex: 1001,
+              backgroundColor: "rgba(255, 255, 255, 0.9)",
+              color: is3DMode ? "#ffb34c" : "#4caf50",
+              fontSize: isMobile ? "18px" : "24px",
+              fontWeight: "bold",
+              width: isMobile ? "38px" : "64px",
+              height: isMobile ? "38px" : "64px",
+              "&:hover": {
+                backgroundColor: "rgba(255, 255, 255, 1)",
+                color: is3DMode ? "#e89d2b" : "#388e3c",
+              },
+              boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+            }}
+          >
+            {is3DMode ? "2D" : "3D"}
+          </IconButton>
+        </span>
       </Tooltip>
-
+      {/* GeoServer Test Button */}
+      <Button
+        onClick={() => setShowGeoServerTest(!showGeoServerTest)}
+        variant="contained"
+        size="small"
+        sx={{
+          position: "absolute",
+          top: isMobile ? "50px" : "140px",
+          right: isMobile ? "20px" : "10px",
+          zIndex: 1001,
+          backgroundColor: "rgba(255, 193, 7, 0.9)",
+          color: "#000",
+          fontSize: "12px",
+          "&:hover": {
+            backgroundColor: "rgba(255, 193, 7, 1)",
+          },
+        }}
+      >
+        GeoServer Test
+      </Button>
+      {/* Debug Import Test Button */}
+      <Button
+        onClick={async () => {
+          const { testGeoServerImport } = await import(
+            "./debug/testGeoServerImport"
+          );
+          testGeoServerImport();
+        }}
+        variant="contained"
+        size="small"
+        sx={{
+          position: "absolute",
+          top: isMobile ? "50px" : "175px",
+          right: isMobile ? "20px" : "10px",
+          zIndex: 1001,
+          backgroundColor: "rgba(255, 87, 34, 0.9)",
+          color: "#fff",
+          fontSize: "12px",
+          "&:hover": {
+            backgroundColor: "rgba(255, 87, 34, 1)",
+          },
+        }}
+      >
+        Debug Import
+      </Button>{" "}
       <Box sx={{ position: "relative", height: "100vh", overflow: "hidden" }}>
         <Box
           sx={{
@@ -264,8 +322,25 @@ export function App() {
             />
           </Paper>
         )}
-      </Box>
 
+        {/* GeoServer Test Panel */}
+        {showGeoServerTest && (
+          <Paper
+            elevation={8}
+            sx={{
+              position: "absolute",
+              top: isMobile ? 100 : 200,
+              left: isMobile ? 16 : 100,
+              right: isMobile ? 16 : 100,
+              maxHeight: isMobile ? "70vh" : "60vh",
+              overflow: "auto",
+              ...panelStyle,
+            }}
+          >
+            <GeoServerTest />
+          </Paper>
+        )}
+      </Box>
       <Box sx={footerStyle}>
         <Typography variant="caption">
           <a
@@ -278,7 +353,6 @@ export function App() {
           </a>
         </Typography>
       </Box>
-
       <CookieConsent />
     </>
   );
