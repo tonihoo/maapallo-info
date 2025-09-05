@@ -1,53 +1,65 @@
 {
-  "type": "FeatureCollection",
-  "features": [
-    {
-      "type": "Feature",
-      "properties": {
-        "name": "Helsinki",
-        "population": 658864,
-        "country": "Finland"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [24.9384, 60.1699]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "name": "Tampere",
-        "population": 238245,
-        "country": "Finland"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [23.7610, 61.4980]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "name": "Turku",
-        "population": 195301,
-        "country": "Finland"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [22.2666, 60.4518]
-      }
-    },
-    {
-      "type": "Feature",
-      "properties": {
-        "name": "Oulu",
-        "population": 208939,
-        "country": "Finland"
-      },
-      "geometry": {
-        "type": "Point",
-        "coordinates": [25.4681, 65.0121]
-      }
-    }
-  ]
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "properties": {
+                "name": "Helsinki",
+                "population": 658864,
+                "country": "Finland"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    24.9384,
+                    60.1699
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "name": "Tampere",
+                "population": 238245,
+                "country": "Finland"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    23.7610,
+                    61.4980
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "name": "Turku",
+                "population": 195301,
+                "country": "Finland"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    22.2666,
+                    60.4518
+                ]
+            }
+        },
+        {
+            "type": "Feature",
+            "properties": {
+                "name": "Oulu",
+                "population": 208939,
+                "country": "Finland"
+            },
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    25.4681,
+                    65.0121
+                ]
+            }
+        }
+    ]
 }
