@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 import {
   Box,
   Paper,
@@ -7,13 +7,11 @@ import {
   Tooltip,
   useMediaQuery,
   useTheme,
-  Button,
 } from "@mui/material";
 import { Map } from "./components/2d/Map";
 import { FeatureInfo } from "./components/common/FeatureInfo";
 import { AppHeader } from "./components/common/AppHeader";
 import { CookieConsent } from "./components/common/CookieConsent";
-import GeoServerTest from "./components/GeoServerTest";
 import { useAppDispatch, useAppSelector } from "./store/hooks";
 import {
   setSelectedFeatureId,
@@ -38,7 +36,6 @@ import { analytics } from "./utils/analytics";
 export function App() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-  const [showGeoServerTest, setShowGeoServerTest] = useState(false);
 
   // Redux state
   const dispatch = useAppDispatch();
@@ -214,51 +211,6 @@ export function App() {
           </IconButton>
         </span>
       </Tooltip>
-      {/* GeoServer Test Button */}
-      <Button
-        onClick={() => setShowGeoServerTest(!showGeoServerTest)}
-        variant="contained"
-        size="small"
-        sx={{
-          position: "absolute",
-          top: isMobile ? "50px" : "140px",
-          right: isMobile ? "20px" : "10px",
-          zIndex: 1001,
-          backgroundColor: "rgba(255, 193, 7, 0.9)",
-          color: "#000",
-          fontSize: "12px",
-          "&:hover": {
-            backgroundColor: "rgba(255, 193, 7, 1)",
-          },
-        }}
-      >
-        GeoServer Test
-      </Button>
-      {/* Debug Import Test Button */}
-      <Button
-        onClick={async () => {
-          const { testGeoServerImport } = await import(
-            "./debug/testGeoServerImport"
-          );
-          testGeoServerImport();
-        }}
-        variant="contained"
-        size="small"
-        sx={{
-          position: "absolute",
-          top: isMobile ? "50px" : "175px",
-          right: isMobile ? "20px" : "10px",
-          zIndex: 1001,
-          backgroundColor: "rgba(255, 87, 34, 0.9)",
-          color: "#fff",
-          fontSize: "12px",
-          "&:hover": {
-            backgroundColor: "rgba(255, 87, 34, 1)",
-          },
-        }}
-      >
-        Debug Import
-      </Button>{" "}
       <Box sx={{ position: "relative", height: "100vh", overflow: "hidden" }}>
         <Box
           sx={{
@@ -320,24 +272,6 @@ export function App() {
               featureId={selectedFeatureId}
               onClose={handleFeatureInfoClose}
             />
-          </Paper>
-        )}
-
-        {/* GeoServer Test Panel */}
-        {showGeoServerTest && (
-          <Paper
-            elevation={8}
-            sx={{
-              position: "absolute",
-              top: isMobile ? 100 : 200,
-              left: isMobile ? 16 : 100,
-              right: isMobile ? 16 : 100,
-              maxHeight: isMobile ? "70vh" : "60vh",
-              overflow: "auto",
-              ...panelStyle,
-            }}
-          >
-            <GeoServerTest />
           </Paper>
         )}
       </Box>
