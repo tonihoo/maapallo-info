@@ -7,16 +7,16 @@ Maapallo.info is a map based portal of global geospatial data related to human d
 The application consists of four components:
 
 - **Server**: FastAPI/Python backend (port 3003)
-- **Client**: React/TypeScript frontend (port 8080)
+- **Client**: React/TypeScript/OpenLayers frontend (port 8080)
 - **Database**: PostgreSQL + PostGIS database (port 5432)
 - **PgAdmin**: Database administration interface (port 5050)
+
+**Geoserver** will be added to the tech stack soon, see 'geoserver' branch.
 
 ### Geospatial layers
 
 - Layers are served dynamically from PostGIS through the backend API.
-- Many layers still load from static GeoJSON files under `client/public/data`.
-- API-backed layers do not have automatic static fallbacks. To add a new API-backed layer, import it via the admin API and it will appear through the API.
-- To-Do: We’re migrating layers progressively from static files to PostGIS-backed endpoints.
+- To add a new API-backed layer, import it via the admin API and it will appear through the API.
 
 ## Security & Environment Variables
 
