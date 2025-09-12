@@ -11,6 +11,8 @@ The application consists of four components:
 - **Database**: PostgreSQL + PostGIS database (port 5432)
 - **PgAdmin**: Database administration interface (port 5050)
 
+**Geoserver** will be added to the tech stack soon, see 'geoserver' branch.
+
 ### Geospatial layers
 
 - Layers are served dynamically from PostGIS through the backend API.
