@@ -7,7 +7,7 @@ Maapallo.info is a map based portal of global geospatial data related to human d
 The application consists of four components:
 
 - **Server**: FastAPI/Python backend (port 3003)
-- **Client**: React/TypeScript frontend (port 8080)
+- **Client**: React/TypeScript/OpenLayers frontend (port 8080)
 - **Database**: PostgreSQL + PostGIS database (port 5432)
 - **PgAdmin**: Database administration interface (port 5050)
 
