@@ -174,33 +174,43 @@ export function App() {
         </Typography>
         {!isMobile && <Box sx={{ width: "40px" }} />}
       </Box>
-
-      <Tooltip title={is3DMode ? "2D kartta" : "3D maapallo"}>
-        <IconButton
-          onClick={toggleMapModeHandler}
-          size="small"
-          sx={{
-            position: "absolute",
-            top: isMobile ? "2px" : "70px",
-            right: isMobile ? "20px" : "10px",
-            zIndex: 1001,
-            backgroundColor: "rgba(255, 255, 255, 0.9)",
-            color: is3DMode ? "#ffb34c" : "#4caf50",
-            fontSize: isMobile ? "18px" : "24px",
-            fontWeight: "bold",
-            width: isMobile ? "38px" : "64px",
-            height: isMobile ? "38px" : "64px",
-            "&:hover": {
-              backgroundColor: "rgba(255, 255, 255, 1)",
-              color: is3DMode ? "#e89d2b" : "#388e3c",
-            },
-            boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-          }}
-        >
-          {is3DMode ? "2D" : "3D"}
-        </IconButton>
+      {/* 3D/2D Toggle Button */}
+      <Tooltip
+        title={
+          is3DMode
+            ? "Vaihda 2D-karttanäkymään"
+            : cesiumPreloaded
+              ? "Vaihda 3D-karttanäkymään"
+              : "3D-kartta latautuu..."
+        }
+      >
+        <span>
+          <IconButton
+            onClick={toggleMapModeHandler}
+            disabled={!cesiumPreloaded}
+            size="small"
+            sx={{
+              position: "absolute",
+              top: isMobile ? "2px" : "70px",
+              right: isMobile ? "20px" : "10px",
+              zIndex: 1001,
+              backgroundColor: "rgba(255, 255, 255, 0.9)",
+              color: is3DMode ? "#ffb34c" : "#4caf50",
+              fontSize: isMobile ? "18px" : "24px",
+              fontWeight: "bold",
+              width: isMobile ? "38px" : "64px",
+              height: isMobile ? "38px" : "64px",
+              "&:hover": {
+                backgroundColor: "rgba(255, 255, 255, 1)",
+                color: is3DMode ? "#e89d2b" : "#388e3c",
+              },
+              boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+            }}
+          >
+            {is3DMode ? "2D" : "3D"}
+          </IconButton>
+        </span>
       </Tooltip>
-
       <Box sx={{ position: "relative", height: "100vh", overflow: "hidden" }}>
         <Box
           sx={{
@@ -265,7 +275,6 @@ export function App() {
           </Paper>
         )}
       </Box>
-
       <Box sx={footerStyle}>
         <Typography variant="caption">
           <a
@@ -278,7 +287,6 @@ export function App() {
           </a>
         </Typography>
       </Box>
-
       <CookieConsent />
     </>
   );

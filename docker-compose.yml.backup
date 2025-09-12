@@ -1,0 +1,129 @@
+services:
+  client:
+    build:
+      context: .
+      dockerfile  geoserver:
+    build:
+      context: ./geoserver
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:8081:8080"
+    environment:
+      - GEOSERVER_ADMIN_USER=admin
+      - GEOSERVER_ADMIN_PASSWORD=geoserver
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=db_dev
+      - POSTGRES_USER=db_dev_user
+      - POSTGRES_PASS=DevPassword
+      - GEOSERVER_CSRF_DISABLED=true
+      - JAVA_OPTS=-Xms512m -Xmx1024m -XX:+UseParallelGC -DGEOSERVER_CSRF_DISABLED=true
+    volumes:
+      - geoserver-data:/opt/geoserver/data_dir
+      - ./client/public/data:/opt/geoserver/data_dir/data/source:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: curl --fail http://localhost:8080/geoserver/web/ || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    restart: unless-stopped
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin-data:/var/lib/pgladmin
+    depends_on:
+      - db
+    restart: unless-stopped
+
+
+volumes:
+  db-volume:
+  geoserver-data:
+  pgladmin-data:e.dev
+    volumes:
+      - ./client:/app/client:delegated
+      - /app/client/node_modules
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      - CESIUM_ION_TOKEN=${CESIUM_ION_TOKEN}
+    env_file:
+      - .env
+    healthcheck:
+      test: curl --fail http://localhost:8080 || exit 1
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    volumes:
+      - ./server:/app:delegated
+      - ./client:/app/client:delegated  # Mount client directory for data access
+    ports:
+      - "127.0.0.1:3003:3003"
+    environment:
+      - ENVIRONMENT=development
+      - PG_HOST=db
+      - PG_PORT=5432
+      - PG_USER=db_dev_user
+      - PG_PASSWORD=DevPassword
+      - PG_DB=db_dev
+      - SERVER_PORT=3003
+      # Authentication (optional for development)
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-changeme}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: curl --fail http://localhost:3003/api/v1/health || exit 1
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  db:
+    image: postgis/postgis:13-3.3-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: db_dev_user
+      POSTGRES_PASSWORD: DevPassword
+      POSTGRES_DB: db_dev
+    volumes:
+      - db-volume:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: psql -U db_dev_user -d db_dev -c "SELECT 1"
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin-data:/var/lib/pgladmin
+    depends_on:
+      - db
+    restart: unless-stopped
+
+
+volumes:
+  db-volume:
+  pgadmin-data:
