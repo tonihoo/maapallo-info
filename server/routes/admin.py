@@ -14,8 +14,10 @@ import json
 import logging
 import os
 import shutil
-import subprocess
 import tempfile
+import subprocess
+import requests
+import base64
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -38,6 +40,174 @@ from sqlalchemy.ext.asyncio import AsyncSession
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
 
 logger = logging.getLogger(__name__)
+
+# GeoServer configuration
+GEOSERVER_URL = "http://geoserver:8080/geoserver"
+GEOSERVER_USER = "admin"
+GEOSERVER_PASSWORD = "geoserver"
+WORKSPACE_NAME = "maapallo"
+
+
+def get_geoserver_auth():
+    """Get basic auth headers for GeoServer REST API."""
+    credentials = f"{GEOSERVER_USER}:{GEOSERVER_PASSWORD}"
+    encoded_credentials = base64.b64encode(credentials.encode()).decode()
+    return {"Authorization": f"Basic {encoded_credentials}"}
+
+
+async def ensure_workspace_exists():
+    """Ensure the workspace exists in GeoServer."""
+    headers = get_geoserver_auth()
+    headers["Content-Type"] = "application/json"
+    
+    # Check if workspace exists
+    response = requests.get(
+        f"{GEOSERVER_URL}/rest/workspaces/{WORKSPACE_NAME}",
+        headers=headers,
+        timeout=30
+    )
+    
+    if response.status_code == 404:
+        # Create workspace
+        workspace_data = {
+            "workspace": {
+                "name": WORKSPACE_NAME
+            }
+        }
+        response = requests.post(
+            f"{GEOSERVER_URL}/rest/workspaces",
+            headers=headers,
+            json=workspace_data,
+            timeout=30
+        )
+        if response.status_code not in [200, 201]:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to create workspace: {response.text}"
+            )
+        logger.info("Created workspace: %s", WORKSPACE_NAME)
+    
+    return True
+
+
+async def ensure_datastore_exists():
+    """Ensure the PostGIS datastore exists in GeoServer."""
+    headers = get_geoserver_auth()
+    headers["Content-Type"] = "application/json"
+    
+    datastore_name = "postgis"
+    
+    # Check if datastore exists
+    datastore_url = (
+        f"{GEOSERVER_URL}/rest/workspaces/{WORKSPACE_NAME}/"
+        f"datastores/{datastore_name}"
+    )
+    response = requests.get(datastore_url, headers=headers, timeout=30)
+    
+    if response.status_code == 404:
+        # Create PostGIS datastore
+        datastore_data = {
+            "dataStore": {
+                "name": datastore_name,
+                "connectionParameters": {
+                    "host": os.getenv("PG_HOST", "db"),
+                    "port": int(os.getenv("PG_PORT", "5432")),
+                    "database": os.getenv("PG_DB", "db_dev"),
+                    "user": os.getenv("PG_USER", "db_dev_user"),
+                    "passwd": os.getenv("PG_PASSWORD", "DevPassword"),
+                    "dbtype": "postgis"
+                }
+            }
+        }
+        response = requests.post(
+            f"{GEOSERVER_URL}/rest/workspaces/{WORKSPACE_NAME}/datastores",
+            headers=headers,
+            json=datastore_data,
+            timeout=30
+        )
+        if response.status_code not in [200, 201]:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to create datastore: {response.text}"
+            )
+        logger.info("Created PostGIS datastore: %s", datastore_name)
+    
+    return datastore_name
+
+
+async def import_geojson_to_postgis(file_path: Path, table_name: str):
+    """Import GeoJSON to PostGIS using ogr2ogr."""
+    
+    # Database connection string
+    db_connection = (
+        f"PG:host={os.getenv('PG_HOST', 'db')} "
+        f"port={os.getenv('PG_PORT', '5432')} "
+        f"dbname={os.getenv('PG_DB', 'db_dev')} "
+        f"user={os.getenv('PG_USER', 'db_dev_user')} "
+        f"password={os.getenv('PG_PASSWORD', 'DevPassword')}"
+    )
+    
+    # Use ogr2ogr to import the GeoJSON
+    result = subprocess.run([
+        "ogr2ogr",
+        "-f", "PostgreSQL",
+        db_connection,
+        str(file_path),
+        "-nln", table_name,
+        "-overwrite",
+        "-lco", "GEOMETRY_NAME=geom",
+        "-lco", "FID=id"
+    ], capture_output=True, text=True, timeout=300)
+    
+    if result.returncode != 0:
+        logger.error("ogr2ogr failed: %s", result.stderr)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Data import failed: {result.stderr}"
+        )
+    
+    logger.info(
+        "Successfully imported %s to PostGIS table %s", file_path, table_name
+    )
+    return True
+
+
+async def create_geoserver_layer(table_name: str, datastore_name: str):
+    """Create a layer in GeoServer from PostGIS table."""
+    headers = get_geoserver_auth()
+    headers["Content-Type"] = "application/json"
+    
+    # Create featuretype (layer)
+    featuretype_data = {
+        "featureType": {
+            "name": table_name,
+            "nativeName": table_name,
+            "title": table_name.replace("_", " ").title(),
+            "srs": "EPSG:4326",
+            "enabled": True
+        }
+    }
+    
+    featuretype_url = (
+        f"{GEOSERVER_URL}/rest/workspaces/{WORKSPACE_NAME}/"
+        f"datastores/{datastore_name}/featuretypes"
+    )
+    response = requests.post(
+        featuretype_url,
+        headers=headers,
+        json=featuretype_data,
+        timeout=30
+    )
+    
+    if response.status_code not in [200, 201]:
+        logger.error("Failed to create layer: %s", response.text)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create layer: {response.text}"
+        )
+    
+    logger.info("Created GeoServer layer: %s", table_name)
+    return True
 
 
 async def _ensure_tables(db: AsyncSession) -> None:
@@ -555,7 +725,7 @@ async def geoserver_upload(
             )
 
         # Create uploads directory if it doesn't exist
-        uploads_dir = Path("/opt/geoserver/uploads")
+        uploads_dir = Path("/app/uploads")
         uploads_dir.mkdir(parents=True, exist_ok=True)
 
         # Use original filename or create one based on layer name
@@ -590,51 +760,58 @@ async def geoserver_import(
     request: dict,
     current_user=Depends(require_auth),
 ):
-    """Trigger GeoServer import script for uploaded file."""
+    """Import uploaded file to GeoServer using REST API."""
     try:
         file_name = request.get("fileName")
+        layer_name = request.get("layerName")
+        
         if not file_name:
             raise HTTPException(status_code=400, detail="fileName is required")
-
-        # Execute the GeoServer import script
-        result = subprocess.run(
-            [
-                "docker-compose",
-                "exec",
-                "-T",
-                "geoserver",
-                "/usr/local/bin/import-data.sh",
-            ],
-            cwd="/Users/toni/git/maapallo-info",  # Adjust path as needed
-            capture_output=True,
-            text=True,
-            timeout=300,  # 5 minute timeout
-        )
-
-        if result.returncode != 0:
-            logger.error("GeoServer import script failed: %s", result.stderr)
+        if not layer_name:
             raise HTTPException(
-                status_code=500,
-                detail=f"Import script failed: {result.stderr}",
+                status_code=400, detail="layerName is required"
             )
 
+        # Validate file exists
+        file_path = Path("/app/uploads") / file_name
+        if not file_path.exists():
+            raise HTTPException(
+                status_code=404,
+                detail=f"File {file_name} not found"
+            )
+
+        # Ensure GeoServer workspace and datastore exist
+        await ensure_workspace_exists()
+        datastore_name = await ensure_datastore_exists()
+
+        # Import to PostGIS
+        table_name = layer_name.lower().replace("-", "_")
+        await import_geojson_to_postgis(file_path, table_name)
+
+        # Create GeoServer layer
+        await create_geoserver_layer(table_name, datastore_name)
+
         logger.info(
-            "GeoServer import script completed successfully for %s", file_name
+            "Successfully imported %s as layer %s", file_name, layer_name
         )
 
         return {
-            "message": "Import script executed successfully",
+            "message": "Layer imported successfully",
             "fileName": file_name,
-            "output": result.stdout,
+            "layerName": layer_name,
+            "tableName": table_name,
+            "workspace": WORKSPACE_NAME,
+            "geoserverUrl": (
+                f"{GEOSERVER_URL}/rest/layers/{WORKSPACE_NAME}:{table_name}"
+            )
         }
 
-    except subprocess.TimeoutExpired:
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except Exception as e:
+        logger.error("GeoServer import failed: %s", str(e))
         raise HTTPException(
             status_code=500,
-            detail="Import script timeout - operation took longer than 5 minutes",
-        )
-    except Exception as e:
-        logger.error("GeoServer import trigger failed: %s", str(e))
-        raise HTTPException(
-            status_code=500, detail=f"Import trigger failed: {str(e)}"
+            detail=f"Import failed: {str(e)}"
         )

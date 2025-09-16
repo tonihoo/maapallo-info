@@ -25,6 +25,7 @@ services:
     volumes:
       - ./server:/app:delegated
       - ./client:/app/client:delegated  # Mount client directory for data access
+      - ./geoserver/uploads:/app/uploads  # Shared uploads directory with GeoServer
     ports:
       - "127.0.0.1:3003:3003"
     environment:

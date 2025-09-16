@@ -82,10 +82,11 @@ export class GeoServerAdminService {
   }
 
   /**
-   * Trigger GeoServer import script for uploaded file
+   * Trigger GeoServer import for uploaded file
    */
   static async triggerImport(
-    fileName: string
+    fileName: string,
+    layerName: string
   ): Promise<{ success: boolean; message: string }> {
     try {
       const response = await fetch("/api/v1/admin/geoserver-import", {
@@ -94,25 +95,25 @@ export class GeoServerAdminService {
           "Content-Type": "application/json",
           ...getAuthHeader(),
         },
-        body: JSON.stringify({ fileName }),
+        body: JSON.stringify({ fileName, layerName }),
       });
 
       if (!response.ok) {
         const error = await response.text();
-        throw new Error(`Import trigger failed: ${error}`);
+        throw new Error(`Import failed: ${error}`);
       }
 
       const result = await response.json();
       return {
         success: true,
-        message: result.message || "Import started successfully",
+        message: result.message || "Import completed successfully",
       };
     } catch (error) {
-      console.error("GeoServer import trigger error:", error);
+      console.error("GeoServer import error:", error);
       return {
         success: false,
         message:
-          error instanceof Error ? error.message : "Import trigger failed",
+          error instanceof Error ? error.message : "Import failed",
       };
     }
   }
@@ -276,7 +277,7 @@ export class GeoServerAdminService {
         message: "Starting import process...",
       });
 
-      const importResult = await this.triggerImport(file.name);
+      const importResult = await this.triggerImport(file.name, layerName);
       if (!importResult.success) {
         return {
           status: "failed",
@@ -284,10 +285,18 @@ export class GeoServerAdminService {
         };
       }
 
-      // Step 3: Poll for completion
-      onProgress?.({ status: "processing", message: "Processing import..." });
+      // Step 3: Import completed immediately with REST API
+      onProgress?.({ 
+        status: "completed", 
+        message: "Import completed successfully",
+        layerName: layerName
+      });
 
-      return await this.pollImportStatus(layerName, onProgress);
+      return {
+        status: "completed",
+        message: "Layer imported successfully",
+        layerName: layerName,
+      };
     } catch (error) {
       console.error("Complete import workflow error:", error);
       return {

@@ -166,7 +166,7 @@ export const AdminImportDialog: React.FC<Props> = ({ open, onClose }) => {
 
           {file && (
             <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-              Selected: {file.name}
+              Valittu: {file.name}
             </Typography>
           )}
 

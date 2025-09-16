@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
     postgresql-client \
     gcc \
     curl \
+    gdal-bin \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better caching
