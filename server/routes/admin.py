@@ -10,18 +10,18 @@ This router ensures tables exist at runtime to be resilient in dev:
   geo_layers, geo_features, import_jobs
 """
 
+import base64
 import json
 import logging
 import os
 import shutil
-import tempfile
 import subprocess
-import requests
-import base64
+import tempfile
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+import requests
 from auth import require_auth
 from database import async_session_maker, get_db
 from fastapi import (
@@ -59,34 +59,30 @@ async def ensure_workspace_exists():
     """Ensure the workspace exists in GeoServer."""
     headers = get_geoserver_auth()
     headers["Content-Type"] = "application/json"
-    
+
     # Check if workspace exists
     response = requests.get(
         f"{GEOSERVER_URL}/rest/workspaces/{WORKSPACE_NAME}",
         headers=headers,
-        timeout=30
+        timeout=30,
     )
-    
+
     if response.status_code == 404:
         # Create workspace
-        workspace_data = {
-            "workspace": {
-                "name": WORKSPACE_NAME
-            }
-        }
+        workspace_data = {"workspace": {"name": WORKSPACE_NAME}}
         response = requests.post(
             f"{GEOSERVER_URL}/rest/workspaces",
             headers=headers,
             json=workspace_data,
-            timeout=30
+            timeout=30,
         )
         if response.status_code not in [200, 201]:
             raise HTTPException(
                 status_code=500,
-                detail=f"Failed to create workspace: {response.text}"
+                detail=f"Failed to create workspace: {response.text}",
             )
         logger.info("Created workspace: %s", WORKSPACE_NAME)
-    
+
     return True
 
 
@@ -94,16 +90,16 @@ async def ensure_datastore_exists():
     """Ensure the PostGIS datastore exists in GeoServer."""
     headers = get_geoserver_auth()
     headers["Content-Type"] = "application/json"
-    
+
     datastore_name = "postgis"
-    
+
     # Check if datastore exists
     datastore_url = (
         f"{GEOSERVER_URL}/rest/workspaces/{WORKSPACE_NAME}/"
         f"datastores/{datastore_name}"
     )
     response = requests.get(datastore_url, headers=headers, timeout=30)
-    
+
     if response.status_code == 404:
         # Create PostGIS datastore
         datastore_data = {
@@ -115,29 +111,29 @@ async def ensure_datastore_exists():
                     "database": os.getenv("PG_DB", "db_dev"),
                     "user": os.getenv("PG_USER", "db_dev_user"),
                     "passwd": os.getenv("PG_PASSWORD", "DevPassword"),
-                    "dbtype": "postgis"
-                }
+                    "dbtype": "postgis",
+                },
             }
         }
         response = requests.post(
             f"{GEOSERVER_URL}/rest/workspaces/{WORKSPACE_NAME}/datastores",
             headers=headers,
             json=datastore_data,
-            timeout=30
+            timeout=30,
         )
         if response.status_code not in [200, 201]:
             raise HTTPException(
                 status_code=500,
-                detail=f"Failed to create datastore: {response.text}"
+                detail=f"Failed to create datastore: {response.text}",
             )
         logger.info("Created PostGIS datastore: %s", datastore_name)
-    
+
     return datastore_name
 
 
 async def import_geojson_to_postgis(file_path: Path, table_name: str):
     """Import GeoJSON to PostGIS using ogr2ogr."""
-    
+
     # Database connection string
     db_connection = (
         f"PG:host={os.getenv('PG_HOST', 'db')} "
@@ -146,26 +142,34 @@ async def import_geojson_to_postgis(file_path: Path, table_name: str):
         f"user={os.getenv('PG_USER', 'db_dev_user')} "
         f"password={os.getenv('PG_PASSWORD', 'DevPassword')}"
     )
-    
+
     # Use ogr2ogr to import the GeoJSON
-    result = subprocess.run([
-        "ogr2ogr",
-        "-f", "PostgreSQL",
-        db_connection,
-        str(file_path),
-        "-nln", table_name,
-        "-overwrite",
-        "-lco", "GEOMETRY_NAME=geom",
-        "-lco", "FID=id"
-    ], capture_output=True, text=True, timeout=300)
-    
+    result = subprocess.run(
+        [
+            "ogr2ogr",
+            "-f",
+            "PostgreSQL",
+            db_connection,
+            str(file_path),
+            "-nln",
+            table_name,
+            "-overwrite",
+            "-lco",
+            "GEOMETRY_NAME=geom",
+            "-lco",
+            "FID=id",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=300,
+    )
+
     if result.returncode != 0:
         logger.error("ogr2ogr failed: %s", result.stderr)
         raise HTTPException(
-            status_code=500,
-            detail=f"Data import failed: {result.stderr}"
+            status_code=500, detail=f"Data import failed: {result.stderr}"
         )
-    
+
     logger.info(
         "Successfully imported %s to PostGIS table %s", file_path, table_name
     )
@@ -176,7 +180,7 @@ async def create_geoserver_layer(table_name: str, datastore_name: str):
     """Create a layer in GeoServer from PostGIS table."""
     headers = get_geoserver_auth()
     headers["Content-Type"] = "application/json"
-    
+
     # Create featuretype (layer)
     featuretype_data = {
         "featureType": {
@@ -184,28 +188,24 @@ async def create_geoserver_layer(table_name: str, datastore_name: str):
             "nativeName": table_name,
             "title": table_name.replace("_", " ").title(),
             "srs": "EPSG:4326",
-            "enabled": True
+            "enabled": True,
         }
     }
-    
+
     featuretype_url = (
         f"{GEOSERVER_URL}/rest/workspaces/{WORKSPACE_NAME}/"
         f"datastores/{datastore_name}/featuretypes"
     )
     response = requests.post(
-        featuretype_url,
-        headers=headers,
-        json=featuretype_data,
-        timeout=30
+        featuretype_url, headers=headers, json=featuretype_data, timeout=30
     )
-    
+
     if response.status_code not in [200, 201]:
         logger.error("Failed to create layer: %s", response.text)
         raise HTTPException(
-            status_code=500,
-            detail=f"Failed to create layer: {response.text}"
+            status_code=500, detail=f"Failed to create layer: {response.text}"
         )
-    
+
     logger.info("Created GeoServer layer: %s", table_name)
     return True
 
@@ -764,7 +764,7 @@ async def geoserver_import(
     try:
         file_name = request.get("fileName")
         layer_name = request.get("layerName")
-        
+
         if not file_name:
             raise HTTPException(status_code=400, detail="fileName is required")
         if not layer_name:
@@ -776,8 +776,7 @@ async def geoserver_import(
         file_path = Path("/app/uploads") / file_name
         if not file_path.exists():
             raise HTTPException(
-                status_code=404,
-                detail=f"File {file_name} not found"
+                status_code=404, detail=f"File {file_name} not found"
             )
 
         # Ensure GeoServer workspace and datastore exist
@@ -803,7 +802,7 @@ async def geoserver_import(
             "workspace": WORKSPACE_NAME,
             "geoserverUrl": (
                 f"{GEOSERVER_URL}/rest/layers/{WORKSPACE_NAME}:{table_name}"
-            )
+            ),
         }
 
     except HTTPException:
@@ -811,7 +810,4 @@ async def geoserver_import(
         raise
     except Exception as e:
         logger.error("GeoServer import failed: %s", str(e))
-        raise HTTPException(
-            status_code=500,
-            detail=f"Import failed: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Import failed: {str(e)}")

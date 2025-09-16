@@ -112,8 +112,7 @@ export class GeoServerAdminService {
       console.error("GeoServer import error:", error);
       return {
         success: false,
-        message:
-          error instanceof Error ? error.message : "Import failed",
+        message: error instanceof Error ? error.message : "Import failed",
       };
     }
   }
@@ -286,10 +285,10 @@ export class GeoServerAdminService {
       }
 
       // Step 3: Import completed immediately with REST API
-      onProgress?.({ 
-        status: "completed", 
+      onProgress?.({
+        status: "completed",
         message: "Import completed successfully",
-        layerName: layerName
+        layerName: layerName,
       });
 
       return {
