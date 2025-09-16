@@ -20,7 +20,7 @@ export const adminService = {
       body: form,
     });
     if (!res.ok) {
-      let msg = "Upload failed";
+      let msg = "Lataus epäonnistui"; // "Upload failed"
       try {
         const err = await res.json();
         msg = err.detail || msg;

@@ -10,8 +10,12 @@ import {
   LinearProgress,
   Box,
   Typography,
+  Chip,
 } from "@mui/material";
-import { adminService } from "../../services/adminService";
+import {
+  GeoServerAdminService,
+  GeoServerImportStatus,
+} from "../../services/geoServerAdminService";
 
 interface Props {
   open: boolean;
@@ -21,25 +25,10 @@ interface Props {
 export const AdminImportDialog: React.FC<Props> = ({ open, onClose }) => {
   const [file, setFile] = useState<File | null>(null);
   const [layerName, setLayerName] = useState("");
-  const [srid, setSrid] = useState(4326);
   const [error, setError] = useState<string | null>(null);
-  type JobStatus = {
-    job_id: string;
-    layer_name: string;
-    srid: number;
-    status: "queued" | "running" | "completed" | "failed";
-    total?: number;
-    processed?: number;
-    errors?: number;
-    error?: string;
-  } | null;
-  const [result, setResult] = useState<JobStatus>(null);
+  const [result, setResult] = useState<GeoServerImportStatus | null>(null);
   const [loading, setLoading] = useState(false);
-  const [progress, setProgress] = useState<{
-    processed: number;
-    total: number;
-    status: string;
-  } | null>(null);
+  const [progress, setProgress] = useState<GeoServerImportStatus | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] || null;
@@ -50,36 +39,54 @@ export const AdminImportDialog: React.FC<Props> = ({ open, onClose }) => {
     setError(null);
     setResult(null);
     setProgress(null);
+
     if (!file || !layerName) {
-      setError("Valitse .geojson ja anna kerroksen nimi");
+      setError("Valitse .geojson tiedosto ja anna kerroksen nimi");
       return;
     }
+
+    // Validate layer name
+    if (!/^[a-zA-Z0-9_-]+$/.test(layerName)) {
+      setError(
+        "Kerroksen nimi saa sisältää vain kirjaimia, numeroita, viivoja ja alaviivoja"
+      );
+      return;
+    }
+
     setLoading(true);
+
     try {
-      const res = await adminService.uploadGeoJSON(file, layerName, srid);
-      const newJobId = res.job_id as string;
-      // Start polling
-      let isDone = false;
-      while (!isDone) {
-        const status = await adminService.getImportStatus(newJobId);
-        setProgress({
-          processed: status.processed ?? 0,
-          total: status.total ?? 0,
-          status: status.status,
-        });
-        if (status.status === "completed") {
-          setResult(status);
-          isDone = true;
-        } else if (status.status === "failed") {
-          setError(status.error || "Tuonti epäonnistui");
-          isDone = true;
-        } else {
-          // wait before next poll
-          await new Promise((r) => setTimeout(r, 1500));
+      // Use GeoServer import workflow
+      const finalResult = await GeoServerAdminService.importFile(
+        file,
+        layerName,
+        (status: GeoServerImportStatus) => {
+          setProgress(status);
         }
+      );
+
+      setResult(finalResult);
+
+      if (finalResult.status === "completed") {
+        setProgress({
+          status: "completed",
+          message: `✅ Tuonti valmis! ${finalResult.featuresCount} kohdetta tuotu onnistuneesti.`,
+          layerName: finalResult.layerName,
+          featuresCount: finalResult.featuresCount,
+        });
+      } else if (finalResult.status === "failed") {
+        setError(
+          finalResult.error || "Tuonti epäonnistui tuntemattomasta syystä"
+        );
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Lataus epäonnistui");
+      const errorMessage =
+        e instanceof Error ? e.message : "Tuonti epäonnistui";
+      setError(errorMessage);
+      setProgress({
+        status: "failed",
+        error: errorMessage,
+      });
     } finally {
       setLoading(false);
     }
@@ -88,7 +95,6 @@ export const AdminImportDialog: React.FC<Props> = ({ open, onClose }) => {
   const handleClose = () => {
     setFile(null);
     setLayerName("");
-    setSrid(4326);
     setError(null);
     setResult(null);
     setProgress(null);
@@ -135,19 +141,71 @@ export const AdminImportDialog: React.FC<Props> = ({ open, onClose }) => {
           </Typography>
 
           <TextField
-            label="Kerroksen nimi"
+            label="Karttakerroksen nimi"
             value={layerName}
             onChange={(e) => setLayerName(e.target.value)}
-            helperText="pienet kirjaimet, numerot ja alaviivat"
+            fullWidth
+            margin="normal"
+            required
           />
 
-          <TextField
-            type="number"
-            label="SRID"
-            value={srid}
-            onChange={(e) => setSrid(parseInt(e.target.value || "4326", 10))}
-            helperText="Oletus 4326 (WGS84)"
-          />
+          <Button
+            variant="contained"
+            component="label"
+            fullWidth
+            sx={{ my: 2 }}
+          >
+            Valitse GeoJSON-tiedosto
+            <input
+              type="file"
+              hidden
+              accept=".geojson,.json"
+              onChange={handleFileChange}
+            />
+          </Button>
+
+          {file && (
+            <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+              Selected: {file.name}
+            </Typography>
+          )}
+
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+
+          {result && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              Karttakerros "{result.layerName}" tuotu onnistuneesti!
+            </Alert>
+          )}
+
+          {progress && (
+            <Box sx={{ mb: 2 }}>
+              <Alert severity="info" sx={{ mb: 1 }}>
+                {progress.stage}
+              </Alert>
+              <LinearProgress
+                variant="determinate"
+                value={progress.progress}
+                sx={{ mb: 1 }}
+              />
+              <Typography variant="body2" color="textSecondary">
+                {progress.message}
+              </Typography>
+            </Box>
+          )}
+
+          <Button
+            variant="contained"
+            onClick={handleUpload}
+            disabled={!file || !layerName || progress !== null}
+            fullWidth
+          >
+            {progress ? "Tuodaan..." : "Vie tiedosto GeoServerille"}
+          </Button>
         </Box>
       </DialogContent>
       <DialogActions>

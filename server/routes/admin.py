@@ -13,8 +13,11 @@ This router ensures tables exist at runtime to be resilient in dev:
 import json
 import logging
 import os
+import shutil
+import subprocess
 import tempfile
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
 
 from auth import require_auth
@@ -525,3 +528,113 @@ async def admin_list_layers(
         )
     )
     return {"layers": [dict(r) for r in result.mappings().all()]}
+
+
+@router.post("/geoserver-upload")
+async def geoserver_upload(
+    file: UploadFile = File(...),
+    layerName: str = Form(...),
+    current_user=Depends(require_auth),
+):
+    """Upload a file to GeoServer uploads directory for processing."""
+    try:
+        # Validate file type
+        if not file.filename or not file.filename.lower().endswith(".geojson"):
+            raise HTTPException(
+                status_code=400, detail="Only .geojson files are supported"
+            )
+
+        # Validate layer name
+        if (
+            not layerName
+            or not layerName.replace("_", "").replace("-", "").isalnum()
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Layer name must contain only letters, numbers, hyphens, and underscores",
+            )
+
+        # Create uploads directory if it doesn't exist
+        uploads_dir = Path("/opt/geoserver/uploads")
+        uploads_dir.mkdir(parents=True, exist_ok=True)
+
+        # Use original filename or create one based on layer name
+        filename = file.filename if file.filename else f"{layerName}.geojson"
+        file_path = uploads_dir / filename
+
+        # Save the uploaded file
+        content = await file.read()
+        with open(file_path, "wb") as f:
+            f.write(content)
+
+        logger.info(
+            "File uploaded to GeoServer uploads: %s (%d bytes)",
+            file_path,
+            len(content),
+        )
+
+        return {
+            "message": f"File uploaded successfully to {filename}",
+            "fileName": filename,
+            "layerName": layerName,
+            "size": len(content),
+        }
+
+    except Exception as e:
+        logger.error("GeoServer upload failed: %s", str(e))
+        raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
+
+
+@router.post("/geoserver-import")
+async def geoserver_import(
+    request: dict,
+    current_user=Depends(require_auth),
+):
+    """Trigger GeoServer import script for uploaded file."""
+    try:
+        file_name = request.get("fileName")
+        if not file_name:
+            raise HTTPException(status_code=400, detail="fileName is required")
+
+        # Execute the GeoServer import script
+        result = subprocess.run(
+            [
+                "docker-compose",
+                "exec",
+                "-T",
+                "geoserver",
+                "/usr/local/bin/import-data.sh",
+            ],
+            cwd="/Users/toni/git/maapallo-info",  # Adjust path as needed
+            capture_output=True,
+            text=True,
+            timeout=300,  # 5 minute timeout
+        )
+
+        if result.returncode != 0:
+            logger.error("GeoServer import script failed: %s", result.stderr)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Import script failed: {result.stderr}",
+            )
+
+        logger.info(
+            "GeoServer import script completed successfully for %s", file_name
+        )
+
+        return {
+            "message": "Import script executed successfully",
+            "fileName": file_name,
+            "output": result.stdout,
+        }
+
+    except subprocess.TimeoutExpired:
+        raise HTTPException(
+            status_code=500,
+            detail="Import script timeout - operation took longer than 5 minutes",
+        )
+    except Exception as e:
+        logger.error("GeoServer import trigger failed: %s", str(e))
+        raise HTTPException(
+            status_code=500, detail=f"Import trigger failed: {str(e)}"
+        )
