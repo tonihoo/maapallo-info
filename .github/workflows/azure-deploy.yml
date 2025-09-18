@@ -68,18 +68,24 @@ jobs:
           # Create resource group if it doesn't exist
           az group create --name ${{ env.RESOURCE_GROUP }} --location ${{ env.LOCATION }}
 
-          # Get Log Analytics workspace ID
-          LOG_ANALYTICS_ID=$(az monitor log-analytics workspace show \
+          # Get Log Analytics workspace details
+          LOG_ANALYTICS_WORKSPACE_ID=$(az monitor log-analytics workspace show \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --workspace-name maapallo-log-analytics \
-            --query id --output tsv)
+            --query customerId --output tsv)
 
-          # Create Container Apps environment with existing Log Analytics workspace
+          LOG_ANALYTICS_WORKSPACE_KEY=$(az monitor log-analytics workspace get-shared-keys \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --workspace-name maapallo-log-analytics \
+            --query primarySharedKey --output tsv)
+
+          # Create Container Apps environment with Log Analytics workspace
           az containerapp env create \
             --name ${{ env.CONTAINER_ENV_NAME }} \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --location ${{ env.LOCATION }} \
-            --logs-workspace-id "$LOG_ANALYTICS_ID"
+            --logs-customer-id "$LOG_ANALYTICS_WORKSPACE_ID" \
+            --logs-key "$LOG_ANALYTICS_WORKSPACE_KEY"
 
       # Deploy PostgreSQL with PostGIS
       - name: Deploy PostgreSQL Database
@@ -110,18 +116,18 @@ jobs:
 
           # Configure PostGIS extension
           echo "Configuring PostGIS extension..."
-          
+
           # Enable PostGIS in server parameters
           az postgres flexible-server parameter set \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --server-name ${{ env.DB_SERVER_NAME }} \
             --name shared_preload_libraries \
             --value "postgis"
-          
+
           # Wait for server to be ready after parameter change
           echo "Waiting for server restart..."
           sleep 30
-          
+
           # Install PostGIS extensions in the database
           PGPASSWORD="${{ secrets.DB_ADMIN_PASSWORD }}" psql \
             -h ${{ env.DB_SERVER_NAME }}.postgres.database.azure.com \
