@@ -161,7 +161,7 @@ jobs:
             --server-name ${{ env.DB_SERVER_NAME }} \
             --name shared_preload_libraries \
             --value "pg_stat_statements,postgis" \
-            --restart true
+            --restart
 
           # Optimize for GIS workload
           az postgres flexible-server parameter set \
