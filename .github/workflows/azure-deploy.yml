@@ -209,12 +209,12 @@ jobs:
               --resource-group ${{ env.RESOURCE_GROUP }} \
               --image ${{ env.ACR_REGISTRY }}/maapallo-geoserver:${{ github.sha }} \
               --set-env-vars \
-                GEOSERVER_ADMIN_PASSWORD=${{ secrets.GEOSERVER_ADMIN_PASSWORD }} \
-                POSTGRES_HOST=${{ env.DB_SERVER_NAME }}.postgres.database.azure.com \
-                POSTGRES_PORT=5432 \
-                POSTGRES_DB=${{ secrets.DB_NAME }} \
-                POSTGRES_USER=${{ secrets.DB_ADMIN_USER }} \
-                POSTGRES_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}
+                "GEOSERVER_ADMIN_PASSWORD=${{ secrets.GEOSERVER_ADMIN_PASSWORD }}" \
+                "POSTGRES_HOST=${{ env.DB_SERVER_NAME }}.postgres.database.azure.com" \
+                "POSTGRES_PORT=5432" \
+                "POSTGRES_DB=${{ secrets.DB_NAME }}" \
+                "POSTGRES_USER=${{ secrets.DB_ADMIN_USER }}" \
+                "POSTGRES_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}"
           else
             echo "Creating new GeoServer container..."
             az containerapp create \
@@ -229,12 +229,12 @@ jobs:
               --min-replicas 1 \
               --max-replicas 3 \
               --env-vars \
-                GEOSERVER_ADMIN_PASSWORD=${{ secrets.GEOSERVER_ADMIN_PASSWORD }} \
-                POSTGRES_HOST=${{ env.DB_SERVER_NAME }}.postgres.database.azure.com \
-                POSTGRES_PORT=5432 \
-                POSTGRES_DB=${{ secrets.DB_NAME }} \
-                POSTGRES_USER=${{ secrets.DB_ADMIN_USER }} \
-                POSTGRES_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}
+                "GEOSERVER_ADMIN_PASSWORD=${{ secrets.GEOSERVER_ADMIN_PASSWORD }}" \
+                "POSTGRES_HOST=${{ env.DB_SERVER_NAME }}.postgres.database.azure.com" \
+                "POSTGRES_PORT=5432" \
+                "POSTGRES_DB=${{ secrets.DB_NAME }}" \
+                "POSTGRES_USER=${{ secrets.DB_ADMIN_USER }}" \
+                "POSTGRES_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}"
           fi
 
       # Deploy Backend API
@@ -248,17 +248,17 @@ jobs:
               --resource-group ${{ env.RESOURCE_GROUP }} \
               --image ${{ env.ACR_REGISTRY }}/maapallo-server:${{ github.sha }} \
               --set-env-vars \
-                ENVIRONMENT=production \
-                JWT_SECRET_KEY="${{ secrets.JWT_SECRET_KEY }}" \
-                ADMIN_USERNAME=admin \
-                ADMIN_PASSWORD="${{ secrets.ADMIN_PASSWORD }}" \
-                PG_HOST=${{ env.DB_SERVER_NAME }}.postgres.database.azure.com \
-                PG_PORT=5432 \
-                PG_DATABASE=${{ secrets.DB_NAME }} \
-                PG_USER=${{ secrets.DB_ADMIN_USER }} \
-                PG_PASS=${{ secrets.DB_ADMIN_PASSWORD }} \
-                PG_SSLMODE=require \
-                GEOSERVER_URL=https://maapallo-geoserver.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io
+                "ENVIRONMENT=production" \
+                "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" \
+                "ADMIN_USERNAME=admin" \
+                "ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}" \
+                "PG_HOST=${{ env.DB_SERVER_NAME }}.postgres.database.azure.com" \
+                "PG_PORT=5432" \
+                "PG_DATABASE=${{ secrets.DB_NAME }}" \
+                "PG_USER=${{ secrets.DB_ADMIN_USER }}" \
+                "PG_PASS=${{ secrets.DB_ADMIN_PASSWORD }}" \
+                "PG_SSLMODE=require" \
+                "GEOSERVER_URL=https://maapallo-geoserver.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io"
           else
             echo "Creating new Server container..."
             az containerapp create \
@@ -273,17 +273,17 @@ jobs:
               --min-replicas 1 \
               --max-replicas 5 \
               --env-vars \
-                ENVIRONMENT=production \
-                JWT_SECRET_KEY="${{ secrets.JWT_SECRET_KEY }}" \
-                ADMIN_USERNAME=admin \
-                ADMIN_PASSWORD="${{ secrets.ADMIN_PASSWORD }}" \
-                PG_HOST=${{ env.DB_SERVER_NAME }}.postgres.database.azure.com \
-                PG_PORT=5432 \
-                PG_DATABASE=${{ secrets.DB_NAME }} \
-                PG_USER=${{ secrets.DB_ADMIN_USER }} \
-                PG_PASS=${{ secrets.DB_ADMIN_PASSWORD }} \
-                PG_SSLMODE=require \
-                GEOSERVER_URL=https://maapallo-geoserver.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io
+                "ENVIRONMENT=production" \
+                "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" \
+                "ADMIN_USERNAME=admin" \
+                "ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}" \
+                "PG_HOST=${{ env.DB_SERVER_NAME }}.postgres.database.azure.com" \
+                "PG_PORT=5432" \
+                "PG_DATABASE=${{ secrets.DB_NAME }}" \
+                "PG_USER=${{ secrets.DB_ADMIN_USER }}" \
+                "PG_PASS=${{ secrets.DB_ADMIN_PASSWORD }}" \
+                "PG_SSLMODE=require" \
+                "GEOSERVER_URL=https://maapallo-geoserver.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io"
           fi
 
       # Deploy Frontend
@@ -297,9 +297,9 @@ jobs:
               --resource-group ${{ env.RESOURCE_GROUP }} \
               --image ${{ env.ACR_REGISTRY }}/maapallo-client:${{ github.sha }} \
               --set-env-vars \
-                REACT_APP_API_URL=https://maapallo-server.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io \
-                REACT_APP_GEOSERVER_URL=https://maapallo-geoserver.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io/geoserver \
-                CESIUM_ION_TOKEN="${{ secrets.CESIUM_ION_TOKEN }}"
+                "REACT_APP_API_URL=https://maapallo-server.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io" \
+                "REACT_APP_GEOSERVER_URL=https://maapallo-geoserver.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io/geoserver" \
+                "CESIUM_ION_TOKEN=${{ secrets.CESIUM_ION_TOKEN }}"
           else
             echo "Creating new Client container..."
             az containerapp create \
@@ -314,9 +314,9 @@ jobs:
               --min-replicas 1 \
               --max-replicas 3 \
               --env-vars \
-                REACT_APP_API_URL=https://maapallo-server.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io \
-                REACT_APP_GEOSERVER_URL=https://maapallo-geoserver.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io/geoserver \
-                CESIUM_ION_TOKEN="${{ secrets.CESIUM_ION_TOKEN }}"
+                "REACT_APP_API_URL=https://maapallo-server.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io" \
+                "REACT_APP_GEOSERVER_URL=https://maapallo-geoserver.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io/geoserver" \
+                "CESIUM_ION_TOKEN=${{ secrets.CESIUM_ION_TOKEN }}"
           fi
 
       # Run initial setup
