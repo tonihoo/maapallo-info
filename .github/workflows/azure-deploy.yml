@@ -108,8 +108,26 @@ jobs:
               --resource-group ${{ env.RESOURCE_GROUP }}
           fi
 
-          # Enable PostGIS extension (this might need to be done manually first time)
-          echo "PostGIS extension setup - may need manual configuration"
+          # Configure PostGIS extension
+          echo "Configuring PostGIS extension..."
+          
+          # Enable PostGIS in server parameters
+          az postgres flexible-server parameter set \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --server-name ${{ env.DB_SERVER_NAME }} \
+            --name shared_preload_libraries \
+            --value "postgis"
+          
+          # Wait for server to be ready after parameter change
+          echo "Waiting for server restart..."
+          sleep 30
+          
+          # Install PostGIS extensions in the database
+          PGPASSWORD="${{ secrets.DB_ADMIN_PASSWORD }}" psql \
+            -h ${{ env.DB_SERVER_NAME }}.postgres.database.azure.com \
+            -U ${{ secrets.DB_ADMIN_USER }} \
+            -d ${{ env.DB_NAME }} \
+            -c "CREATE EXTENSION IF NOT EXISTS postgis; CREATE EXTENSION IF NOT EXISTS postgis_topology;" || echo "PostGIS extensions may already exist"
 
       # Deploy Database container (for PostGIS setup)
       - name: Deploy Database Container
