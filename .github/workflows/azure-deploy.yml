@@ -67,6 +67,18 @@ jobs:
           # Create resource group if it doesn't exist
           az group create --name ${{ env.RESOURCE_GROUP }} --location ${{ env.LOCATION }}
 
+          # Create Log Analytics workspace if it doesn't exist
+          echo "Checking if Log Analytics workspace exists..."
+          if ! az monitor log-analytics workspace show --name maapallo-log-analytics --resource-group ${{ env.RESOURCE_GROUP }} >/dev/null 2>&1; then
+            echo "Creating Log Analytics workspace..."
+            az monitor log-analytics workspace create \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --workspace-name maapallo-log-analytics \
+              --location ${{ env.LOCATION }}
+          else
+            echo "Log Analytics workspace already exists."
+          fi
+
           # Get Log Analytics workspace details
           LOG_ANALYTICS_CUSTOMER_ID=$(az monitor log-analytics workspace show \
             --resource-group ${{ env.RESOURCE_GROUP }} \
