@@ -179,13 +179,13 @@ jobs:
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --server-name ${{ env.DB_SERVER_NAME }} \
             --name shared_buffers \
-            --value "256MB"
+            --value "262144"
 
           az postgres flexible-server parameter set \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --server-name ${{ env.DB_SERVER_NAME }} \
             --name effective_cache_size \
-            --value "1536MB"
+            --value "1572864"
 
           # Wait for server to be ready after parameter changes
           echo "Waiting for server restart..."
