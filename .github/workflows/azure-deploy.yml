@@ -119,9 +119,14 @@ jobs:
               --location ${{ env.LOCATION }} \
               --admin-user "${{ secrets.DB_ADMIN_USER }}" \
               --admin-password "${{ secrets.DB_ADMIN_PASSWORD }}" \
-              --sku-name Standard_B2s \
-              --storage-size 128 \
-              --version 14 || {
+              --sku-name standard_d2s_v3 \
+              --tier GeneralPurpose \
+              --storage-size 256 \
+              --storage-auto-grow Enabled \
+              --backup-retention 14 \
+              --version 15 \
+              --high-availability Disabled \
+              --public-access 0.0.0.0-255.255.255.255 || {
                 echo "Server creation failed. It might already exist with different configuration."
                 echo "Checking server status..."
                 az postgres flexible-server show --name ${{ env.DB_SERVER_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} || exit 1
@@ -148,34 +153,58 @@ jobs:
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --server-name ${{ env.DB_SERVER_NAME }} \
             --name shared_preload_libraries \
-            --value "postgis"
+            --value "pg_stat_statements,postgis" \
+            --restart true
 
-          # Wait for server to be ready after parameter change
+          # Optimize for GIS workload
+          az postgres flexible-server parameter set \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --server-name ${{ env.DB_SERVER_NAME }} \
+            --name max_connections \
+            --value "200"
+
+          az postgres flexible-server parameter set \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --server-name ${{ env.DB_SERVER_NAME }} \
+            --name shared_buffers \
+            --value "256MB"
+
+          az postgres flexible-server parameter set \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --server-name ${{ env.DB_SERVER_NAME }} \
+            --name effective_cache_size \
+            --value "1536MB"
+
+          # Wait for server to be ready after parameter changes
           echo "Waiting for server restart..."
-          sleep 30
+          sleep 60
 
           # Install PostGIS extensions in the database
           PGPASSWORD="${{ secrets.DB_ADMIN_PASSWORD }}" psql \
             -h ${{ env.DB_SERVER_NAME }}.postgres.database.azure.com \
             -U ${{ secrets.DB_ADMIN_USER }} \
             -d ${{ secrets.DB_NAME }} \
-            -c "CREATE EXTENSION IF NOT EXISTS postgis; CREATE EXTENSION IF NOT EXISTS postgis_topology;" || echo "PostGIS extensions may already exist"
+            -c "CREATE EXTENSION IF NOT EXISTS postgis; CREATE EXTENSION IF NOT EXISTS postgis_topology; CREATE EXTENSION IF NOT EXISTS pg_stat_statements;" || echo "PostGIS extensions may already exist"
 
-      # Deploy Database container (for PostGIS setup)
-      - name: Deploy Database Container
+      # Deploy Database container with PostGIS - Production configuration
+      # Deploy GeoServer
+      - name: Deploy GeoServer Container
         run: |
           az containerapp create \
-            --name maapallo-db \
+            --name maapallo-geoserver \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --environment ${{ env.CONTAINER_ENV_NAME }} \
-            --image postgis/postgis:13-3.3-alpine \
-            --target-port 5432 \
-            --ingress internal \
-            --cpu 1.0 \
-            --memory 2.0Gi \
+            --image ${{ env.ACR_REGISTRY }}/maapallo-geoserver:${{ github.sha }} \
+            --target-port 8080 \
+            --ingress external \
+            --cpu 2.0 \
+            --memory 4.0Gi \
             --min-replicas 1 \
-            --max-replicas 1 \
+            --max-replicas 3 \
             --env-vars \
+              GEOSERVER_ADMIN_PASSWORD=${{ secrets.GEOSERVER_ADMIN_PASSWORD }} \
+              POSTGRES_HOST=${{ env.DB_SERVER_NAME }}.postgres.database.azure.com \
+              POSTGRES_PORT=5432 \
               POSTGRES_DB=${{ secrets.DB_NAME }} \
               POSTGRES_USER=${{ secrets.DB_ADMIN_USER }} \
               POSTGRES_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}
@@ -192,8 +221,8 @@ jobs:
             --ingress external \
             --cpu 2.0 \
             --memory 4.0Gi \
-            --min-replicas 1 \
-            --max-replicas 3 \
+            --min-replicas 2 \
+            --max-replicas 5 \
             --env-vars \
               GEOSERVER_ADMIN_PASSWORD=${{ secrets.GEOSERVER_ADMIN_PASSWORD }} \
               POSTGRES_HOST=maapallo-db \
@@ -221,12 +250,12 @@ jobs:
               JWT_SECRET_KEY="${{ secrets.JWT_SECRET_KEY }}" \
               ADMIN_USERNAME=admin \
               ADMIN_PASSWORD="${{ secrets.ADMIN_PASSWORD }}" \
-              PG_HOST=maapallo-db \
+              PG_HOST=${{ env.DB_SERVER_NAME }}.postgres.database.azure.com \
               PG_PORT=5432 \
               PG_DATABASE=${{ secrets.DB_NAME }} \
               PG_USER=${{ secrets.DB_ADMIN_USER }} \
               PG_PASS=${{ secrets.DB_ADMIN_PASSWORD }} \
-              PG_SSLMODE=prefer \
+              PG_SSLMODE=require \
               GEOSERVER_URL=https://maapallo-geoserver.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io
 
       # Deploy Frontend
