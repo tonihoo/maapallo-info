@@ -10,7 +10,7 @@ on:
 env:
   ACR_REGISTRY: maapalloinforegistry.azurecr.io
   APP_NAME: maapallo-info-app
-  RESOURCE_GROUP: maapallo-group
+  RESOURCE_GROUP: maapallo-info-group
   LOCATION: northeurope
 
   # Database configuration - using more unique names
@@ -101,23 +101,7 @@ jobs:
               --resource-group ${{ env.RESOURCE_GROUP }} \
               --location ${{ env.LOCATION }} \
               --logs-workspace-id "$LOG_ANALYTICS_CUSTOMER_ID" \
-              --logs-workspace-key "$LOG_ANALYTICS_WORKSPACE_KEY" || {
-                echo "Failed to create Container Apps environment. Checking for existing environments in region..."
-
-                # List existing environments in the region
-                EXISTING_ENVS=$(az containerapp env list --query "[?location=='${{ env.LOCATION }}'].name" --output tsv)
-
-                if [ -n "$EXISTING_ENVS" ]; then
-                  FIRST_ENV=$(echo "$EXISTING_ENVS" | head -n1)
-                  echo "Found existing Container Apps environment: $FIRST_ENV"
-                  echo "Updating environment name to use existing environment..."
-                  echo "CONTAINER_ENV_NAME=$FIRST_ENV" >> $GITHUB_ENV
-                else
-                  echo "No existing environments found. You may need to choose a different region or delete an existing environment."
-                  az containerapp env list --query "[].{name:name, location:location, resourceGroup:resourceGroup}" --output table
-                  exit 1
-                fi
-              }
+              --logs-workspace-key "$LOG_ANALYTICS_WORKSPACE_KEY"
           fi
 
       # Deploy PostgreSQL with PostGIS
