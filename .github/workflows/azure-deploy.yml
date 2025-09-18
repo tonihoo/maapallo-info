@@ -15,7 +15,6 @@ env:
 
   # Database configuration
   DB_SERVER_NAME: maapallo-info-db
-  DB_NAME: maapallo_info
 
   # Container Apps environment
   CONTAINER_ENV_NAME: maapallo-env
@@ -93,12 +92,12 @@ jobs:
           # Create PostgreSQL server if it doesn't exist
           # Using previous naming convention: server=maapallo-info-db, database=maapallo_info, admin=maapalloadmin
           if ! az postgres flexible-server show --name ${{ env.DB_SERVER_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} &>/dev/null; then
-            echo "Creating PostgreSQL server..."
+            echo "Creating PostgreSQL server with admin user: ${{ secrets.DB_ADMIN_USER }}"
             az postgres flexible-server create \
               --name ${{ env.DB_SERVER_NAME }} \
               --resource-group ${{ env.RESOURCE_GROUP }} \
               --location ${{ env.LOCATION }} \
-              --admin-user ${{ secrets.DB_ADMIN_USER }} \
+              --admin-user "${{ secrets.DB_ADMIN_USER }}" \
               --admin-password "${{ secrets.DB_ADMIN_PASSWORD }}" \
               --sku-name Standard_B2s \
               --storage-size 128 \
@@ -106,10 +105,10 @@ jobs:
           fi
 
           # Create database if it doesn't exist
-          if ! az postgres flexible-server db show --database-name ${{ env.DB_NAME }} --server-name ${{ env.DB_SERVER_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} &>/dev/null; then
+          if ! az postgres flexible-server db show --database-name ${{ secrets.DB_NAME }} --server-name ${{ env.DB_SERVER_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} &>/dev/null; then
             echo "Creating database..."
             az postgres flexible-server db create \
-              --database-name ${{ env.DB_NAME }} \
+              --database-name ${{ secrets.DB_NAME }} \
               --server-name ${{ env.DB_SERVER_NAME }} \
               --resource-group ${{ env.RESOURCE_GROUP }}
           fi
@@ -132,7 +131,7 @@ jobs:
           PGPASSWORD="${{ secrets.DB_ADMIN_PASSWORD }}" psql \
             -h ${{ env.DB_SERVER_NAME }}.postgres.database.azure.com \
             -U ${{ secrets.DB_ADMIN_USER }} \
-            -d ${{ env.DB_NAME }} \
+            -d ${{ secrets.DB_NAME }} \
             -c "CREATE EXTENSION IF NOT EXISTS postgis; CREATE EXTENSION IF NOT EXISTS postgis_topology;" || echo "PostGIS extensions may already exist"
 
       # Deploy Database container (for PostGIS setup)
@@ -150,7 +149,7 @@ jobs:
             --min-replicas 1 \
             --max-replicas 1 \
             --env-vars \
-              POSTGRES_DB=${{ env.DB_NAME }} \
+              POSTGRES_DB=${{ secrets.DB_NAME }} \
               POSTGRES_USER=${{ secrets.DB_ADMIN_USER }} \
               POSTGRES_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}
 
@@ -172,7 +171,7 @@ jobs:
               GEOSERVER_ADMIN_PASSWORD=${{ secrets.GEOSERVER_ADMIN_PASSWORD }} \
               POSTGRES_HOST=maapallo-db \
               POSTGRES_PORT=5432 \
-              POSTGRES_DB=${{ env.DB_NAME }} \
+              POSTGRES_DB=${{ secrets.DB_NAME }} \
               POSTGRES_USER=${{ secrets.DB_ADMIN_USER }} \
               POSTGRES_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}
 
@@ -193,11 +192,11 @@ jobs:
             --env-vars \
               ENVIRONMENT=production \
               JWT_SECRET_KEY="${{ secrets.JWT_SECRET_KEY }}" \
-              ADMIN_USERNAME="${{ secrets.ADMIN_USERNAME }}" \
+              ADMIN_USERNAME=admin \
               ADMIN_PASSWORD="${{ secrets.ADMIN_PASSWORD }}" \
               PG_HOST=maapallo-db \
               PG_PORT=5432 \
-              PG_DATABASE=${{ env.DB_NAME }} \
+              PG_DATABASE=${{ secrets.DB_NAME }} \
               PG_USER=${{ secrets.DB_ADMIN_USER }} \
               PG_PASS=${{ secrets.DB_ADMIN_PASSWORD }} \
               PG_SSLMODE=prefer \
