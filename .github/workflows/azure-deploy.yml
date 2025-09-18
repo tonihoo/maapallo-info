@@ -201,70 +201,123 @@ jobs:
       # Deploy GeoServer
       - name: Deploy GeoServer Container
         run: |
-          az containerapp create \
-            --name maapallo-geoserver \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --environment ${{ env.CONTAINER_ENV_NAME }} \
-            --image ${{ env.ACR_REGISTRY }}/maapallo-geoserver:${{ github.sha }} \
-            --target-port 8080 \
-            --ingress external \
-            --cpu 2.0 \
-            --memory 4.0Gi \
-            --min-replicas 1 \
-            --max-replicas 3 \
-            --env-vars \
-              GEOSERVER_ADMIN_PASSWORD=${{ secrets.GEOSERVER_ADMIN_PASSWORD }} \
-              POSTGRES_HOST=${{ env.DB_SERVER_NAME }}.postgres.database.azure.com \
-              POSTGRES_PORT=5432 \
-              POSTGRES_DB=${{ secrets.DB_NAME }} \
-              POSTGRES_USER=${{ secrets.DB_ADMIN_USER }} \
-              POSTGRES_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}
+          # Check if GeoServer container app exists
+          if az containerapp show --name maapallo-geoserver --resource-group ${{ env.RESOURCE_GROUP }} >/dev/null 2>&1; then
+            echo "Updating existing GeoServer container..."
+            az containerapp update \
+              --name maapallo-geoserver \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --image ${{ env.ACR_REGISTRY }}/maapallo-geoserver:${{ github.sha }} \
+              --set-env-vars \
+                GEOSERVER_ADMIN_PASSWORD=${{ secrets.GEOSERVER_ADMIN_PASSWORD }} \
+                POSTGRES_HOST=${{ env.DB_SERVER_NAME }}.postgres.database.azure.com \
+                POSTGRES_PORT=5432 \
+                POSTGRES_DB=${{ secrets.DB_NAME }} \
+                POSTGRES_USER=${{ secrets.DB_ADMIN_USER }} \
+                POSTGRES_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}
+          else
+            echo "Creating new GeoServer container..."
+            az containerapp create \
+              --name maapallo-geoserver \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --environment ${{ env.CONTAINER_ENV_NAME }} \
+              --image ${{ env.ACR_REGISTRY }}/maapallo-geoserver:${{ github.sha }} \
+              --target-port 8080 \
+              --ingress external \
+              --cpu 2.0 \
+              --memory 4.0Gi \
+              --min-replicas 1 \
+              --max-replicas 3 \
+              --env-vars \
+                GEOSERVER_ADMIN_PASSWORD=${{ secrets.GEOSERVER_ADMIN_PASSWORD }} \
+                POSTGRES_HOST=${{ env.DB_SERVER_NAME }}.postgres.database.azure.com \
+                POSTGRES_PORT=5432 \
+                POSTGRES_DB=${{ secrets.DB_NAME }} \
+                POSTGRES_USER=${{ secrets.DB_ADMIN_USER }} \
+                POSTGRES_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}
+          fi
 
       # Deploy Backend API
       - name: Deploy Server Container
         run: |
-          az containerapp create \
-            --name maapallo-server \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --environment ${{ env.CONTAINER_ENV_NAME }} \
-            --image ${{ env.ACR_REGISTRY }}/maapallo-server:${{ github.sha }} \
-            --target-port 3003 \
-            --ingress external \
-            --cpu 1.0 \
-            --memory 2.0Gi \
-            --min-replicas 1 \
-            --max-replicas 5 \
-            --env-vars \
-              ENVIRONMENT=production \
-              JWT_SECRET_KEY="${{ secrets.JWT_SECRET_KEY }}" \
-              ADMIN_USERNAME=admin \
-              ADMIN_PASSWORD="${{ secrets.ADMIN_PASSWORD }}" \
-              PG_HOST=${{ env.DB_SERVER_NAME }}.postgres.database.azure.com \
-              PG_PORT=5432 \
-              PG_DATABASE=${{ secrets.DB_NAME }} \
-              PG_USER=${{ secrets.DB_ADMIN_USER }} \
-              PG_PASS=${{ secrets.DB_ADMIN_PASSWORD }} \
-              PG_SSLMODE=require \
-              GEOSERVER_URL=https://maapallo-geoserver.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io
+          # Check if Server container app exists
+          if az containerapp show --name maapallo-server --resource-group ${{ env.RESOURCE_GROUP }} >/dev/null 2>&1; then
+            echo "Updating existing Server container..."
+            az containerapp update \
+              --name maapallo-server \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --image ${{ env.ACR_REGISTRY }}/maapallo-server:${{ github.sha }} \
+              --set-env-vars \
+                ENVIRONMENT=production \
+                JWT_SECRET_KEY="${{ secrets.JWT_SECRET_KEY }}" \
+                ADMIN_USERNAME=admin \
+                ADMIN_PASSWORD="${{ secrets.ADMIN_PASSWORD }}" \
+                PG_HOST=${{ env.DB_SERVER_NAME }}.postgres.database.azure.com \
+                PG_PORT=5432 \
+                PG_DATABASE=${{ secrets.DB_NAME }} \
+                PG_USER=${{ secrets.DB_ADMIN_USER }} \
+                PG_PASS=${{ secrets.DB_ADMIN_PASSWORD }} \
+                PG_SSLMODE=require \
+                GEOSERVER_URL=https://maapallo-geoserver.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io
+          else
+            echo "Creating new Server container..."
+            az containerapp create \
+              --name maapallo-server \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --environment ${{ env.CONTAINER_ENV_NAME }} \
+              --image ${{ env.ACR_REGISTRY }}/maapallo-server:${{ github.sha }} \
+              --target-port 3003 \
+              --ingress external \
+              --cpu 1.0 \
+              --memory 2.0Gi \
+              --min-replicas 1 \
+              --max-replicas 5 \
+              --env-vars \
+                ENVIRONMENT=production \
+                JWT_SECRET_KEY="${{ secrets.JWT_SECRET_KEY }}" \
+                ADMIN_USERNAME=admin \
+                ADMIN_PASSWORD="${{ secrets.ADMIN_PASSWORD }}" \
+                PG_HOST=${{ env.DB_SERVER_NAME }}.postgres.database.azure.com \
+                PG_PORT=5432 \
+                PG_DATABASE=${{ secrets.DB_NAME }} \
+                PG_USER=${{ secrets.DB_ADMIN_USER }} \
+                PG_PASS=${{ secrets.DB_ADMIN_PASSWORD }} \
+                PG_SSLMODE=require \
+                GEOSERVER_URL=https://maapallo-geoserver.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io
+          fi
 
       # Deploy Frontend
       - name: Deploy Client Container
         run: |
-          az containerapp create \
-            --name maapallo-client \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --environment ${{ env.CONTAINER_ENV_NAME }} \
-            --image ${{ env.ACR_REGISTRY }}/maapallo-client:${{ github.sha }} \
-            --target-port 8080 \
-            --ingress external \
-            --cpu 0.5 \
-            --memory 1.0Gi \
-            --min-replicas 1 \
-            --max-replicas 3 \
-            --env-vars \
-              REACT_APP_API_URL=https://maapallo-server.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io \
-              REACT_APP_GEOSERVER_URL=https://maapallo-geoserver.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io/geoserver \
-              CESIUM_ION_TOKEN="${{ secrets.CESIUM_ION_TOKEN }}"
+          # Check if Client container app exists
+          if az containerapp show --name maapallo-client --resource-group ${{ env.RESOURCE_GROUP }} >/dev/null 2>&1; then
+            echo "Updating existing Client container..."
+            az containerapp update \
+              --name maapallo-client \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --image ${{ env.ACR_REGISTRY }}/maapallo-client:${{ github.sha }} \
+              --set-env-vars \
+                REACT_APP_API_URL=https://maapallo-server.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io \
+                REACT_APP_GEOSERVER_URL=https://maapallo-geoserver.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io/geoserver \
+                CESIUM_ION_TOKEN="${{ secrets.CESIUM_ION_TOKEN }}"
+          else
+            echo "Creating new Client container..."
+            az containerapp create \
+              --name maapallo-client \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --environment ${{ env.CONTAINER_ENV_NAME }} \
+              --image ${{ env.ACR_REGISTRY }}/maapallo-client:${{ github.sha }} \
+              --target-port 8080 \
+              --ingress external \
+              --cpu 0.5 \
+              --memory 1.0Gi \
+              --min-replicas 1 \
+              --max-replicas 3 \
+              --env-vars \
+                REACT_APP_API_URL=https://maapallo-server.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io \
+                REACT_APP_GEOSERVER_URL=https://maapallo-geoserver.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io/geoserver \
+                CESIUM_ION_TOKEN="${{ secrets.CESIUM_ION_TOKEN }}"
+          fi
 
       # Run initial setup
       - name: Initialize Application
