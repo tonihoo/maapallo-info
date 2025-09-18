@@ -10,7 +10,7 @@ env:
   ACR_REGISTRY: maapalloregistry.azurecr.io
   APP_NAME: maapallo-info-app
   RESOURCE_GROUP: maapallo-info-group
-  LOCATION: northeurope # Close to Finland for better performance
+  LOCATION: northeurope
 
   # Database configuration
   DB_SERVER_NAME: maapallo-postgis-server
