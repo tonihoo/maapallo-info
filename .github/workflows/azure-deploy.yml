@@ -72,7 +72,7 @@ jobs:
           LOG_ANALYTICS_WORKSPACE_ID=$(az monitor log-analytics workspace show \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --workspace-name maapallo-log-analytics \
-            --query customerId --output tsv)
+            --query id --output tsv)
 
           LOG_ANALYTICS_WORKSPACE_KEY=$(az monitor log-analytics workspace get-shared-keys \
             --resource-group ${{ env.RESOURCE_GROUP }} \
@@ -84,8 +84,8 @@ jobs:
             --name ${{ env.CONTAINER_ENV_NAME }} \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --location ${{ env.LOCATION }} \
-            --logs-customer-id "$LOG_ANALYTICS_WORKSPACE_ID" \
-            --logs-key "$LOG_ANALYTICS_WORKSPACE_KEY"
+            --logs-workspace-id "$LOG_ANALYTICS_WORKSPACE_ID" \
+            --logs-workspace-key "$LOG_ANALYTICS_WORKSPACE_KEY"
 
       # Deploy PostgreSQL with PostGIS
       - name: Deploy PostgreSQL Database
