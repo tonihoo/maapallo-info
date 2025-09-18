@@ -155,12 +155,12 @@ jobs:
           # Configure PostGIS extension
           echo "Configuring PostGIS extension..."
 
-          # Enable PostGIS in server parameters
+          # Enable pg_stat_statements in server parameters (PostGIS doesn't need preloading)
           az postgres flexible-server parameter set \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --server-name ${{ env.DB_SERVER_NAME }} \
             --name shared_preload_libraries \
-            --value "pg_stat_statements,postgis"
+            --value "pg_stat_statements"
 
           # Restart server to apply parameter changes
           echo "Restarting server to apply parameter changes..."
