@@ -160,8 +160,13 @@ jobs:
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --server-name ${{ env.DB_SERVER_NAME }} \
             --name shared_preload_libraries \
-            --value "pg_stat_statements,postgis" \
-            --restart
+            --value "pg_stat_statements,postgis"
+
+          # Restart server to apply parameter changes
+          echo "Restarting server to apply parameter changes..."
+          az postgres flexible-server restart \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.DB_SERVER_NAME }}
 
           # Optimize for GIS workload
           az postgres flexible-server parameter set \
