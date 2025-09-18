@@ -456,7 +456,7 @@ jobs:
                 "PG_USER=${{ secrets.DB_ADMIN_USER }}" \
                 "PG_PASS=${{ secrets.DB_ADMIN_PASSWORD }}" \
                 "PG_SSLMODE=require" \
-                "GEOSERVER_URL=https://maapallo-geoserver.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io"
+                "GEOSERVER_URL=https://maapallo-geoserver.$CONTAINER_DOMAIN"
           fi
 
       # Deploy Frontend
@@ -486,7 +486,7 @@ jobs:
               ENV_DEFAULT_DOMAIN=$(az containerapp env show \
                 --name ${{ env.CONTAINER_ENV_NAME }} \
                 --resource-group ${{ env.RESOURCE_GROUP }} \
-                --query defaultDomain \
+                --query properties.defaultDomain \
                 --output tsv)
 
               az containerapp create \
@@ -514,7 +514,7 @@ jobs:
               ENV_DEFAULT_DOMAIN=$(az containerapp env show \
                 --name ${{ env.CONTAINER_ENV_NAME }} \
                 --resource-group ${{ env.RESOURCE_GROUP }} \
-                --query defaultDomain \
+                --query properties.defaultDomain \
                 --output tsv)
 
               # For existing apps, we need to update the identity and registry configuration first
@@ -547,7 +547,7 @@ jobs:
             ENV_DEFAULT_DOMAIN=$(az containerapp env show \
               --name ${{ env.CONTAINER_ENV_NAME }} \
               --resource-group ${{ env.RESOURCE_GROUP }} \
-              --query defaultDomain \
+              --query properties.defaultDomain \
               --output tsv)
 
             az containerapp create \
