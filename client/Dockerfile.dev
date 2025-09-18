@@ -3,13 +3,13 @@ FROM node:20-alpine
 WORKDIR /app/client
 
 # Copy package files
-COPY client/package*.json ./
+COPY package*.json ./
 
 # Install dependencies
 RUN npm ci
 
 # Copy source code
-COPY client/ .
+COPY . .
 
 # Expose port for webpack dev server
 EXPOSE 8080
