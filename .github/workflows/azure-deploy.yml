@@ -351,6 +351,9 @@ jobs:
           # Get managed identity details
           IDENTITY_ID=$(az identity show --name maapallo-container-identity --resource-group ${{ env.RESOURCE_GROUP }} --query id -o tsv)
 
+          # Get Container Apps environment default domain
+          CONTAINER_DOMAIN=$(az containerapp env show --name ${{ env.CONTAINER_ENV_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query properties.defaultDomain -o tsv)
+
           # Check if Server container app exists and its state
           if az containerapp show --name maapallo-server --resource-group ${{ env.RESOURCE_GROUP }} >/dev/null 2>&1; then
             # Check if the container app is in a failed state
@@ -392,7 +395,7 @@ jobs:
                   "PG_USER=${{ secrets.DB_ADMIN_USER }}" \
                   "PG_PASS=${{ secrets.DB_ADMIN_PASSWORD }}" \
                   "PG_SSLMODE=require" \
-                  "GEOSERVER_URL=https://maapallo-geoserver.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io"
+                  "GEOSERVER_URL=https://maapallo-geoserver.$CONTAINER_DOMAIN"
             else
               echo "Updating existing Server container..."
               # For existing apps, we need to update the identity and registry configuration first
@@ -424,7 +427,7 @@ jobs:
                   "PG_USER=${{ secrets.DB_ADMIN_USER }}" \
                   "PG_PASS=${{ secrets.DB_ADMIN_PASSWORD }}" \
                   "PG_SSLMODE=require" \
-                  "GEOSERVER_URL=https://maapallo-geoserver.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io"
+                  "GEOSERVER_URL=https://maapallo-geoserver.$CONTAINER_DOMAIN"
             fi
           else
             echo "Creating new Server container..."
@@ -478,6 +481,14 @@ jobs:
               sleep 30
 
               echo "Creating new Client container..."
+
+              # Get the environment default domain dynamically
+              ENV_DEFAULT_DOMAIN=$(az containerapp env show \
+                --name ${{ env.CONTAINER_ENV_NAME }} \
+                --resource-group ${{ env.RESOURCE_GROUP }} \
+                --query defaultDomain \
+                --output tsv)
+
               az containerapp create \
                 --name maapallo-client \
                 --resource-group ${{ env.RESOURCE_GROUP }} \
@@ -493,11 +504,19 @@ jobs:
                 --registry-identity $IDENTITY_ID \
                 --registry-server ${{ env.ACR_REGISTRY }} \
                 --env-vars \
-                  "REACT_APP_API_URL=https://maapallo-server.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io" \
-                  "REACT_APP_GEOSERVER_URL=https://maapallo-geoserver.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io/geoserver" \
+                  "REACT_APP_API_URL=https://maapallo-server.${ENV_DEFAULT_DOMAIN}" \
+                  "REACT_APP_GEOSERVER_URL=https://maapallo-geoserver.${ENV_DEFAULT_DOMAIN}/geoserver" \
                   "CESIUM_ION_TOKEN=${{ secrets.CESIUM_ION_TOKEN }}"
             else
               echo "Updating existing Client container..."
+
+              # Get the environment default domain dynamically
+              ENV_DEFAULT_DOMAIN=$(az containerapp env show \
+                --name ${{ env.CONTAINER_ENV_NAME }} \
+                --resource-group ${{ env.RESOURCE_GROUP }} \
+                --query defaultDomain \
+                --output tsv)
+
               # For existing apps, we need to update the identity and registry configuration first
               az containerapp identity assign \
                 --name maapallo-client \
@@ -517,12 +536,20 @@ jobs:
                 --resource-group ${{ env.RESOURCE_GROUP }} \
                 --image ${{ env.ACR_REGISTRY }}/maapallo-client:${{ github.sha }} \
                 --set-env-vars \
-                  "REACT_APP_API_URL=https://maapallo-server.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io" \
-                  "REACT_APP_GEOSERVER_URL=https://maapallo-geoserver.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io/geoserver" \
+                  "REACT_APP_API_URL=https://maapallo-server.${ENV_DEFAULT_DOMAIN}" \
+                  "REACT_APP_GEOSERVER_URL=https://maapallo-geoserver.${ENV_DEFAULT_DOMAIN}/geoserver" \
                   "CESIUM_ION_TOKEN=${{ secrets.CESIUM_ION_TOKEN }}"
             fi
           else
             echo "Creating new Client container..."
+
+            # Get the environment default domain dynamically
+            ENV_DEFAULT_DOMAIN=$(az containerapp env show \
+              --name ${{ env.CONTAINER_ENV_NAME }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --query defaultDomain \
+              --output tsv)
+
             az containerapp create \
               --name maapallo-client \
               --resource-group ${{ env.RESOURCE_GROUP }} \
@@ -538,8 +565,8 @@ jobs:
               --registry-identity $IDENTITY_ID \
               --registry-server ${{ env.ACR_REGISTRY }} \
               --env-vars \
-                "REACT_APP_API_URL=https://maapallo-server.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io" \
-                "REACT_APP_GEOSERVER_URL=https://maapallo-geoserver.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io/geoserver" \
+                "REACT_APP_API_URL=https://maapallo-server.${ENV_DEFAULT_DOMAIN}" \
+                "REACT_APP_GEOSERVER_URL=https://maapallo-geoserver.${ENV_DEFAULT_DOMAIN}/geoserver" \
                 "CESIUM_ION_TOKEN=${{ secrets.CESIUM_ION_TOKEN }}"
           fi
 
