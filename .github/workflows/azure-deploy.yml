@@ -70,9 +70,34 @@ jobs:
           az provider register --namespace Microsoft.ContainerRegistry --wait
           az provider register --namespace Microsoft.DBforPostgreSQL --wait
           az provider register --namespace Microsoft.OperationalInsights --wait
+          az provider register --namespace Microsoft.ManagedIdentity --wait
 
           # Create resource group if it doesn't exist
           az group create --name ${{ env.RESOURCE_GROUP }} --location ${{ env.LOCATION }}
+
+          # Create or get managed identity for Container Apps
+          echo "Creating managed identity for Container Apps..."
+          if ! az identity show --name maapallo-container-identity --resource-group ${{ env.RESOURCE_GROUP }} >/dev/null 2>&1; then
+            az identity create \
+              --name maapallo-container-identity \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --location ${{ env.LOCATION }}
+          fi
+
+          # Get managed identity details
+          IDENTITY_ID=$(az identity show --name maapallo-container-identity --resource-group ${{ env.RESOURCE_GROUP }} --query id -o tsv)
+          IDENTITY_CLIENT_ID=$(az identity show --name maapallo-container-identity --resource-group ${{ env.RESOURCE_GROUP }} --query clientId -o tsv)
+
+          # Get ACR resource ID
+          ACR_RESOURCE_ID=$(az acr show --name maapalloinforegistry --resource-group ${{ env.RESOURCE_GROUP }} --query id -o tsv)
+
+          # Assign AcrPull role to managed identity
+          echo "Assigning AcrPull role to managed identity..."
+          az role assignment create \
+            --assignee $IDENTITY_CLIENT_ID \
+            --scope $ACR_RESOURCE_ID \
+            --role AcrPull \
+            --output none || echo "Role assignment may already exist"
 
           # Create Log Analytics workspace if it doesn't exist
           echo "Checking if Log Analytics workspace exists..."
@@ -201,6 +226,9 @@ jobs:
       # Deploy GeoServer
       - name: Deploy GeoServer Container
         run: |
+          # Get managed identity details
+          IDENTITY_ID=$(az identity show --name maapallo-container-identity --resource-group ${{ env.RESOURCE_GROUP }} --query id -o tsv)
+
           # Check if GeoServer container app exists
           if az containerapp show --name maapallo-geoserver --resource-group ${{ env.RESOURCE_GROUP }} >/dev/null 2>&1; then
             echo "Updating existing GeoServer container..."
@@ -228,6 +256,9 @@ jobs:
               --memory 4.0Gi \
               --min-replicas 1 \
               --max-replicas 3 \
+              --user-assigned $IDENTITY_ID \
+              --registry-identity $IDENTITY_ID \
+              --registry-server ${{ env.ACR_REGISTRY }} \
               --env-vars \
                 "GEOSERVER_ADMIN_PASSWORD=${{ secrets.GEOSERVER_ADMIN_PASSWORD }}" \
                 "POSTGRES_HOST=${{ env.DB_SERVER_NAME }}.postgres.database.azure.com" \
@@ -240,6 +271,9 @@ jobs:
       # Deploy Backend API
       - name: Deploy Server Container
         run: |
+          # Get managed identity details
+          IDENTITY_ID=$(az identity show --name maapallo-container-identity --resource-group ${{ env.RESOURCE_GROUP }} --query id -o tsv)
+
           # Check if Server container app exists
           if az containerapp show --name maapallo-server --resource-group ${{ env.RESOURCE_GROUP }} >/dev/null 2>&1; then
             echo "Updating existing Server container..."
@@ -272,6 +306,9 @@ jobs:
               --memory 2.0Gi \
               --min-replicas 1 \
               --max-replicas 5 \
+              --user-assigned $IDENTITY_ID \
+              --registry-identity $IDENTITY_ID \
+              --registry-server ${{ env.ACR_REGISTRY }} \
               --env-vars \
                 "ENVIRONMENT=production" \
                 "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" \
@@ -289,6 +326,9 @@ jobs:
       # Deploy Frontend
       - name: Deploy Client Container
         run: |
+          # Get managed identity details
+          IDENTITY_ID=$(az identity show --name maapallo-container-identity --resource-group ${{ env.RESOURCE_GROUP }} --query id -o tsv)
+
           # Check if Client container app exists
           if az containerapp show --name maapallo-client --resource-group ${{ env.RESOURCE_GROUP }} >/dev/null 2>&1; then
             echo "Updating existing Client container..."
@@ -313,6 +353,9 @@ jobs:
               --memory 1.0Gi \
               --min-replicas 1 \
               --max-replicas 3 \
+              --user-assigned $IDENTITY_ID \
+              --registry-identity $IDENTITY_ID \
+              --registry-server ${{ env.ACR_REGISTRY }} \
               --env-vars \
                 "REACT_APP_API_URL=https://maapallo-server.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io" \
                 "REACT_APP_GEOSERVER_URL=https://maapallo-geoserver.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io/geoserver" \
