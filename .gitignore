@@ -29,3 +29,7 @@ server/*.geojson
 
 # Import scripts generate temporary files
 server/pop_density_data.geojson
+
+# Log files and deployment logs
+LogFiles/
+*.log
