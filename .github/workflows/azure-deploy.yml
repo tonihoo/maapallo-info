@@ -232,6 +232,20 @@ jobs:
           # Check if GeoServer container app exists
           if az containerapp show --name maapallo-geoserver --resource-group ${{ env.RESOURCE_GROUP }} >/dev/null 2>&1; then
             echo "Updating existing GeoServer container..."
+            # For existing apps, we need to update the identity and registry configuration first
+            az containerapp identity assign \
+              --name maapallo-geoserver \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --user-assigned $IDENTITY_ID || echo "Identity may already be assigned"
+
+            # Update registry configuration
+            az containerapp registry set \
+              --name maapallo-geoserver \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --server ${{ env.ACR_REGISTRY }} \
+              --identity $IDENTITY_ID || echo "Registry may already be configured"
+
+            # Now update the container with new image
             az containerapp update \
               --name maapallo-geoserver \
               --resource-group ${{ env.RESOURCE_GROUP }} \
@@ -277,6 +291,20 @@ jobs:
           # Check if Server container app exists
           if az containerapp show --name maapallo-server --resource-group ${{ env.RESOURCE_GROUP }} >/dev/null 2>&1; then
             echo "Updating existing Server container..."
+            # For existing apps, we need to update the identity and registry configuration first
+            az containerapp identity assign \
+              --name maapallo-server \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --user-assigned $IDENTITY_ID || echo "Identity may already be assigned"
+
+            # Update registry configuration
+            az containerapp registry set \
+              --name maapallo-server \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --server ${{ env.ACR_REGISTRY }} \
+              --identity $IDENTITY_ID || echo "Registry may already be configured"
+
+            # Now update the container with new image
             az containerapp update \
               --name maapallo-server \
               --resource-group ${{ env.RESOURCE_GROUP }} \
@@ -332,6 +360,20 @@ jobs:
           # Check if Client container app exists
           if az containerapp show --name maapallo-client --resource-group ${{ env.RESOURCE_GROUP }} >/dev/null 2>&1; then
             echo "Updating existing Client container..."
+            # For existing apps, we need to update the identity and registry configuration first
+            az containerapp identity assign \
+              --name maapallo-client \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --user-assigned $IDENTITY_ID || echo "Identity may already be assigned"
+
+            # Update registry configuration
+            az containerapp registry set \
+              --name maapallo-client \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --server ${{ env.ACR_REGISTRY }} \
+              --identity $IDENTITY_ID || echo "Registry may already be configured"
+
+            # Now update the container with new image
             az containerapp update \
               --name maapallo-client \
               --resource-group ${{ env.RESOURCE_GROUP }} \
