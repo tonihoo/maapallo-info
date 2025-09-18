@@ -7,7 +7,7 @@ on:
   workflow_dispatch: # Allow manual triggering
 
 env:
-  ACR_REGISTRY: maapalloregistry.azurecr.io
+  ACR_REGISTRY: maapalloinforegistry.azurecr.io
   APP_NAME: maapallo-info-app
   RESOURCE_GROUP: maapallo-info-group
   LOCATION: northeurope
