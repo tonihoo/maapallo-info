@@ -1,11 +1,22 @@
 #!/bin/bash
 
 # Test script for GeoServer setup
+# Run this from the geoserver/ directory or the project root
 
 echo "🧪 Testing GeoServer Setup"
 echo "=========================="
 
+# Determine if we're in geoserver/ subdirectory or project root
+if [[ $(basename "$PWD") == "geoserver" ]]; then
+    COMPOSE_DIR=".."
+    echo "📁 Running from geoserver/ directory"
+else
+    COMPOSE_DIR="."
+    echo "📁 Running from project root"
+fi
+
 # Test 1: Check if services are running
+echo ""
 echo "1️⃣  Checking if services are running..."
 
 if curl -s http://localhost:8081/geoserver/web/ > /dev/null; then
@@ -29,7 +40,7 @@ fi
 # Test 2: Check database connection
 echo ""
 echo "2️⃣  Testing database connection..."
-docker-compose exec -T db psql -U db_dev_user -d db_dev -c "SELECT version();" > /dev/null 2>&1
+(cd "$COMPOSE_DIR" && docker-compose exec -T db psql -U db_dev_user -d db_dev -c "SELECT version();") > /dev/null 2>&1
 if [ $? -eq 0 ]; then
     echo "   ✅ Database is accessible"
 else

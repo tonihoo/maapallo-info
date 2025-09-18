@@ -4,16 +4,27 @@ on:
   push:
     branches:
       - main
+      - geoserver
+  workflow_dispatch: # Allow manual triggering
 
 env:
-  ACR_REGISTRY: maapalloregistry.azurecr.io
+  ACR_REGISTRY: maapalloinforegistry.azurecr.io
   APP_NAME: maapallo-info-app
   RESOURCE_GROUP: maapallo-info-group
+  LOCATION: northeurope
+
+  # Database configuration
+  DB_SERVER_NAME: maapallo-info-db
+  DB_NAME: maapallo_info
+
+  # Container Apps environment
+  CONTAINER_ENV_NAME: maapallo-env
 
 jobs:
   build-and-deploy:
-    name: Build and Deploy
+    name: Build and Deploy GeoServer Stack
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
 
@@ -23,70 +34,180 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
+          creds: ${{ secrets.AZURE_CREDENTIALS_NGO }} # Use NGO account credentials
 
       - name: Log in to ACR
-        uses: azure/docker-login@v1
-        with:
-          login-server: ${{ env.ACR_REGISTRY }}
-          username: ${{ secrets.ACR_USERNAME }}
-          password: ${{ secrets.ACR_PASSWORD }}
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile.production
-          push: true
-          tags: ${{ env.ACR_REGISTRY }}/${{ env.APP_NAME }}:${{ github.sha }}, ${{ env.ACR_REGISTRY }}/${{ env.APP_NAME }}:latest
-          build-args: |
-            CESIUM_ION_TOKEN=${{ secrets.CESIUM_ION_TOKEN }}
-
-      - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ env.APP_NAME }}
-          images: ${{ env.ACR_REGISTRY }}/${{ env.APP_NAME }}:${{ github.sha }}
-
-      - name: Configure App Service Environment Variables
         run: |
-          echo "Setting up environment variables..."
-          az webapp config appsettings set \
+          az acr login --name ${{ env.ACR_REGISTRY }}
+
+      # Build and push all container images
+      - name: Build and push Client image
+        run: |
+          docker build -f client/Dockerfile.dev -t ${{ env.ACR_REGISTRY }}/maapallo-client:${{ github.sha }} ./client
+          docker push ${{ env.ACR_REGISTRY }}/maapallo-client:${{ github.sha }}
+          docker tag ${{ env.ACR_REGISTRY }}/maapallo-client:${{ github.sha }} ${{ env.ACR_REGISTRY }}/maapallo-client:latest
+          docker push ${{ env.ACR_REGISTRY }}/maapallo-client:latest
+
+      - name: Build and push Server image
+        run: |
+          docker build -f server/Dockerfile -t ${{ env.ACR_REGISTRY }}/maapallo-server:${{ github.sha }} ./server
+          docker push ${{ env.ACR_REGISTRY }}/maapallo-server:${{ github.sha }}
+          docker tag ${{ env.ACR_REGISTRY }}/maapallo-server:${{ github.sha }} ${{ env.ACR_REGISTRY }}/maapallo-server:latest
+          docker push ${{ env.ACR_REGISTRY }}/maapallo-server:latest
+
+      - name: Build and push GeoServer image
+        run: |
+          docker build -f geoserver/Dockerfile -t ${{ env.ACR_REGISTRY }}/maapallo-geoserver:${{ github.sha }} ./geoserver
+          docker push ${{ env.ACR_REGISTRY }}/maapallo-geoserver:${{ github.sha }}
+          docker tag ${{ env.ACR_REGISTRY }}/maapallo-geoserver:${{ github.sha }} ${{ env.ACR_REGISTRY }}/maapallo-geoserver:latest
+          docker push ${{ env.ACR_REGISTRY }}/maapallo-geoserver:latest
+
+      # Deploy infrastructure using Azure Container Apps
+      - name: Deploy Container Apps Environment
+        run: |
+          # Create resource group if it doesn't exist
+          az group create --name ${{ env.RESOURCE_GROUP }} --location ${{ env.LOCATION }}
+
+          # Get Log Analytics workspace ID
+          LOG_ANALYTICS_ID=$(az monitor log-analytics workspace show \
             --resource-group ${{ env.RESOURCE_GROUP }} \
-            --name ${{ env.APP_NAME }} \
-            --settings \
+            --workspace-name maapallo-log-analytics \
+            --query id --output tsv)
+
+          # Create Container Apps environment with existing Log Analytics workspace
+          az containerapp env create \
+            --name ${{ env.CONTAINER_ENV_NAME }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --location ${{ env.LOCATION }} \
+            --logs-workspace-id "$LOG_ANALYTICS_ID"
+
+      # Deploy PostgreSQL with PostGIS
+      - name: Deploy PostgreSQL Database
+        run: |
+          # Create PostgreSQL server if it doesn't exist
+          # Using previous naming convention: server=maapallo-info-db, database=maapallo_info, admin=maapalloadmin
+          if ! az postgres flexible-server show --name ${{ env.DB_SERVER_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} &>/dev/null; then
+            echo "Creating PostgreSQL server..."
+            az postgres flexible-server create \
+              --name ${{ env.DB_SERVER_NAME }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --location ${{ env.LOCATION }} \
+              --admin-user ${{ secrets.DB_ADMIN_USER }} \
+              --admin-password "${{ secrets.DB_ADMIN_PASSWORD }}" \
+              --sku-name Standard_B2s \
+              --storage-size 128 \
+              --version 14
+          fi
+
+          # Create database if it doesn't exist
+          if ! az postgres flexible-server db show --database-name ${{ env.DB_NAME }} --server-name ${{ env.DB_SERVER_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} &>/dev/null; then
+            echo "Creating database..."
+            az postgres flexible-server db create \
+              --database-name ${{ env.DB_NAME }} \
+              --server-name ${{ env.DB_SERVER_NAME }} \
+              --resource-group ${{ env.RESOURCE_GROUP }}
+          fi
+
+          # Enable PostGIS extension (this might need to be done manually first time)
+          echo "PostGIS extension setup - may need manual configuration"
+
+      # Deploy Database container (for PostGIS setup)
+      - name: Deploy Database Container
+        run: |
+          az containerapp create \
+            --name maapallo-db \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --environment ${{ env.CONTAINER_ENV_NAME }} \
+            --image postgis/postgis:13-3.3-alpine \
+            --target-port 5432 \
+            --ingress internal \
+            --cpu 1.0 \
+            --memory 2.0Gi \
+            --min-replicas 1 \
+            --max-replicas 1 \
+            --env-vars \
+              POSTGRES_DB=${{ env.DB_NAME }} \
+              POSTGRES_USER=${{ secrets.DB_ADMIN_USER }} \
+              POSTGRES_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}
+
+      # Deploy GeoServer
+      - name: Deploy GeoServer Container
+        run: |
+          az containerapp create \
+            --name maapallo-geoserver \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --environment ${{ env.CONTAINER_ENV_NAME }} \
+            --image ${{ env.ACR_REGISTRY }}/maapallo-geoserver:${{ github.sha }} \
+            --target-port 8080 \
+            --ingress external \
+            --cpu 2.0 \
+            --memory 4.0Gi \
+            --min-replicas 1 \
+            --max-replicas 3 \
+            --env-vars \
+              GEOSERVER_ADMIN_PASSWORD=${{ secrets.GEOSERVER_ADMIN_PASSWORD }} \
+              POSTGRES_HOST=maapallo-db \
+              POSTGRES_PORT=5432 \
+              POSTGRES_DB=${{ env.DB_NAME }} \
+              POSTGRES_USER=${{ secrets.DB_ADMIN_USER }} \
+              POSTGRES_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}
+
+      # Deploy Backend API
+      - name: Deploy Server Container
+        run: |
+          az containerapp create \
+            --name maapallo-server \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --environment ${{ env.CONTAINER_ENV_NAME }} \
+            --image ${{ env.ACR_REGISTRY }}/maapallo-server:${{ github.sha }} \
+            --target-port 3003 \
+            --ingress external \
+            --cpu 1.0 \
+            --memory 2.0Gi \
+            --min-replicas 1 \
+            --max-replicas 5 \
+            --env-vars \
+              ENVIRONMENT=production \
+              JWT_SECRET_KEY="${{ secrets.JWT_SECRET_KEY }}" \
               ADMIN_USERNAME="${{ secrets.ADMIN_USERNAME }}" \
               ADMIN_PASSWORD="${{ secrets.ADMIN_PASSWORD }}" \
-              JWT_SECRET_KEY="${{ secrets.JWT_SECRET_KEY }}" \
-              CESIUM_ION_TOKEN="${{ secrets.CESIUM_ION_TOKEN }}" \
-              ENVIRONMENT="production"
+              PG_HOST=maapallo-db \
+              PG_PORT=5432 \
+              PG_DATABASE=${{ env.DB_NAME }} \
+              PG_USER=${{ secrets.DB_ADMIN_USER }} \
+              PG_PASS=${{ secrets.DB_ADMIN_PASSWORD }} \
+              PG_SSLMODE=prefer \
+              GEOSERVER_URL=https://maapallo-geoserver.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io
 
-          # Option 1: Use Azure's existing database secrets (recommended)
-          echo "✅ Using Azure Key Vault/App Configuration for database secrets (PG_*)"
-
-          # Option 2: Uncomment below if you want to use GitHub secrets for database
-          # az webapp config appsettings set \
-          #   --resource-group ${{ env.RESOURCE_GROUP }} \
-          #   --name ${{ env.APP_NAME }} \
-          #   --settings \
-          #     PG_HOST="${{ secrets.PG_HOST }}" \
-          #     PG_PORT="${{ secrets.PG_PORT }}" \
-          #     PG_DATABASE="${{ secrets.PG_DATABASE }}" \
-          #     PG_USER="${{ secrets.PG_USER }}" \
-          #     PG_PASS="${{ secrets.PG_PASS }}" \
-          #     PG_SSLMODE="${{ secrets.PG_SSLMODE }}"
-
-      - name: Run migrations and restart Web App
+      # Deploy Frontend
+      - name: Deploy Client Container
         run: |
-          echo "Running migrations via API endpoint..."
-          # Wait for app to be available
-          sleep 30
+          az containerapp create \
+            --name maapallo-client \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --environment ${{ env.CONTAINER_ENV_NAME }} \
+            --image ${{ env.ACR_REGISTRY }}/maapallo-client:${{ github.sha }} \
+            --target-port 8080 \
+            --ingress external \
+            --cpu 0.5 \
+            --memory 1.0Gi \
+            --min-replicas 1 \
+            --max-replicas 3 \
+            --env-vars \
+              REACT_APP_API_URL=https://maapallo-server.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io \
+              REACT_APP_GEOSERVER_URL=https://maapallo-geoserver.${CONTAINER_ENV_NAME}.${LOCATION}.azurecontainerapps.io/geoserver \
+              CESIUM_ION_TOKEN="${{ secrets.CESIUM_ION_TOKEN }}"
 
-          # Try to run migrations via API
-          curl -X POST "https://${{ env.APP_NAME }}.azurewebsites.net/api/v1/admin/migrate" \
-            -H "Content-Type: application/json" \
-            -d '{"username": "${{ secrets.ADMIN_USERNAME }}", "password": "${{ secrets.ADMIN_PASSWORD }}"}' || echo "Migration endpoint call failed - app may not be ready yet"
+      # Run initial setup
+      - name: Initialize Application
+        run: |
+          echo "Waiting for containers to be ready..."
+          sleep 60
 
-          echo "Restarting web app..."
-          az webapp restart --name ${{ env.APP_NAME }} --resource-group ${{ env.RESOURCE_GROUP }}
-          echo "✅ Web app restarted - using direct uvicorn startup"
+          # Get the frontend URL
+          FRONTEND_URL=$(az containerapp show --name maapallo-client --resource-group ${{ env.RESOURCE_GROUP }} --query properties.configuration.ingress.fqdn -o tsv)
+
+          echo "✅ Application deployed successfully!"
+          echo "🌐 Frontend URL: https://$FRONTEND_URL"
+          echo "🗺️ GeoServer Admin: https://$(az containerapp show --name maapallo-geoserver --resource-group ${{ env.RESOURCE_GROUP }} --query properties.configuration.ingress.fqdn -o tsv)/geoserver"
+          echo "🔧 API Endpoint: https://$(az containerapp show --name maapallo-server --resource-group ${{ env.RESOURCE_GROUP }} --query properties.configuration.ingress.fqdn -o tsv)"
