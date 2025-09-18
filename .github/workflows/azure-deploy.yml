@@ -42,7 +42,9 @@ jobs:
       # Build and push all container images
       - name: Build and push Client image
         run: |
-          docker build -f client/Dockerfile.dev -t ${{ env.ACR_REGISTRY }}/maapallo-client:${{ github.sha }} ./client
+          docker build -f client/Dockerfile.production \
+            --build-arg CESIUM_ION_TOKEN="${{ secrets.CESIUM_ION_TOKEN }}" \
+            -t ${{ env.ACR_REGISTRY }}/maapallo-client:${{ github.sha }} ./client
           docker push ${{ env.ACR_REGISTRY }}/maapallo-client:${{ github.sha }}
           docker tag ${{ env.ACR_REGISTRY }}/maapallo-client:${{ github.sha }} ${{ env.ACR_REGISTRY }}/maapallo-client:latest
           docker push ${{ env.ACR_REGISTRY }}/maapallo-client:latest
@@ -504,9 +506,8 @@ jobs:
                 --registry-identity $IDENTITY_ID \
                 --registry-server ${{ env.ACR_REGISTRY }} \
                 --env-vars \
-                  "REACT_APP_API_URL=https://maapallo-server.${ENV_DEFAULT_DOMAIN}" \
-                  "REACT_APP_GEOSERVER_URL=https://maapallo-geoserver.${ENV_DEFAULT_DOMAIN}/geoserver" \
-                  "CESIUM_ION_TOKEN=${{ secrets.CESIUM_ION_TOKEN }}"
+                  "API_SERVER_URL=https://maapallo-server.${ENV_DEFAULT_DOMAIN}" \
+                  "GEOSERVER_URL=https://maapallo-geoserver.${ENV_DEFAULT_DOMAIN}/geoserver"
             else
               echo "Updating existing Client container..."
 
@@ -536,9 +537,8 @@ jobs:
                 --resource-group ${{ env.RESOURCE_GROUP }} \
                 --image ${{ env.ACR_REGISTRY }}/maapallo-client:${{ github.sha }} \
                 --set-env-vars \
-                  "REACT_APP_API_URL=https://maapallo-server.${ENV_DEFAULT_DOMAIN}" \
-                  "REACT_APP_GEOSERVER_URL=https://maapallo-geoserver.${ENV_DEFAULT_DOMAIN}/geoserver" \
-                  "CESIUM_ION_TOKEN=${{ secrets.CESIUM_ION_TOKEN }}"
+                  "API_SERVER_URL=https://maapallo-server.${ENV_DEFAULT_DOMAIN}" \
+                  "GEOSERVER_URL=https://maapallo-geoserver.${ENV_DEFAULT_DOMAIN}/geoserver"
             fi
           else
             echo "Creating new Client container..."
@@ -565,9 +565,8 @@ jobs:
               --registry-identity $IDENTITY_ID \
               --registry-server ${{ env.ACR_REGISTRY }} \
               --env-vars \
-                "REACT_APP_API_URL=https://maapallo-server.${ENV_DEFAULT_DOMAIN}" \
-                "REACT_APP_GEOSERVER_URL=https://maapallo-geoserver.${ENV_DEFAULT_DOMAIN}/geoserver" \
-                "CESIUM_ION_TOKEN=${{ secrets.CESIUM_ION_TOKEN }}"
+                "API_SERVER_URL=https://maapallo-server.${ENV_DEFAULT_DOMAIN}" \
+                "GEOSERVER_URL=https://maapallo-geoserver.${ENV_DEFAULT_DOMAIN}/geoserver"
           fi
 
       # Run initial setup
