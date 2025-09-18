@@ -64,6 +64,13 @@ jobs:
       # Deploy infrastructure using Azure Container Apps
       - name: Deploy Container Apps Environment
         run: |
+          # Register required resource providers
+          echo "Registering Azure resource providers..."
+          az provider register --namespace Microsoft.App --wait
+          az provider register --namespace Microsoft.ContainerRegistry --wait
+          az provider register --namespace Microsoft.DBforPostgreSQL --wait
+          az provider register --namespace Microsoft.OperationalInsights --wait
+
           # Create resource group if it doesn't exist
           az group create --name ${{ env.RESOURCE_GROUP }} --location ${{ env.LOCATION }}
 
