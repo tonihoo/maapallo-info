@@ -4,19 +4,22 @@ Maapallo.info is a map based portal of global geospatial data related to human d
 
 ## Technical Implementation
 
-The application consists of four components:
+The application consists of five components:
 
 - **Server**: FastAPI/Python backend (port 3003)
 - **Client**: React/TypeScript/OpenLayers frontend (port 8080)
 - **Database**: PostgreSQL + PostGIS database (port 5432)
+- **GeoServer**: OGC-compliant geospatial server (port 8081)
 - **PgAdmin**: Database administration interface (port 5050)
 
-**Geoserver** will be added to the tech stack soon, see 'geoserver' branch.
+### Geospatial Architecture
 
-### Geospatial layers
+The application uses a hybrid architecture for geospatial data management:
 
-- Layers are served dynamically from PostGIS through the backend API.
-- To add a new API-backed layer, import it via the admin API and it will appear through the API.
+- **Static Layers**: Served directly from PostGIS through the FastAPI backend
+- **Dynamic Layers**: Managed through GeoServer with automatic import capabilities
+- **Data Import**: Admin interface allows uploading GeoJSON files that are automatically processed by GeoServer and stored in PostGIS
+- **Layer Management**: GeoServer provides OGC-compliant WMS/WFS services for complex geospatial operations
 
 ## Security & Environment Variables
 
@@ -59,6 +62,7 @@ docker compose exec server python run_migrations.py
 
 - **Frontend**: [http://localhost:8080](http://localhost:8080)
 - **API documentation**: [http://localhost:3003/docs](http://localhost:3003/docs)
+- **GeoServer**: [http://localhost:8081/geoserver](http://localhost:8081/geoserver) (admin/geoserver)
 - **PgAdmin**: [http://localhost:5050](http://localhost:5050)
 
 ## Daily Development
@@ -73,6 +77,7 @@ docker compose up -d
 docker compose up -d server
 docker compose up -d client
 docker compose up -d db
+docker compose up -d geoserver
 ```
 
 ### Stopping containers
@@ -94,6 +99,7 @@ docker compose logs -f
 # Follow logs of one container
 docker compose logs -f server
 docker compose logs -f client
+docker compose logs -f geoserver
 ```
 
 ## Dependency Management
@@ -256,25 +262,31 @@ docker compose exec server python -c "from migrate import check_migration_status
 ### FastAPI Backend
 
 **Technical stack:**
+
 - **FastAPI**: Modern, async Python web framework
 - **SQLAlchemy**: Async ORM with PostgreSQL
 - **Pydantic**: Data validation and type safety
 - **PostGIS**: Spatial database extensions
 - **Uvicorn**: ASGI server for production
+- **GDAL/OGR**: Geospatial data processing
 
 **API Endpoints:**
+
 - `GET /api/v1/health/` - Health check
 - `GET /api/v1/feature/` - List all features
 - `POST /api/v1/feature/` - Create new feature
 - `GET /api/v1/feature/{id}` - Get feature by ID
 - `PUT /api/v1/feature/{id}` - Update feature
 - `DELETE /api/v1/feature/{id}` - Delete feature
+- `POST /api/v1/admin/geoserver-upload` - Upload geospatial files
+- `POST /api/v1/admin/geoserver-import` - Import data to GeoServer
 
 **API Documentation:** [http://localhost:3003/docs](http://localhost:3003/docs)
 
 ### React Frontend
 
 **Technical stack:**
+
 - **React 18**: Modern React with hooks
 - **TypeScript**: Type safety
 - **Material-UI**: UI component library
@@ -285,9 +297,11 @@ docker compose exec server python -c "from migrate import check_migration_status
 ### PostgreSQL + PostGIS Database
 
 **Configuration:**
+
 - PostgreSQL 13 with PostGIS 3.3
 - Spatial data support for geographic features
 - SRID 3067 (Finland coordinate system) for locations
+- Automatic spatial indexing for imported layers
 
 ## Troubleshooting
 
@@ -322,6 +336,33 @@ docker compose ps db
 
 # Test connection
 docker compose exec db psql -U postgres -d maapallo_info -c "SELECT version();"
+```
+
+**GeoServer issues:**
+```bash
+# Check GeoServer status
+docker compose ps geoserver
+
+# View GeoServer logs
+docker compose logs geoserver
+
+# Test GeoServer web interface
+curl http://localhost:8081/geoserver/web/
+
+# Test workspace creation
+curl -u admin:geoserver http://localhost:8081/geoserver/rest/workspaces/maapallo
+```
+
+**Data import issues:**
+```bash
+# Check if GDAL is available in server container
+docker compose exec server ogr2ogr --version
+
+# Test PostGIS connection from server
+docker compose exec server psql -h db -U db_dev_user -d db_dev -c "SELECT PostGIS_Version();"
+
+# Check uploaded files
+docker compose exec server ls -la /app/uploads/
 ```
 
 **Frontend doesn't show changes:**
