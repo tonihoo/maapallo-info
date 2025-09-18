@@ -13,7 +13,7 @@ env:
   RESOURCE_GROUP: maapallo-info-group
   LOCATION: northeurope
 
-  # Database configuration - using more unique names
+  # Database configuration
   DB_SERVER_NAME: maapallo-db-server
 
   # Container Apps environment
@@ -33,7 +33,7 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS_NGO }} # Use NGO account credentials
+          creds: ${{ secrets.AZURE_CREDENTIALS_NGO }}
 
       - name: Log in to ACR
         run: |
@@ -193,7 +193,6 @@ jobs:
             -d ${{ secrets.DB_NAME }} \
             -c "CREATE EXTENSION IF NOT EXISTS postgis; CREATE EXTENSION IF NOT EXISTS postgis_topology; CREATE EXTENSION IF NOT EXISTS pg_stat_statements;" || echo "PostGIS extensions may already exist"
 
-      # Deploy Database container with PostGIS - Production configuration
       # Deploy GeoServer
       - name: Deploy GeoServer Container
         run: |
@@ -211,28 +210,6 @@ jobs:
             --env-vars \
               GEOSERVER_ADMIN_PASSWORD=${{ secrets.GEOSERVER_ADMIN_PASSWORD }} \
               POSTGRES_HOST=${{ env.DB_SERVER_NAME }}.postgres.database.azure.com \
-              POSTGRES_PORT=5432 \
-              POSTGRES_DB=${{ secrets.DB_NAME }} \
-              POSTGRES_USER=${{ secrets.DB_ADMIN_USER }} \
-              POSTGRES_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}
-
-      # Deploy GeoServer
-      - name: Deploy GeoServer Container
-        run: |
-          az containerapp create \
-            --name maapallo-geoserver \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --environment ${{ env.CONTAINER_ENV_NAME }} \
-            --image ${{ env.ACR_REGISTRY }}/maapallo-geoserver:${{ github.sha }} \
-            --target-port 8080 \
-            --ingress external \
-            --cpu 2.0 \
-            --memory 4.0Gi \
-            --min-replicas 2 \
-            --max-replicas 5 \
-            --env-vars \
-              GEOSERVER_ADMIN_PASSWORD=${{ secrets.GEOSERVER_ADMIN_PASSWORD }} \
-              POSTGRES_HOST=maapallo-db \
               POSTGRES_PORT=5432 \
               POSTGRES_DB=${{ secrets.DB_NAME }} \
               POSTGRES_USER=${{ secrets.DB_ADMIN_USER }} \
