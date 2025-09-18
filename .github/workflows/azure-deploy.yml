@@ -87,17 +87,43 @@ jobs:
           # Get managed identity details
           IDENTITY_ID=$(az identity show --name maapallo-container-identity --resource-group ${{ env.RESOURCE_GROUP }} --query id -o tsv)
           IDENTITY_CLIENT_ID=$(az identity show --name maapallo-container-identity --resource-group ${{ env.RESOURCE_GROUP }} --query clientId -o tsv)
+          IDENTITY_PRINCIPAL_ID=$(az identity show --name maapallo-container-identity --resource-group ${{ env.RESOURCE_GROUP }} --query principalId -o tsv)
 
           # Get ACR resource ID
           ACR_RESOURCE_ID=$(az acr show --name maapalloinforegistry --resource-group ${{ env.RESOURCE_GROUP }} --query id -o tsv)
 
-          # Assign AcrPull role to managed identity
-          echo "Assigning AcrPull role to managed identity..."
-          az role assignment create \
-            --assignee $IDENTITY_CLIENT_ID \
+          # Check if role assignment already exists
+          echo "Checking if AcrPull role is already assigned..."
+          EXISTING_ASSIGNMENT=$(az role assignment list \
+            --assignee $IDENTITY_PRINCIPAL_ID \
             --scope $ACR_RESOURCE_ID \
             --role AcrPull \
-            --output none || echo "Role assignment may already exist"
+            --query "[].id" -o tsv)
+
+          if [ -z "$EXISTING_ASSIGNMENT" ]; then
+            echo "Assigning AcrPull role to managed identity..."
+            az role assignment create \
+              --assignee-object-id $IDENTITY_PRINCIPAL_ID \
+              --assignee-principal-type ServicePrincipal \
+              --scope $ACR_RESOURCE_ID \
+              --role AcrPull \
+              --output none || {
+                echo "⚠️  Automatic role assignment failed. Creating role assignment using alternative method..."
+                # Try with client ID instead
+                az role assignment create \
+                  --assignee $IDENTITY_CLIENT_ID \
+                  --scope $ACR_RESOURCE_ID \
+                  --role AcrPull \
+                  --output none || {
+                    echo "🔧 Manual role assignment required. Please run:"
+                    echo "az role assignment create --assignee $IDENTITY_PRINCIPAL_ID --scope $ACR_RESOURCE_ID --role AcrPull"
+                    echo "Or using client ID:"
+                    echo "az role assignment create --assignee $IDENTITY_CLIENT_ID --scope $ACR_RESOURCE_ID --role AcrPull"
+                  }
+              }
+          else
+            echo "✅ AcrPull role is already assigned to managed identity"
+          fi
 
           # Create Log Analytics workspace if it doesn't exist
           echo "Checking if Log Analytics workspace exists..."
@@ -329,17 +355,17 @@ jobs:
           if az containerapp show --name maapallo-server --resource-group ${{ env.RESOURCE_GROUP }} >/dev/null 2>&1; then
             # Check if the container app is in a failed state
             PROVISIONING_STATE=$(az containerapp show --name maapallo-server --resource-group ${{ env.RESOURCE_GROUP }} --query properties.provisioningState -o tsv 2>/dev/null || echo "Unknown")
-            
+
             if [ "$PROVISIONING_STATE" = "Failed" ]; then
               echo "Server container is in failed state. Deleting and recreating..."
               az containerapp delete \
                 --name maapallo-server \
                 --resource-group ${{ env.RESOURCE_GROUP }} \
                 --yes
-              
+
               # Wait a moment for deletion to complete
               sleep 30
-              
+
               echo "Creating new Server container..."
               az containerapp create \
                 --name maapallo-server \
@@ -440,17 +466,17 @@ jobs:
           if az containerapp show --name maapallo-client --resource-group ${{ env.RESOURCE_GROUP }} >/dev/null 2>&1; then
             # Check if the container app is in a failed state
             PROVISIONING_STATE=$(az containerapp show --name maapallo-client --resource-group ${{ env.RESOURCE_GROUP }} --query properties.provisioningState -o tsv 2>/dev/null || echo "Unknown")
-            
+
             if [ "$PROVISIONING_STATE" = "Failed" ]; then
               echo "Client container is in failed state. Deleting and recreating..."
               az containerapp delete \
                 --name maapallo-client \
                 --resource-group ${{ env.RESOURCE_GROUP }} \
                 --yes
-              
+
               # Wait a moment for deletion to complete
               sleep 30
-              
+
               echo "Creating new Client container..."
               az containerapp create \
                 --name maapallo-client \
