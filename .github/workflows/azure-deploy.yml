@@ -10,11 +10,11 @@ on:
 env:
   ACR_REGISTRY: maapalloinforegistry.azurecr.io
   APP_NAME: maapallo-info-app
-  RESOURCE_GROUP: maapallo-info-group
+  RESOURCE_GROUP: maapallo-group
   LOCATION: northeurope
 
-  # Database configuration
-  DB_SERVER_NAME: maapallo-info-db
+  # Database configuration - using more unique names
+  DB_SERVER_NAME: maapallo-db-server
 
   # Container Apps environment
   CONTAINER_ENV_NAME: maapallo-env
@@ -89,9 +89,11 @@ jobs:
       # Deploy PostgreSQL with PostGIS
       - name: Deploy PostgreSQL Database
         run: |
-          # Create PostgreSQL server if it doesn't exist
-          # Using previous naming convention: server=maapallo-info-db, database=maapallo_info, admin=maapalloadmin
-          if ! az postgres flexible-server show --name ${{ env.DB_SERVER_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} &>/dev/null; then
+          # Check if PostgreSQL server exists
+          echo "Checking if PostgreSQL server exists..."
+          if az postgres flexible-server show --name ${{ env.DB_SERVER_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} >/dev/null 2>&1; then
+            echo "PostgreSQL server ${{ env.DB_SERVER_NAME }} already exists, skipping creation."
+          else
             echo "Creating PostgreSQL server with admin user: ${{ secrets.DB_ADMIN_USER }}"
             az postgres flexible-server create \
               --name ${{ env.DB_SERVER_NAME }} \
@@ -101,12 +103,19 @@ jobs:
               --admin-password "${{ secrets.DB_ADMIN_PASSWORD }}" \
               --sku-name Standard_B2s \
               --storage-size 128 \
-              --version 14
+              --version 14 || {
+                echo "Server creation failed. It might already exist with different configuration."
+                echo "Checking server status..."
+                az postgres flexible-server show --name ${{ env.DB_SERVER_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} || exit 1
+              }
           fi
 
           # Create database if it doesn't exist
-          if ! az postgres flexible-server db show --database-name ${{ secrets.DB_NAME }} --server-name ${{ env.DB_SERVER_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} &>/dev/null; then
-            echo "Creating database..."
+          echo "Checking if database exists..."
+          if az postgres flexible-server db show --database-name ${{ secrets.DB_NAME }} --server-name ${{ env.DB_SERVER_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} >/dev/null 2>&1; then
+            echo "Database ${{ secrets.DB_NAME }} already exists, skipping creation."
+          else
+            echo "Creating database ${{ secrets.DB_NAME }}..."
             az postgres flexible-server db create \
               --database-name ${{ secrets.DB_NAME }} \
               --server-name ${{ env.DB_SERVER_NAME }} \
