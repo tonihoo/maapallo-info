@@ -39,15 +39,15 @@ GEOSERVER_URL=${GEOSERVER_URL:-"http://maapallo-geoserver:8080/geoserver"}
 
 # Create nginx config from template
 cat > /etc/nginx/conf.d/default.conf << NGINXEOF
+# Use memory-based temp directories to avoid permission issues
+client_body_temp_path /tmp/nginx-client-body;
+proxy_temp_path /tmp/nginx-proxy;
+
 server {
     listen 8080;
     server_name localhost;
     root /usr/share/nginx/html;
     index index.html;
-
-    # Use memory-based temp directories to avoid permission issues
-    client_body_temp_path /tmp/nginx-client-body;
-    proxy_temp_path /tmp/nginx-proxy;
 
     # Proxy API calls to backend server
     location /api/ {
