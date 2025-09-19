@@ -97,15 +97,10 @@ EOF
 
 RUN chmod +x /docker-entrypoint.sh
 
-# Create nginx user and change ownership
-RUN addgroup -g 1001 -S nginx && \
-    adduser -S -D -H -u 1001 -h /var/cache/nginx -s /sbin/nologin -G nginx -g nginx nginx && \
-    chown -R nginx:nginx /var/cache/nginx && \
-    chown -R nginx:nginx /var/log/nginx && \
-    chown -R nginx:nginx /etc/nginx/conf.d && \
+# Set proper ownership for nginx user (which already exists in nginx:alpine)
+RUN chown -R nginx:nginx /etc/nginx/conf.d && \
     chown -R nginx:nginx /usr/share/nginx/html && \
-    touch /var/run/nginx.pid && \
-    chown nginx:nginx /var/run/nginx.pid
+    chown nginx:nginx /docker-entrypoint.sh
 
 # Switch to non-root user
 USER nginx
