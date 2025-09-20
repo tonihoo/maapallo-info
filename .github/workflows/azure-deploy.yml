@@ -507,7 +507,9 @@ jobs:
                 --registry-server ${{ env.ACR_REGISTRY }} \
                 --env-vars \
                   "API_SERVER_URL=https://maapallo-server.${ENV_DEFAULT_DOMAIN}" \
-                  "GEOSERVER_URL=https://maapallo-geoserver.${ENV_DEFAULT_DOMAIN}/geoserver"
+                  "GEOSERVER_URL=https://maapallo-geoserver.${ENV_DEFAULT_DOMAIN}/geoserver" \
+                  "BASIC_AUTH_USERNAME=${{ secrets.BASIC_AUTH_USERNAME }}" \
+                  "BASIC_AUTH_PASSWORD=${{ secrets.BASIC_AUTH_PASSWORD }}"
             else
               echo "Updating existing Client container..."
 
@@ -538,7 +540,9 @@ jobs:
                 --image ${{ env.ACR_REGISTRY }}/maapallo-client:${{ github.sha }} \
                 --set-env-vars \
                   "API_SERVER_URL=https://maapallo-server.${ENV_DEFAULT_DOMAIN}" \
-                  "GEOSERVER_URL=https://maapallo-geoserver.${ENV_DEFAULT_DOMAIN}/geoserver"
+                  "GEOSERVER_URL=https://maapallo-geoserver.${ENV_DEFAULT_DOMAIN}/geoserver" \
+                  "BASIC_AUTH_USERNAME=${{ secrets.BASIC_AUTH_USERNAME }}" \
+                  "BASIC_AUTH_PASSWORD=${{ secrets.BASIC_AUTH_PASSWORD }}"
             fi
           else
             echo "Creating new Client container..."
@@ -566,7 +570,9 @@ jobs:
               --registry-server ${{ env.ACR_REGISTRY }} \
               --env-vars \
                 "API_SERVER_URL=https://maapallo-server.${ENV_DEFAULT_DOMAIN}" \
-                "GEOSERVER_URL=https://maapallo-geoserver.${ENV_DEFAULT_DOMAIN}/geoserver"
+                "GEOSERVER_URL=https://maapallo-geoserver.${ENV_DEFAULT_DOMAIN}/geoserver" \
+                "BASIC_AUTH_USERNAME=${{ secrets.BASIC_AUTH_USERNAME }}" \
+                "BASIC_AUTH_PASSWORD=${{ secrets.BASIC_AUTH_PASSWORD }}"
           fi
 
       # Run initial setup
