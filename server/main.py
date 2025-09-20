@@ -47,13 +47,14 @@ async def simple_auth_middleware(request: Request, call_next):
     # Only protect the main page and HTML routes
     path = request.url.path
 
-    # Skip auth for all API routes, static assets, health checks
+    # Skip auth for all API routes, static assets, health checks, and docs
     if (
         path.startswith("/api/")
         or path.startswith("/images/")
         or path.startswith("/cesium/")
         or path.startswith("/data/")
         or path.startswith("/static/")
+        or path in ["/docs", "/redoc", "/openapi.json"]
         or "." in path.split("/")[-1]
     ):  # Has file extension
         return await call_next(request)
