@@ -1,3 +1,5 @@
+from urllib.parse import quote_plus
+
 from pydantic_settings import BaseSettings
 
 
@@ -20,25 +22,34 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> str:
+        # URL-encode the password to handle special characters
+        encoded_password = quote_plus(self.pg_pass)
+
         # For local development, don't include any SSL parameters
         if self.environment == "development":
             return (
-                f"postgresql+asyncpg://{self.pg_user}:{self.pg_pass}"
+                f"postgresql+asyncpg://{self.pg_user}:{encoded_password}"
                 f"@{self.pg_host}:{self.pg_port}/"
                 f"{self.pg_database}"
             )
 
-        # For production with asyncpg, use the correct SSL parameters
-        # asyncpg uses 'ssl' parameter
-        # but it expects 'require', 'prefer', 'disable', etc.
-        return (
-            f"postgresql+asyncpg://{self.pg_user}:{self.pg_pass}"
+        # For production with asyncpg, handle SSL properly
+        # When SSL is disabled, don't include SSL parameter at all
+        base_url = (
+            f"postgresql+asyncpg://{self.pg_user}:{encoded_password}"
             f"@{self.pg_host}:{self.pg_port}/{self.pg_database}"
-            f"?ssl={self.pg_sslmode}"
         )
+
+        if self.pg_sslmode == "disable":
+            return base_url
+        else:
+            return f"{base_url}?ssl={self.pg_sslmode}"
 
     @property
     def database_url_sync(self) -> str:
+        # URL-encode the password to handle special characters
+        encoded_password = quote_plus(self.pg_pass)
+
         # Ensure sslmode is valid
         valid_ssl_modes = [
             "disable",
@@ -53,7 +64,7 @@ class Settings(BaseSettings):
         )
 
         return (
-            f"postgresql://{self.pg_user}:{self.pg_pass}"
+            f"postgresql://{self.pg_user}:{encoded_password}"
             f"@{self.pg_host}:{self.pg_port}/"
             f"{self.pg_database}?sslmode={ssl_mode}"
         )
