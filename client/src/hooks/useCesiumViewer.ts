@@ -201,7 +201,7 @@ export function useCesiumViewer({
     ) => {
       const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
 
-      handler.setInputAction((movement: any) => {
+      handler.setInputAction((movement: { endPosition: Cesium.Cartesian2 }) => {
         const cartesian = viewer.camera.pickEllipsoid(
           movement.endPosition,
           viewer.scene.globe.ellipsoid
@@ -217,7 +217,7 @@ export function useCesiumViewer({
         }
       }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
 
-      handler.setInputAction((click: any) => {
+      handler.setInputAction((click: { position: Cesium.Cartesian2 }) => {
         const pickedObject = viewer.scene.pick(click.position);
 
         if (pickedObject && pickedObject.id) {
@@ -281,14 +281,94 @@ export function useCesiumViewer({
       >
     ) => {
       try {
+        // Configure NASA GIBS Blue Marble (Level 8) as the base imagery provider via WMTS
+        const nasaBlueMarbleProvider =
+          new Cesium.WebMapTileServiceImageryProvider({
+            url: "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/wmts.cgi",
+            layer: "BlueMarble_ShadedRelief",
+            style: "default",
+            format: "image/jpeg",
+            tileMatrixSetID: "GoogleMapsCompatible_Level8",
+            maximumLevel: 8,
+            tilingScheme: new Cesium.WebMercatorTilingScheme(),
+            tileWidth: 256,
+            tileHeight: 256,
+            credit: new Cesium.Credit(
+              "Imagery from NASA GIBS (Blue Marble), courtesy of NASA EOSDIS Worldview"
+            ),
+          });
+
+        // Choose terrain provider:
+        // - If REACT_APP_DISABLE_ION_TERRAIN is 'true', force ellipsoid terrain (e.g., for development)
+        // - Else, use World Terrain only if a valid Ion token is set; otherwise fall back to ellipsoid
+        const disableIonTerrain =
+          (process.env.REACT_APP_DISABLE_ION_TERRAIN || "")
+            .toString()
+            .toLowerCase() === "true";
+
+        const hasIonToken =
+          typeof Cesium.Ion?.defaultAccessToken === "string" &&
+          Cesium.Ion.defaultAccessToken.trim().length > 0 &&
+          Cesium.Ion.defaultAccessToken !== "YOUR_NEW_CESIUM_ION_TOKEN_HERE";
+
+        const terrainProvider =
+          !disableIonTerrain && hasIonToken
+            ? Cesium.createWorldTerrain({
+                requestWaterMask: true,
+                requestVertexNormals: true,
+              })
+            : new Cesium.EllipsoidTerrainProvider();
+
         const viewer = new Cesium.Viewer(containerElement, {
           ...OPTIMIZED_CESIUM_OPTIONS,
-          baseLayerPicker: true, // Keep this enabled for imagery options
-          terrainProvider: Cesium.createWorldTerrain({
-            requestWaterMask: true,
-            requestVertexNormals: true,
-          }),
+          // Use NASA Blue Marble imagery by default and disable other imagery options
+          baseLayerPicker: false,
+          imageryProvider: nasaBlueMarbleProvider,
+          terrainProvider,
         });
+
+        // If terrain provider encounters errors (e.g., 401 from Ion), fall back to ellipsoid terrain
+        try {
+          const onTerrainError = () => {
+            try {
+              if (
+                !(
+                  viewer.terrainProvider instanceof
+                  Cesium.EllipsoidTerrainProvider
+                )
+              ) {
+                viewer.terrainProvider = new Cesium.EllipsoidTerrainProvider();
+              }
+            } catch (e) {
+              // ignore
+            }
+          };
+          // Attach to both possible locations depending on Cesium version
+          const tp1 = viewer.terrainProvider as Cesium.TerrainProvider & {
+            errorEvent?: Cesium.Event;
+          };
+          if (
+            tp1 &&
+            typeof tp1 === "object" &&
+            tp1.errorEvent?.addEventListener
+          ) {
+            tp1.errorEvent.addEventListener(onTerrainError);
+          }
+
+          const tp2 = viewer.scene.globe
+            .terrainProvider as Cesium.TerrainProvider & {
+            errorEvent?: Cesium.Event;
+          };
+          if (
+            tp2 &&
+            typeof tp2 === "object" &&
+            tp2.errorEvent?.addEventListener
+          ) {
+            tp2.errorEvent.addEventListener(onTerrainError);
+          }
+        } catch (_) {
+          // no-op
+        }
 
         // Enable terrain exaggeration for better 3D effect
         viewer.scene.globe.terrainExaggeration = 1.0;
