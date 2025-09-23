@@ -81,46 +81,7 @@ MIGRATIONS = {
         ON custom_events (timestamp);
         """,
     },
-    "0004_add_population_density_2022": {
-        "description": "Creates table for population density by country data",
-        "sql": """
-        CREATE TABLE IF NOT EXISTS pop_density_by_country_2022_num (
-            id SERIAL PRIMARY KEY,
-            "NAME" VARCHAR(255),
-            "ISO_A3" VARCHAR(3),
-            pop_density_2022_num DECIMAL(10,3),
-            geom GEOMETRY(MULTIPOLYGON, 4326)
-        );
-
-        CREATE INDEX IF NOT EXISTS idx_pop_density_geom
-        ON pop_density_by_country_2022_num USING GIST (geom);
-
-        CREATE INDEX IF NOT EXISTS idx_pop_density_iso
-        ON pop_density_by_country_2022_num ("ISO_A3");
-        """,
-    },
-    # Future migrations can be added here
-    "0005_add_climate_data": {
-        "description": "Creates table for climate data layers",
-        "sql": """
-        CREATE TABLE IF NOT EXISTS climate_data (
-            id SERIAL PRIMARY KEY,
-            "NAME" VARCHAR(255),
-            "ISO_A3" VARCHAR(3),
-            temperature_avg DECIMAL(5,2),
-            precipitation_mm DECIMAL(8,2),
-            year INTEGER,
-            geom GEOMETRY(MULTIPOLYGON, 4326)
-        );
-
-        CREATE INDEX IF NOT EXISTS idx_climate_geom
-        ON climate_data USING GIST (geom);
-
-        CREATE INDEX IF NOT EXISTS idx_climate_iso ON climate_data ("ISO_A3");
-        CREATE INDEX IF NOT EXISTS idx_climate_year ON climate_data (year);
-        """,
-    },
-    "0006_create_geo_layers": {
+    "0004_create_geo_layers": {
         "description": "Create generic geo_layers and geo_features tables",
         "sql": """
         CREATE TABLE IF NOT EXISTS geo_layers (
