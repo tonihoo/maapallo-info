@@ -118,6 +118,12 @@ export function Map({
       <LayerSwitcher
         layers={[
           {
+            id: "worldBoundaries",
+            name: "Valtioiden rajat",
+            description: "Valtioiden rajat ja nimet",
+            visible: layerVisibility.worldBoundaries,
+          },
+          {
             id: "oceanCurrents",
             name: "Merivirrat",
             description: "Merivirtojen globaalit kiertomallit",
@@ -129,13 +135,6 @@ export function Map({
             description: "Luonnontilaiset metsäalueet 2020",
             visible: layerVisibility.intactForests,
           },
-          {
-            id: "worldBoundaries",
-            name: "Valtioiden rajat",
-            description: "Valtioiden rajat ja nimet",
-            visible: layerVisibility.worldBoundaries,
-          },
-
           {
             id: "adultLiteracy",
             name: "Lukutaito, aikuiset",
