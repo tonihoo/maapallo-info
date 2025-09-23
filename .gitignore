@@ -26,6 +26,7 @@ cypress/screenshots
 # Large data files - don't commit to git
 client/public/data/*.geojson
 server/*.geojson
+geoserver/uploads/
 
 # Import scripts generate temporary files
 server/pop_density_data.geojson
