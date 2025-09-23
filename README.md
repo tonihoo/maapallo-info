@@ -15,7 +15,7 @@ The application consists of five components:
 - **Client**: React/TypeScript/OpenLayers frontend (port 8080)
 - **Database**: PostgreSQL + PostGIS database (port 5432)
 - **GeoServer**: OGC-compliant geospatial server (port 8081)
-- **PgAdmin**: Database administration interface (port 5050)
+- **PgAdmin**: Database administration interface (port 5050, available in local setup only)
 
 ### Geospatial Architecture
 
