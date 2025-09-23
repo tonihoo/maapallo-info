@@ -136,16 +136,16 @@ export function Map({
             visible: layerVisibility.intactForests,
           },
           {
-            id: "adultLiteracy",
-            name: "Lukutaito, aikuiset",
-            description: "Aikuisten lukutaitoprosentit maittain (2020-2023)",
-            visible: layerVisibility.adultLiteracy,
-          },
-          {
             id: "populationDensity",
             name: "Väestöntiheys",
             description: "Väestöntiheys maittain 2022 (henkeä/km²)",
             visible: layerVisibility.populationDensity,
+          },
+          {
+            id: "adultLiteracy",
+            name: "Lukutaito, aikuiset",
+            description: "Aikuisten lukutaitoprosentit maittain (2020-2023)",
+            visible: layerVisibility.adultLiteracy,
           },
           {
             id: "articleLocators",
