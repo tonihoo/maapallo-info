@@ -1,4 +1,5 @@
 import * as Cesium from "cesium";
+import { env } from "./env";
 
 // Set Cesium configuration properly for Webpack build
 // The CESIUM_BASE_URL is defined in webpack.config.js
@@ -20,8 +21,8 @@ export const initializeCesiumConfig = () => {
     }
   }
 
-  // Get Cesium Ion token from environment variable
-  const CESIUM_ION_TOKEN = process.env.CESIUM_ION_TOKEN;
+  // Get Cesium Ion token from environment variable (bundled or window-injected)
+  const CESIUM_ION_TOKEN = env("CESIUM_ION_TOKEN", "");
 
   if (
     !CESIUM_ION_TOKEN ||
