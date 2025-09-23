@@ -52,6 +52,9 @@ export function App() {
   const mapFeatures = useAppSelector(selectMapFeatures);
   const headerFooterColor = useAppSelector(selectHeaderFooterColor);
   const currentBaseMap = useAppSelector(selectCurrentBaseMap);
+  const articleLocatorsVisible = useAppSelector(
+    (state) => state.map.layerVisibility.articleLocators
+  );
 
   // Handler for base map changes
   const handleBaseMapChange = useCallback(
@@ -248,6 +251,7 @@ export function App() {
                 selectedFeatureId={selectedFeatureId}
                 onMapClick={handleMapClick}
                 onFeatureClick={handleFeatureSelect}
+                articleLocatorsVisible={articleLocatorsVisible}
               />
             ) : (
               <div style={{ padding: "20px", textAlign: "center" }}>

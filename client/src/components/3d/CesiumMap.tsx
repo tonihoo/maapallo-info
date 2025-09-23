@@ -25,7 +25,7 @@ export function CesiumMap({
   onMapClick,
   selectedFeatureId,
   onFeatureClick,
-  articleLocatorsVisible = true,
+  articleLocatorsVisible = false,
 }: Props) {
   const featuresRef = useRef(features);
 
@@ -77,6 +77,11 @@ export function CesiumMap({
       entitiesToRemove.forEach((entity) =>
         viewerRef.current?.entities.remove(entity)
       );
+
+      // Do not render any article markers/labels in 3D unless explicitly enabled
+      if (!articleLocatorsVisible) {
+        return;
+      }
 
       // Add ALL features, but control their visibility
       features.forEach((feature, index) => {
