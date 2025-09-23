@@ -3,114 +3,216 @@
 # GeoServer Initialization Script
 # Creates workspace, datastore, and sets up the PostGIS connection
 
-set -e
+set -Eeuo pipefail
+IFS=$'\n\t'
 
-GEOSERVER_URL="http://localhost:8080/geoserver"
-GEOSERVER_USER="admin"
-GEOSERVER_PASS="geoserver"
-WORKSPACE="maapallo"
+# Config (override via environment variables if needed)
+GEOSERVER_URL="${GEOSERVER_URL:-http://localhost:8080/geoserver}"        # Internal URL from inside the container
+GEOSERVER_PUBLIC_URL="${GEOSERVER_PUBLIC_URL:-http://localhost:8081/geoserver}" # External URL for user info
+GEOSERVER_USER="${GEOSERVER_USER:-admin}"
+GEOSERVER_PASS="${GEOSERVER_PASS:-geoserver}"
+WORKSPACE="${WORKSPACE:-maapallo}"
+DATASTORE="${DATASTORE:-postgis_maapallo}"
+SRC_DIR="${SRC_DIR:-/opt/geoserver/source_data}"
+
+# Postgres connection (defaults align with common docker-compose names)
+POSTGRES_HOST="${POSTGRES_HOST:-db}"
+POSTGRES_PORT="${POSTGRES_PORT:-5432}"
+POSTGRES_DB="${POSTGRES_DB:-maapallo}"
+POSTGRES_USER="${POSTGRES_USER:-postgres}"
+POSTGRES_PASS="${POSTGRES_PASS:-postgres}"
+
+# Logging helpers
+log()  { echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')] $*"; }
+info() { log "INFO  $*"; }
+warn() { log "WARN  $*"; }
+error(){ log "ERROR $*"; }
+
+trap 'error "Failed at line $LINENO"; exit 1' ERR
 
 # Wait for GeoServer to be ready
 wait_for_geoserver() {
-    echo "⏳ Waiting for GeoServer to start..."
-    while ! curl -s -f "$GEOSERVER_URL/web/" > /dev/null 2>&1; do
+    info "⏳ Waiting for GeoServer to start at $GEOSERVER_URL ..."
+    local tries=0
+    local max_tries=60   # ~5 minutes
+    until curl -sSf "$GEOSERVER_URL/web/" > /dev/null 2>&1; do
+        tries=$((tries+1))
+        if [[ $tries -ge $max_tries ]]; then
+            error "GeoServer did not become ready after $((max_tries*5)) seconds"
+            return 1
+        fi
         sleep 5
-        echo "   Still waiting..."
+        info "   Still waiting ($tries/$max_tries) ..."
     done
-    echo "✅ GeoServer is ready!"
+    info "✅ GeoServer is ready"
 }
 
 # Create workspace
 create_workspace() {
-    echo "🏗️  Creating workspace: $WORKSPACE"
+    info "🏗️  Ensuring workspace exists: $WORKSPACE"
+    local code
+    code=$(curl -s -o /dev/null -w "%{http_code}" -u "$GEOSERVER_USER:$GEOSERVER_PASS" \
+        "$GEOSERVER_URL/rest/workspaces/$WORKSPACE.json") || code=0
 
-    curl -u "$GEOSERVER_USER:$GEOSERVER_PASS" \
+    if [[ "$code" == "200" ]]; then
+        info "   ✅ Workspace '$WORKSPACE' already exists"
+        return 0
+    fi
+
+    info "   Creating workspace '$WORKSPACE'"
+    curl -sS -u "$GEOSERVER_USER:$GEOSERVER_PASS" \
         -X POST \
         -H "Content-Type: application/json" \
-        -d "{
-            \"workspace\": {
-                \"name\": \"$WORKSPACE\",
-                \"isolated\": false
-            }
-        }" \
-        "$GEOSERVER_URL/rest/workspaces" 2>/dev/null || echo "   Workspace might already exist"
+        -d @- \
+        "$GEOSERVER_URL/rest/workspaces" >/dev/null <<'JSON'
+{ "workspace": { "name": "$WORKSPACE", "isolated": false } }
+JSON
+    info "   ✅ Workspace created"
 }
 
 # Create PostGIS datastore
 create_datastore() {
-    echo "🗄️  Creating PostGIS datastore"
+    info "🗄️  Ensuring PostGIS datastore exists: $DATASTORE"
 
-    curl -u "$GEOSERVER_USER:$GEOSERVER_PASS" \
-        -X POST \
-        -H "Content-Type: application/json" \
-        -d "{
-            \"dataStore\": {
-                \"name\": \"postgis_maapallo\",
-                \"description\": \"PostGIS connection for Maapallo layers\",
-                \"type\": \"PostGIS\",
-                \"enabled\": true,
-                \"connectionParameters\": {
-                    \"host\": \"$POSTGRES_HOST\",
-                    \"port\": \"$POSTGRES_PORT\",
-                    \"database\": \"$POSTGRES_DB\",
-                    \"user\": \"$POSTGRES_USER\",
-                    \"passwd\": \"$POSTGRES_PASS\",
-                    \"dbtype\": \"postgis\",
-                    \"schema\": \"public\",
-                    \"Expose primary keys\": \"true\",
-                    \"validate connections\": \"true\",
-                    \"Connection timeout\": \"20\",
-                    \"min connections\": \"1\",
-                    \"max connections\": \"10\"
-                }
-            }
-        }" \
-        "$GEOSERVER_URL/rest/workspaces/$WORKSPACE/datastores" 2>/dev/null || echo "   Datastore might already exist"
+    # Validate connection parameters
+    if [[ -z "$POSTGRES_HOST" || -z "$POSTGRES_DB" || -z "$POSTGRES_USER" || -z "$POSTGRES_PASS" ]]; then
+        warn "   Missing Postgres connection parameters; using defaults where applicable"
+    fi
+
+    local code
+    code=$(curl -s -o /dev/null -w "%{http_code}" -u "$GEOSERVER_USER:$GEOSERVER_PASS" \
+        "$GEOSERVER_URL/rest/workspaces/$WORKSPACE/datastores/$DATASTORE.json") || code=0
+
+    if [[ "$code" == "200" ]]; then
+        info "   ✅ Datastore '$DATASTORE' already exists"
+        return 0
+    fi
+
+        info "   Creating datastore '$DATASTORE'"
+        curl -sS -u "$GEOSERVER_USER:$GEOSERVER_PASS" \
+            -X POST \
+            -H "Content-Type: application/json" \
+            -d @- \
+            "$GEOSERVER_URL/rest/workspaces/$WORKSPACE/datastores" >/dev/null <<'JSON'
+{
+    "dataStore": {
+        "name": "$DATASTORE",
+        "description": "PostGIS connection for Maapallo layers",
+        "type": "PostGIS",
+        "enabled": true,
+        "connectionParameters": {
+            "host": "$POSTGRES_HOST",
+            "port": "$POSTGRES_PORT",
+            "database": "$POSTGRES_DB",
+            "user": "$POSTGRES_USER",
+            "passwd": "$POSTGRES_PASS",
+            "dbtype": "postgis",
+            "schema": "public",
+            "Expose primary keys": "true",
+            "validate connections": "true",
+            "Connection timeout": "20",
+            "min connections": "1",
+            "max connections": "10"
+        }
+    }
+}
+JSON
+    info "   ✅ Datastore created"
 }
 
 # Set up CORS
 setup_cors() {
-    echo "🌐 Setting up CORS configuration"
-
-    # Enable CORS in web.xml if not already done
-    if [ -f /opt/geoserver/webapps/geoserver/WEB-INF/web.xml ]; then
-        if ! grep -q "cors-filter" /opt/geoserver/webapps/geoserver/WEB-INF/web.xml; then
-            echo "   Adding CORS filter to web.xml"
-            # This would be done during build time in a real scenario
-        fi
-    fi
+    info "🌐 CORS configuration"
+    # Note: Proper CORS setup is best done at image build time or via reverse proxy.
+    # This function is a placeholder to keep init idempotent and minimal.
 }
 
 # Create styles directory if it doesn't exist
 setup_styles() {
-    echo "🎨 Setting up styles directory"
+    info "🎨 Setting up styles directory"
     mkdir -p /opt/geoserver/data_dir/styles
-    chown -R geoserver:geoserver /opt/geoserver/data_dir/styles
+    if id -u geoserver >/dev/null 2>&1; then
+        chown -R geoserver:geoserver /opt/geoserver/data_dir/styles
+    else
+        warn "   User 'geoserver' not found; skipping chown on styles directory"
+    fi
+}
+
+# Check if a layer exists (published) in GeoServer
+layer_exists() {
+    local layer_name="$1"
+    curl -s -f -u "$GEOSERVER_USER:$GEOSERVER_PASS" \
+        "$GEOSERVER_URL/rest/layers/$WORKSPACE:$layer_name.json" > /dev/null 2>&1
+}
+
+# Seed default layers from mounted source data into PostGIS and publish them
+seed_default_layers() {
+    info "🌱 Seeding default layers (if missing)"
+
+    # Ensure source directory exists
+    if [ ! -d "$SRC_DIR" ]; then
+        warn "   Source data directory not found: $SRC_DIR (skipping seed)"
+        return
+    fi
+
+    # Map: file -> target table/layer name
+    declare -A FILES
+    FILES["$SRC_DIR/world.geojson"]="world"
+    FILES["$SRC_DIR/pop_density_by_country_2022_num.geojson"]="pop_density_by_country_2022_num"
+    FILES["$SRC_DIR/intact-forest-landscapes-simplified-2020.geojson"]="intact_forests"
+
+    for file in "${!FILES[@]}"; do
+        table_name="${FILES[$file]}"
+        if layer_exists "$table_name"; then
+            info "   ✅ Layer '$table_name' already exists, skipping"
+            continue
+        fi
+
+        if [ -f "$file" ]; then
+            info "   ➕ Importing and publishing: $(basename "$file") -> $table_name"
+            if [ ! -x "/usr/local/bin/import-data.sh" ]; then
+                error "   Import script not found or not executable: /usr/local/bin/import-data.sh"
+                continue
+            fi
+            /usr/local/bin/import-data.sh "$file" "$table_name" || {
+                error "   Failed to import $file"
+                continue
+            }
+        else
+            warn "   File not found: $file (skipping)"
+        fi
+    done
+
+    # Helpful hints for optional layers not present by default
+    if ! layer_exists "adult_literacy"; then
+        info "   ℹ️ Layer 'adult_literacy' not seeded (no source file)."
+        info "      • Add a prepared GeoJSON as $SRC_DIR/adult_literacy.geojson"
+        info "      • Or generate it in PostGIS, then publish via GeoServer UI or script"
+    fi
 }
 
 # Main initialization
 main() {
-    echo "🚀 Initializing GeoServer for Maapallo"
-    echo "======================================"
+    info "🚀 Initializing GeoServer for Maapallo"
+    info "======================================"
 
     wait_for_geoserver
     create_workspace
     create_datastore
     setup_cors
     setup_styles
+    seed_default_layers
 
     echo ""
-    echo "✅ GeoServer initialization complete!"
+    info "✅ GeoServer initialization complete!"
     echo ""
-    echo "📋 Access Information:"
-    echo "   • GeoServer Web UI: http://localhost:8081/geoserver"
-    echo "   • Username: admin"
-    echo "   • Password: geoserver"
-    echo "   • Workspace: $WORKSPACE"
-    echo "   • Upload files to: ./geoserver/uploads/"
+    info "📋 Access Information:"
+    info "   • GeoServer Web UI: $GEOSERVER_PUBLIC_URL"
+    info "   • Username: $GEOSERVER_USER"
+    info "   • Workspace: $WORKSPACE"
     echo ""
-    echo "📁 To import data:"
-    echo "   docker-compose exec geoserver /usr/local/bin/import-data.sh"
+    info "📁 To import data manually:"
+    info "   docker compose exec geoserver /usr/local/bin/import-data.sh /path/to/file.geojson <layer_name>"
 }
 
 # Run if called directly

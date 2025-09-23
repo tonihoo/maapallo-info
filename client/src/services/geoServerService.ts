@@ -36,7 +36,17 @@ const getGeoServerConfig = () => ({
   version: "1.0.0",
 });
 
-// Layer mapping from old paths to GeoServer layer names
+// Feature flag: allow disabling GeoServer usage in dev to avoid noisy errors
+const isGeoServerDisabled = (): boolean => {
+  const env = typeof process !== "undefined" && process.env ? process.env : {};
+  // If REACT_APP_DISABLE_GEOSERVER is set to '1' or 'true', skip GeoServer
+  const val = (env.REACT_APP_DISABLE_GEOSERVER || "").toString().toLowerCase();
+  return val === "1" || val === "true";
+};
+
+// Optional mapping from legacy static file paths to GeoServer layer names.
+// Note: Static fallbacks are no longer used. These aliases exist only to ease
+// the transition from legacy code that referenced /data/*.geojson URLs.
 const LAYER_MAPPING: Record<string, string> = {
   "/data/adult_literacy.geojson": "adult_literacy",
   "/data/pop_density_by_country_2022_num.geojson":
@@ -63,6 +73,8 @@ function buildWfsUrl(
     version: config.version,
     request: "GetFeature",
     typeName: `${config.workspace}:${layerName}`,
+    // Use a widely compatible outputFormat for GeoJSON
+    // GeoServer accepts 'application/json' or 'application/json; subtype=geojson'
     outputFormat: "application/json",
   };
 
@@ -71,7 +83,10 @@ function buildWfsUrl(
     .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
     .join("&");
 
-  return `${config.baseUrl}/${config.workspace}/wfs?${queryString}`;
+  // Important: WFS endpoint should NOT include the workspace path segment.
+  // Use /geoserver/wfs (or /geoserver/ows) and pass workspace in typeName (workspace:layer)
+  // e.g. http://localhost:8081/geoserver/wfs?service=WFS&...&typeName=maapallo:world
+  return `${config.baseUrl}/wfs?${queryString}`;
 }
 
 /**
@@ -81,6 +96,9 @@ async function fetchFromGeoServer(
   layerName: string,
   params: Record<string, string> = {}
 ): Promise<GeoJsonData> {
+  if (isGeoServerDisabled()) {
+    throw new Error("GeoServer disabled by REACT_APP_DISABLE_GEOSERVER");
+  }
   const cacheKey = `${layerName}-${JSON.stringify(params)}`;
 
   // Return cached data if available
@@ -101,10 +119,22 @@ async function fetchFromGeoServer(
   const fetchPromise = fetch(url)
     .then(async (response) => {
       if (!response.ok) {
+        // Try to read server message for diagnostics
+        const text = await response.text().catch(() => "");
         throw new Error(
-          `GeoServer HTTP error! status: ${response.status} for layer: ${layerName}`
+          `GeoServer HTTP error ${response.status} for layer ${layerName}. ${text?.slice(0, 200)}`
         );
       }
+
+      // Ensure Content-Type is JSON; if XML (ExceptionReport), surface a clear error
+      const ct = (response.headers.get("content-type") || "").toLowerCase();
+      if (!ct.includes("application/json") && !ct.includes("json")) {
+        const text = await response.text();
+        throw new Error(
+          `GeoServer returned non-JSON (${ct}) for layer ${layerName}. First bytes: ${text.slice(0, 120)}`
+        );
+      }
+
       const data = await response.json();
 
       // Validate GeoJSON structure
@@ -125,7 +155,8 @@ async function fetchFromGeoServer(
     })
     .catch((error) => {
       loadingPromises.delete(cacheKey);
-      console.error(`❌ Failed to load GeoServer layer ${layerName}:`, error);
+      // Use warn to avoid noisy red errors when fallback is available
+      console.warn(`❌ Failed to load GeoServer layer ${layerName}:`, error);
       throw error;
     });
 
@@ -148,36 +179,30 @@ export class GeoServerService {
     const geoServerLayerName = LAYER_MAPPING[urlOrLayerName];
 
     if (geoServerLayerName) {
-      try {
-        // Try GeoServer first
-        return await fetchFromGeoServer(geoServerLayerName, params);
-      } catch (error) {
-        console.warn(
-          `GeoServer failed for ${urlOrLayerName}, falling back to static file:`,
-          error
+      // Always use GeoServer for layers; no static fallback
+      if (isGeoServerDisabled()) {
+        throw new Error(
+          `GeoServer disabled by REACT_APP_DISABLE_GEOSERVER (cannot fetch '${geoServerLayerName}')`
         );
-
-        // Fallback to static file for development
-        const response = await fetch(urlOrLayerName);
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return await response.json();
       }
+      return await fetchFromGeoServer(geoServerLayerName, params);
     }
 
     // If not a mapped layer, treat as direct layer name
     if (!urlOrLayerName.startsWith("/") && !urlOrLayerName.startsWith("http")) {
+      if (isGeoServerDisabled()) {
+        throw new Error(
+          `GeoServer disabled and no static fallback available for layer name '${urlOrLayerName}'.`
+        );
+      }
       return await fetchFromGeoServer(urlOrLayerName, params);
     }
 
-    // Fallback to static file fetch
-    console.info(`Fetching static file: ${urlOrLayerName}`);
-    const response = await fetch(urlOrLayerName);
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    return await response.json();
+    // For absolute/relative URLs that are not known GeoServer layers, static
+    // fetches are no longer supported for map layers.
+    throw new Error(
+      `Static file fetches are disabled for map layers ('${urlOrLayerName}'). Use GeoServer layer names instead.`
+    );
   }
 
   /**
@@ -258,36 +283,28 @@ export const getLayerDataFunction = async (
   const geoServerLayerName = LAYER_MAPPING[urlOrLayerName];
 
   if (geoServerLayerName) {
-    try {
-      // Try GeoServer first
-      return await fetchFromGeoServer(geoServerLayerName, params);
-    } catch (error) {
-      console.warn(
-        `GeoServer failed for ${urlOrLayerName}, falling back to static file:`,
-        error
+    if (isGeoServerDisabled()) {
+      throw new Error(
+        `GeoServer disabled by REACT_APP_DISABLE_GEOSERVER (cannot fetch '${geoServerLayerName}')`
       );
-
-      // Fallback to static file for development
-      const response = await fetch(urlOrLayerName);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return await response.json();
     }
+    return await fetchFromGeoServer(geoServerLayerName, params);
   }
 
   // If not a mapped layer, treat as direct layer name
   if (!urlOrLayerName.startsWith("/") && !urlOrLayerName.startsWith("http")) {
+    if (isGeoServerDisabled()) {
+      throw new Error(
+        `GeoServer disabled and no static fallback available for layer name '${urlOrLayerName}'.`
+      );
+    }
     return await fetchFromGeoServer(urlOrLayerName, params);
   }
 
-  // Fallback to static file fetch
-  console.info(`Fetching static file: ${urlOrLayerName}`);
-  const response = await fetch(urlOrLayerName);
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
-  }
-  return await response.json();
+  // Static file fetches are disabled for map layers
+  throw new Error(
+    `Static file fetches are disabled for map layers ('${urlOrLayerName}'). Use GeoServer layer names instead.`
+  );
 };
 
 export const clearCacheFunction = (layerName?: string): void => {

@@ -273,7 +273,7 @@ export class GeoServerAdminService {
       // Step 2: Trigger import
       onProgress?.({
         status: "processing",
-        message: "Starting import process...",
+        message: "Aloitetaan tiedoston tuonti...",
       });
 
       const importResult = await this.triggerImport(file.name, layerName);
@@ -287,21 +287,20 @@ export class GeoServerAdminService {
       // Step 3: Import completed immediately with REST API
       onProgress?.({
         status: "completed",
-        message: "Import completed successfully",
+        message: "Tuonti valmis",
         layerName: layerName,
       });
 
       return {
         status: "completed",
-        message: "Layer imported successfully",
+        message: "Karttakerros tuotu onnistuneesti",
         layerName: layerName,
       };
     } catch (error) {
       console.error("Complete import workflow error:", error);
       return {
         status: "failed",
-        error:
-          error instanceof Error ? error.message : "Import workflow failed",
+        error: error instanceof Error ? error.message : "Tuonti epäonnistui",
       };
     }
   }
