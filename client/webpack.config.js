@@ -1,3 +1,5 @@
+/* eslint-env node */
+/* eslint-disable */
 const path = require('path');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const { DefinePlugin } = require('webpack');
@@ -15,14 +17,21 @@ module.exports = (env, argv) => {
 
     // Configure dev server for HMR
     devServer: {
-      static: {
-        directory: path.join(__dirname, 'dist'),
-      },
+      // Serve static files from both webpack output (in-memory) and the public folder
+      static: [
+        {
+          directory: path.join(__dirname, 'dist'),
+        },
+        {
+          directory: path.join(__dirname, 'public'),
+          watch: true,
+        },
+      ],
       port: 8080,
       host: '0.0.0.0',
       hot: true, // Enable Hot Module Replacement
       liveReload: true, // Enable live reloading
-      watchFiles: ['src/**/*'], // Watch for changes in src directory
+  watchFiles: ['src/**/*', 'public/**/*'], // Watch for changes in src and public directories
       open: false,
       historyApiFallback: true,
       allowedHosts: 'all',
@@ -95,6 +104,9 @@ module.exports = (env, argv) => {
       new DefinePlugin({
         'process.env.NODE_ENV': JSON.stringify(isProduction ? 'production' : 'development'),
         'process.env.CESIUM_ION_TOKEN': JSON.stringify(process.env.CESIUM_ION_TOKEN || ''),
+        'process.env.REACT_APP_GEOSERVER_URL': JSON.stringify(process.env.REACT_APP_GEOSERVER_URL || ''),
+        'process.env.REACT_APP_DISABLE_GEOSERVER': JSON.stringify(process.env.REACT_APP_DISABLE_GEOSERVER || ''),
+        'process.env.REACT_APP_DISABLE_ION_TERRAIN': JSON.stringify(process.env.REACT_APP_DISABLE_ION_TERRAIN ?? (!isProduction ? 'true' : 'false')),
         'CESIUM_BASE_URL': JSON.stringify('/cesium/'),
       }),
 
@@ -120,7 +132,9 @@ module.exports = (env, argv) => {
             from: path.join(__dirname, 'public'),
             to: '',
             globOptions: {
-              ignore: ['**/index.html'], // Exclude index.html since HtmlWebpackPlugin handles it
+              // Exclude index.html (handled by HtmlWebpackPlugin) and
+              // the legacy data folder (layers now load from GeoServer)
+              ignore: ['**/index.html', '**/data/**'],
             },
             noErrorOnMissing: true,
           },
