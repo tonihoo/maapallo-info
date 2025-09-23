@@ -45,7 +45,7 @@ const initialState: MapState = {
   is3DMode: false,
   cesiumPreloaded: false,
   CesiumMapComponent: null,
-  currentBaseMap: "topo",
+  currentBaseMap: "satellite",
   layerVisibility: {
     worldBoundaries: false,
     oceanCurrents: false,

@@ -12,6 +12,8 @@ import { Map } from "./components/2d/Map";
 import { FeatureInfo } from "./components/common/FeatureInfo";
 import { AppHeader } from "./components/common/AppHeader";
 import { CookieConsent } from "./components/common/CookieConsent";
+import { BaseMapAttribution } from "./components/common/BaseMapAttribution";
+import { BaseMapKey } from "./components/2d/BaseMapSelector";
 import { useAppDispatch, useAppSelector } from "./store/hooks";
 import {
   setSelectedFeatureId,
@@ -19,6 +21,7 @@ import {
   toggleMapMode,
   setCesiumPreloaded,
   setCesiumComponent,
+  setCurrentBaseMap,
 } from "./store/slices/mapSlice";
 import { fetchAllFeatures } from "./store/slices/featuresSlice";
 import { verifyStoredToken } from "./store/slices/authSlice";
@@ -30,6 +33,7 @@ import {
   selectRefreshTrigger,
   selectMapFeatures,
   selectHeaderFooterColor,
+  selectCurrentBaseMap,
 } from "./store/selectors";
 import { analytics } from "./utils/analytics";
 
@@ -46,6 +50,15 @@ export function App() {
   const refreshTrigger = useAppSelector(selectRefreshTrigger);
   const mapFeatures = useAppSelector(selectMapFeatures);
   const headerFooterColor = useAppSelector(selectHeaderFooterColor);
+  const currentBaseMap = useAppSelector(selectCurrentBaseMap);
+
+  // Handler for base map changes
+  const handleBaseMapChange = useCallback(
+    (baseMapKey: BaseMapKey) => {
+      dispatch(setCurrentBaseMap(baseMapKey));
+    },
+    [dispatch]
+  );
 
   // Background preload Cesium after initial render
   useEffect(() => {
@@ -244,6 +257,7 @@ export function App() {
                 /* No hover action needed */
               }}
               selectedFeatureId={selectedFeatureId}
+              onBaseMapChange={handleBaseMapChange}
             />
           )}
         </Box>
@@ -276,16 +290,7 @@ export function App() {
         )}
       </Box>
       <Box sx={footerStyle}>
-        <Typography variant="caption">
-          <a
-            href="https://kehmy.fi"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ textDecoration: "none", color: "black" }}
-          >
-            Kehitysmaantieteen yhdistys 2025
-          </a>
-        </Typography>
+        {!is3DMode && <BaseMapAttribution currentBaseMap={currentBaseMap} />}
       </Box>
       <CookieConsent />
     </>

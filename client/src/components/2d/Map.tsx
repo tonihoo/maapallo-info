@@ -1,5 +1,5 @@
 import { GlobalStyles } from "@mui/material";
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import {
   Feature as GeoJSONFeature,
   Geometry,
@@ -14,6 +14,7 @@ import { LayerSwitcher } from "./LayerSwitcher";
 import { AdultLiteracyLegend } from "./AdultLiteracyLegend";
 import { PopulationDensityLegend } from "./PopulationDensityLegend";
 import { useOpenLayersMap } from "../../hooks/useOpenLayersMap";
+import { BaseMapKey } from "./BaseMapSelector";
 
 interface Props {
   children?: ReactNode;
@@ -22,6 +23,7 @@ interface Props {
   onFeatureClick?: (featureId: number) => void;
   onFeatureHover?: (featureId: number | null) => void;
   selectedFeatureId?: number | null;
+  onBaseMapChange?: (baseMapKey: BaseMapKey) => void;
 }
 
 export function Map({
@@ -31,6 +33,7 @@ export function Map({
   onFeatureHover,
   features = [],
   selectedFeatureId,
+  onBaseMapChange,
 }: Props) {
   const {
     mapRef,
@@ -57,17 +60,12 @@ export function Map({
     onFeatureHover,
   });
 
-  const staticLegendData = [
-    { color: "#006837", label: "95-100%", range: [95, 100] },
-    { color: "#31a354", label: "85-94%", range: [85, 94] },
-    { color: "#78c679", label: "75-84%", range: [75, 84] },
-    { color: "#c2e699", label: "65-74%", range: [65, 74] },
-    { color: "#ffffcc", label: "50-64%", range: [50, 64] },
-    { color: "#fed976", label: "35-49%", range: [35, 49] },
-    { color: "#fd8d3c", label: "20-34%", range: [20, 34] },
-    { color: "#e31a1c", label: "0-19%", range: [0, 19] },
-    { color: "rgba(200, 200, 200, 0.5)", label: "Ei dataa", range: null },
-  ];
+  // Call the onBaseMapChange callback when currentBaseMap changes
+  useEffect(() => {
+    if (onBaseMapChange) {
+      onBaseMapChange(currentBaseMap);
+    }
+  }, [currentBaseMap, onBaseMapChange]);
 
   return (
     <div style={{ width: "100%", height: "100%", position: "relative" }}>
@@ -170,7 +168,7 @@ export function Map({
 
       <AdultLiteracyLegend
         visible={layerVisibility.adultLiteracy}
-        legendData={staticLegendData}
+        legendData={adultLiteracyLegendData}
       />
 
       <PopulationDensityLegend

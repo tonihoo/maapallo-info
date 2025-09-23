@@ -179,7 +179,7 @@ export function useMapInitialization({
       keyboardEventTarget: document,
       layers: [
         (() => {
-          const baseLayer = BASE_MAPS.topo.layer();
+          const baseLayer = BASE_MAPS[currentBaseMap].layer();
           baseLayer.setZIndex(0); // Explicitly set base map z-index
           return baseLayer;
         })(), // Base map with z-index 0

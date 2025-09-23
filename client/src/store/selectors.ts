@@ -10,6 +10,8 @@ export const selectCesiumPreloaded = (state: RootState) =>
   state.map.cesiumPreloaded;
 export const selectCesiumComponent = (state: RootState) =>
   state.map.CesiumMapComponent;
+export const selectCurrentBaseMap = (state: RootState) =>
+  state.map.currentBaseMap;
 
 // Features selectors
 export const selectAllFeatures = (state: RootState) =>

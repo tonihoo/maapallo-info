@@ -4,6 +4,30 @@ import OSM from "ol/source/OSM.js";
 import XYZ from "ol/source/XYZ";
 
 export const BASE_MAPS = {
+  satellite: {
+    name: "Satelliitti",
+    icon: "🌍",
+    layer: () =>
+      new TileLayer({
+        source: new XYZ({
+          url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+          attributions:
+            'Tiles © <a href="https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer">Esri</a> &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
+          maxZoom: 19,
+          crossOrigin: "anonymous",
+        }),
+        properties: { name: "satellite" },
+      }),
+  },
+  osm: {
+    name: "OpenStreetMap",
+    icon: "🗺️",
+    layer: () =>
+      new TileLayer({
+        source: new OSM(),
+        properties: { name: "osm" },
+      }),
+  },
   topo: {
     name: "Topografinen",
     icon: "🏔️",
@@ -17,28 +41,7 @@ export const BASE_MAPS = {
         properties: { name: "topo" },
       }),
   },
-  osm: {
-    name: "OpenStreetMap",
-    icon: "🗺️",
-    layer: () =>
-      new TileLayer({
-        source: new OSM(),
-        properties: { name: "osm" },
-      }),
-  },
-  satellite: {
-    name: "Satelliitti",
-    icon: "🌍",
-    layer: () =>
-      new TileLayer({
-        source: new XYZ({
-          url: "https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}",
-          attributions: "© Google",
-          maxZoom: 20,
-        }),
-        properties: { name: "satellite" },
-      }),
-  },
+
   cartoLight: {
     name: "Vaalea",
     icon: "🌕",
