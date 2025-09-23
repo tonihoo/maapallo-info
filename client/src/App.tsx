@@ -22,6 +22,7 @@ import {
   setCesiumPreloaded,
   setCesiumComponent,
   setCurrentBaseMap,
+  setLayerVisibility,
 } from "./store/slices/mapSlice";
 import { fetchAllFeatures } from "./store/slices/featuresSlice";
 import { verifyStoredToken } from "./store/slices/authSlice";
@@ -99,6 +100,11 @@ export function App() {
   const handleFeatureSelect = useCallback(
     (id: number) => {
       dispatch(setSelectedFeatureId(id));
+
+      // Ensure article locators layer is visible when a feature is selected from the menu
+      dispatch(
+        setLayerVisibility({ layerId: "articleLocators", visible: true })
+      );
 
       // Track feature selection analytics
       analytics.trackFeatureSelection(id, is3DMode ? "3d" : "2d", "map_click");
