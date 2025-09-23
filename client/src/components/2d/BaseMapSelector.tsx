@@ -2,22 +2,65 @@ import { useState } from "react";
 import TileLayer from "ol/layer/Tile";
 import OSM from "ol/source/OSM.js";
 import XYZ from "ol/source/XYZ";
+import WMTS from "ol/source/WMTS";
+import WMTSTileGrid from "ol/tilegrid/WMTS";
+import { get as getProjection } from "ol/proj";
+import { getTopLeft, getWidth } from "ol/extent";
 
 export const BASE_MAPS = {
   satellite: {
     name: "Satelliitti",
     icon: "🌍",
-    layer: () =>
-      new TileLayer({
-        source: new XYZ({
-          url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-          attributions:
-            'Tiles © <a href="https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer">Esri</a> &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-          maxZoom: 19,
-          crossOrigin: "anonymous",
+    layer: () => {
+      const projection = getProjection("EPSG:3857");
+      if (!projection) {
+        return new TileLayer({
+          source: new OSM(),
+          properties: { name: "osm" },
+        });
+      }
+      const extent = projection.getExtent();
+      const size = getWidth(extent) / 256;
+      // Blue Marble typically published at GoogleMapsCompatible_Level8
+      const maxZoom = 8;
+      const resolutions = new Array(maxZoom + 1);
+      const matrixIds = new Array(maxZoom + 1);
+      for (let z = 0; z <= maxZoom; z++) {
+        resolutions[z] = size / Math.pow(2, z);
+        matrixIds[z] = z.toString();
+      }
+
+      const source = new WMTS({
+        url: "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/wmts.cgi",
+        // Use a seamless static mosaic to avoid visible swath seams
+        layer: "BlueMarble_ShadedRelief",
+        matrixSet: "GoogleMapsCompatible_Level8",
+        format: "image/jpeg",
+        projection,
+        tileGrid: new WMTSTileGrid({
+          origin: getTopLeft(extent),
+          resolutions,
+          matrixIds,
         }),
+        style: "default",
+        wrapX: true,
+        attributions:
+          'Imagery courtesy NASA Worldview, part of NASA EOSDIS | <a href="https://earthdata.nasa.gov/gibs">GIBS</a>',
+        // Disable fade-in transition between tile updates
+        transition: 0,
+        crossOrigin: "anonymous",
+      });
+
+      return new TileLayer({
+        source,
         properties: { name: "satellite" },
-      }),
+        maxZoom,
+        // Keep lower-res tiles visible while higher-res are loading
+        preload: 8,
+        // Disable fade-in to reduce perceived white flashes
+        className: "no-fade",
+      });
+    },
   },
   osm: {
     name: "OpenStreetMap",

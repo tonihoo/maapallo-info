@@ -23,6 +23,10 @@ export function useMapView() {
       projection: "EPSG:3857",
       minZoom: ZOOM_LIMITS.min,
       maxZoom: ZOOM_LIMITS.max,
+      // Snap to discrete zoom levels to avoid requesting unsupported fractional levels
+      constrainResolution: true,
+      // Jump to constrained resolution without smoothing to prevent blank frames
+      smoothResolutionConstraint: false,
     });
   });
 
@@ -63,10 +67,13 @@ export function useMapView() {
   // Control functions
   const handleZoom = useCallback(
     (zoomIn: boolean) => {
-      const currentZoom = olView.getZoom() || INITIAL_VIEW.zoom;
-      const newZoom = zoomIn
-        ? Math.min(currentZoom + 1, ZOOM_LIMITS.max)
-        : Math.max(currentZoom - 1, ZOOM_LIMITS.min);
+      const currentZoom = olView.getZoom() ?? INITIAL_VIEW.zoom;
+      const maxZ =
+        (olView.getMaxZoom?.() as number | undefined) ?? ZOOM_LIMITS.max;
+      const minZ =
+        (olView.getMinZoom?.() as number | undefined) ?? ZOOM_LIMITS.min;
+      const target = zoomIn ? currentZoom + 1 : currentZoom - 1;
+      const newZoom = Math.max(minZ, Math.min(target, maxZ));
 
       olView.animate({
         zoom: newZoom,

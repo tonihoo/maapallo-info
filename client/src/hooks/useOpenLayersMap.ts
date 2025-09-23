@@ -15,6 +15,7 @@ import { useDataLoading } from "./map/useDataLoading";
 import { useFeatureManagement } from "./map/useFeatureManagement";
 import { useLayerEffects } from "./map/useLayerEffects";
 import { useMapEvents } from "./map/useMapEvents";
+import { ZOOM_LIMITS } from "../constants/mapConstants";
 
 interface UseOpenLayersMapProps {
   features: GeoJSONFeature<Geometry, GeoJsonProperties>[];
@@ -163,6 +164,24 @@ export function useOpenLayersMap({
     onFeatureHover,
     handlePointerMove,
   });
+
+  // Enforce zoom constraints based on current base map (e.g., Blue Marble supports 0..8)
+  useEffect(() => {
+    if (!olView) return;
+    if (currentBaseMap === "satellite") {
+      olView.setMinZoom(0);
+      olView.setMaxZoom(8);
+      const z = olView.getZoom() ?? 0;
+      if (z > 8) olView.setZoom(8);
+      if (z < 0) olView.setZoom(0);
+    } else {
+      olView.setMinZoom(ZOOM_LIMITS.min);
+      olView.setMaxZoom(ZOOM_LIMITS.max);
+      const z = olView.getZoom() ?? ZOOM_LIMITS.min;
+      if (z < ZOOM_LIMITS.min) olView.setZoom(ZOOM_LIMITS.min);
+      if (z > ZOOM_LIMITS.max) olView.setZoom(ZOOM_LIMITS.max);
+    }
+  }, [currentBaseMap, olView]);
 
   return {
     mapRef,

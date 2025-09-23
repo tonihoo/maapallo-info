@@ -209,6 +209,27 @@ export function useMapInitialization({
       const newBaseLayer = BASE_MAPS[baseMapKey].layer();
       layers.setAt(0, newBaseLayer);
       dispatch(setCurrentBaseMap(baseMapKey));
+
+      // Enforce zoom constraints for specific basemaps (e.g., Blue Marble Level8)
+      const view = olMap.getView();
+      const DEFAULT_MIN = 0;
+      const DEFAULT_MAX = 19;
+      if (baseMapKey === "satellite") {
+        // Our Blue Marble configuration supports z 0..8
+        view.setMinZoom(0);
+        view.setMaxZoom(8);
+        const z = view.getZoom() ?? 0;
+        if (z > 8) view.setZoom(8);
+        if (z < 0) view.setZoom(0);
+      } else {
+        // Restore broad defaults for other basemaps
+        view.setMinZoom(DEFAULT_MIN);
+        view.setMaxZoom(DEFAULT_MAX);
+        const z = view.getZoom() ?? DEFAULT_MIN;
+        // Clamp back into range in case we came from Blue Marble
+        if (z > DEFAULT_MAX) view.setZoom(DEFAULT_MAX);
+        if (z < DEFAULT_MIN) view.setZoom(DEFAULT_MIN);
+      }
     },
     [olMap, dispatch]
   );

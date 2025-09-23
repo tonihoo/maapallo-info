@@ -13,7 +13,7 @@ const getAttributionText = (baseMapKey: BaseMapKey): string => {
     case "osm":
       return "© OpenStreetMap contributors";
     case "satellite":
-      return "Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community";
+      return "Imagery courtesy NASA Worldview, part of NASA EOSDIS (GIBS)";
     case "cartoLight":
     case "cartoDark":
       return "© OpenStreetMap contributors © CARTO";

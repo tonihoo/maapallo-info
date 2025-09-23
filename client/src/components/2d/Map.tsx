@@ -75,6 +75,14 @@ export function Map({
           ".ol-viewport": {
             cursor: "default",
           },
+          // Keep interim tiles to avoid white flashes
+          ".ol-layer": {
+            willChange: "auto",
+          },
+          // Disable CSS transition on layers we mark as no-fade
+          ".no-fade": {
+            transition: "none !important",
+          },
           ".ol-zoom": {
             position: "absolute",
             top: "65px",
