@@ -112,8 +112,13 @@ export function useMapInitialization({
       source: oceanCurrentsSource,
       style: (feature: FeatureLike, resolution: number) => {
         const zoom = olView.getZoomForResolution(resolution);
-        const temp = feature.get("TEMP") || "";
-        const name = feature.get("NAME") || "";
+        // Read TEMP/NAME with minimal casing tolerance (GeoServer may lowercase)
+        const temp = String(feature.get("TEMP") ?? feature.get("temp") ?? "")
+          .trim()
+          .toLowerCase();
+        const name = String(
+          feature.get("NAME") ?? feature.get("name") ?? ""
+        ).trim();
 
         // Show ocean currents at zoom level 1 and above for testing
         const showCurrent = zoom >= 1; // Lowered from 3 to 1 for easier testing
@@ -122,16 +127,17 @@ export function useMapInitialization({
           return new Style(); // Empty style when zoomed out
         }
 
-        // Color based on temperature
-        const strokeColor =
-          temp === "warm"
-            ? "rgba(255, 69, 0, 0.7)" // Red-orange for warm currents
-            : "rgba(0, 191, 255, 0.7)"; // Deep sky blue for cold currents
+        // Determine warm vs cold based on temp indicator or name hint
+        const isWarm = temp === "warm" || temp.startsWith("warm");
 
-        const fillColor =
-          temp === "warm"
-            ? "rgba(255, 69, 0, 0.2)" // Semi-transparent red-orange
-            : "rgba(0, 191, 255, 0.2)"; // Semi-transparent blue
+        // Color based on temperature
+        const strokeColor = isWarm
+          ? "rgba(255, 69, 0, 0.7)" // Red-orange for warm currents
+          : "rgba(0, 191, 255, 0.7)"; // Deep sky blue for cold currents
+
+        const fillColor = isWarm
+          ? "rgba(255, 69, 0, 0.2)" // Semi-transparent red-orange
+          : "rgba(0, 191, 255, 0.2)"; // Semi-transparent blue
 
         // Show labels at higher zoom levels
         const showLabels = zoom >= 5 && name.trim();
@@ -149,17 +155,17 @@ export function useMapInitialization({
                 text: name,
                 font: "10px Arial,sans-serif",
                 fill: new Fill({
-                  color:
-                    temp === "warm"
-                      ? "rgba(139, 0, 0, 0.9)"
-                      : "rgba(0, 0, 139, 0.9)",
+                  color: isWarm
+                    ? "rgba(139, 0, 0, 0.9)"
+                    : "rgba(0, 0, 139, 0.9)",
                 }),
                 stroke: new Stroke({
                   color: "rgba(255, 255, 255, 0.8)",
                   width: 1,
                 }),
                 offsetY: 0,
-                placement: "point",
+                // For line geometries, place text along the line for better labeling
+                placement: "line",
                 overflow: true,
               })
             : undefined,

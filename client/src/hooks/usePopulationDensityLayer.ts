@@ -88,9 +88,11 @@ export function usePopulationDensityLayer({
       isLoadingRef.current = true;
       console.log("🔄 Creating population density layer...");
 
-      // Load population density GeoJSON using cache
-      const geoJsonData = await getCachedGeoJson(
-        "/data/pop_density_by_country_2022_num.geojson"
+      // Load population density features from GeoServer
+      const geoServerModule = await import("../services/geoServerService");
+      const { getLayerDataFunction } = geoServerModule;
+      const geoJsonData = await getLayerDataFunction(
+        "pop_density_by_country_2022_num"
       );
 
       // Create layer with initial visibility from current state or pending state

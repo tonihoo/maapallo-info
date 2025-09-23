@@ -56,13 +56,21 @@ export function useAdultLiteracyLayer({ visible }: UseAdultLiteracyLayerProps) {
   // Load literacy data
   const loadLiteracyData = useCallback(async () => {
     try {
-      const response = await fetch(
-        "/data/world_development_indicators.geojson"
-      );
-      if (!response.ok) {
-        throw new Error("HTTP error! status: " + response.status);
+      // Fetch WDI literacy data from GeoServer if available as a layer
+      // Fallback to empty if not present
+      let data: WDICollection = { features: [] };
+      try {
+        const geoServerModule = await import("../services/geoServerService");
+        const { getLayerDataFunction } = geoServerModule;
+        // Expect a layer named 'world_development_indicators'
+        data = (await getLayerDataFunction(
+          "world_development_indicators"
+        )) as unknown as WDICollection;
+      } catch (e) {
+        console.warn(
+          "WDI layer not found in GeoServer; adult literacy overlay will have no data."
+        );
       }
-      const data = (await response.json()) as WDICollection;
 
       // Extract recent literacy data (2020-2023)
       const recentYears = ["2020", "2021", "2022", "2023"];
@@ -143,8 +151,10 @@ export function useAdultLiteracyLayer({ visible }: UseAdultLiteracyLayerProps) {
       // Load literacy data first
       await loadLiteracyData();
 
-      // Load world boundaries using cache
-      const worldData = await getCachedGeoJson("/data/world.geojson");
+      // Load world boundaries from GeoServer
+      const geoServerModule = await import("../services/geoServerService");
+      const { getLayerDataFunction } = geoServerModule;
+      const worldData = await getLayerDataFunction("world");
 
       // Create layer with initial visibility from current state or pending state
       const initialVisibility =

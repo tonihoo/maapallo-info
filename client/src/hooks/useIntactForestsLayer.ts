@@ -126,17 +126,10 @@ export function useIntactForestsLayer({ visible }: UseIntactForestsLayerProps) {
       }
       */
 
-      // Fallback to static file if API not available or returned no data
-      if (!geoJsonData) {
-        try {
-          geoJsonData = await getCachedGeoJson(
-            "/data/intact-forest-landscapes-simplified-2020.geojson"
-          );
-          console.info("✅ IFL: Using static file fallback");
-        } catch (error) {
-          console.warn("⚠️ IFL: Static file fallback failed:", error);
-        }
-      }
+      // Load intact forest layer from GeoServer
+      const geoServerModule = await import("../services/geoServerService");
+      const { getLayerDataFunction } = geoServerModule;
+      geoJsonData = await getLayerDataFunction("intact_forests");
 
       // Create layer with initial visibility from current state or pending state
       const initialVisibility =

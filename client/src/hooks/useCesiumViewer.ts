@@ -86,14 +86,20 @@ export function useCesiumViewer({
 
   const loadCountryBoundaries = useCallback(async (viewer: Cesium.Viewer) => {
     try {
-      const countriesDataSource = await Cesium.GeoJsonDataSource.load(
-        "/data/world.geojson",
-        {
-          stroke: Cesium.Color.WHITE,
-          fill: Cesium.Color.TRANSPARENT,
-          strokeWidth: 2,
-        }
-      );
+      // Fetch country boundaries from GeoServer
+      const geoServerModule = await import("../services/geoServerService");
+      const { getLayerDataFunction } = geoServerModule;
+      const worldGeoJson = await getLayerDataFunction("world");
+
+      const blob = new Blob([JSON.stringify(worldGeoJson)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const countriesDataSource = await Cesium.GeoJsonDataSource.load(url, {
+        stroke: Cesium.Color.WHITE,
+        fill: Cesium.Color.TRANSPARENT,
+        strokeWidth: 2,
+      });
 
       viewer.dataSources.add(countriesDataSource);
 
