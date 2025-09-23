@@ -2,9 +2,10 @@
 
 Maapallo.info is a map based portal of global geospatial data related to human development, environment and other geographical phenomena.
 
-The portal is still in its early development phase. The production site is not public, but you can preview it at https://maapallo.info by providing the following credentials.
-Username: earth
-Password: isnotflat
+The portal is still in its early development phase. The production site is not public, but you can preview it at https://maapallo.info by providing the following credentials:
+
+Username: `earth`
+Password: `isnotflat`
 
 ## Technical Implementation
 
