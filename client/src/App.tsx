@@ -255,7 +255,7 @@ export function App() {
               />
             ) : (
               <div style={{ padding: "20px", textAlign: "center" }}>
-                Loading 3D map...
+                Ladataan 3D-karttaa...
               </div>
             )
           ) : (

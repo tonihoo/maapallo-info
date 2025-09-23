@@ -33,7 +33,7 @@ export const BASE_MAPS = {
       const source = new WMTS({
         url: "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/wmts.cgi",
         // Use a seamless static mosaic to avoid visible swath seams
-        layer: "BlueMarble_ShadedRelief",
+        layer: "BlueMarble_ShadedRelief_Bathymetry",
         matrixSet: "GoogleMapsCompatible_Level8",
         format: "image/jpeg",
         projection,
