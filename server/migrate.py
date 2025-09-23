@@ -52,15 +52,27 @@ async def run_migration_file(filepath: str) -> bool:
 
 
 async def run_all_migrations():
-    """Run all migration files in order"""
-    migration_files = [
-        "0001_create_feature_table.sql",
-        "0002_add_test_data.sql",
-        "0003_create_analytics_tables.sql",
-        "0004_add_population_density_2022.sql",
-        "0005_import_population_density_data.sql",
-        "0006_create_geo_layers.sql",
-    ]
+    """Run all migration files in lexical order.
+
+    Discovers available .sql files in the migrations directory and executes
+    them in sorted order. Relies on numeric prefixes (e.g. 0001_, 0002_) to
+    guarantee correct ordering without hardcoding filenames.
+    """
+    migrations_dir = Path(__file__).parent / "migrations"
+
+    if not migrations_dir.exists():
+        logger.error(f"Migrations directory not found: {migrations_dir}")
+        return False
+
+    # Collect and sort migration files; only take files starting with digits
+    discovered = sorted(p.name for p in migrations_dir.glob("*.sql"))
+    migration_files = [f for f in discovered if f and f[0:4].isdigit()]
+
+    if not migration_files:
+        logger.warning("No migration files found to run.")
+        return True
+
+    logger.info("Discovered migration files: " + ", ".join(migration_files))
 
     success_count = 0
     for migration_file in migration_files:
