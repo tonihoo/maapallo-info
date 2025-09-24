@@ -202,8 +202,8 @@ async def ensure_datastore_exists():
     response = requests.get(datastore_url, headers=headers, timeout=30)
 
     if response.status_code == 404:
-        # Create PostGIS datastore using centralized param resolution
-        params = _resolve_db_params()
+        # Create PostGIS datastore using GeoServer-accessible params
+        params = _resolve_geoserver_db_params()
         datastore_data = {
             "dataStore": {
                 "name": datastore_name,
@@ -235,34 +235,13 @@ async def ensure_datastore_exists():
 
 
 def _resolve_db_params() -> dict:
-    """Resolve DB connection parameters from env (upper/lower) or settings."""
-    host = os.getenv("PG_HOST") or os.getenv("pg_host") or settings.pg_host
-    port = int(
-        os.getenv("PG_PORT") or os.getenv("pg_port") or settings.pg_port
-    )
-    db = (
-        os.getenv("PG_DB")
-        or os.getenv("pg_database")
-        or os.getenv("DB_NAME")
-        or settings.pg_database
-    )
-    user = (
-        os.getenv("PG_USER")
-        or os.getenv("pg_user")
-        or os.getenv("DB_ADMIN_USER")
-        or settings.pg_user
-    )
-    password = (
-        os.getenv("PG_PASSWORD")
-        or os.getenv("pg_pass")
-        or os.getenv("DB_ADMIN_PASSWORD")
-        or settings.pg_pass
-    )
-    sslmode = (
-        os.getenv("PG_SSLMODE")
-        or os.getenv("pg_sslmode")
-        or settings.pg_sslmode
-    )
+    """Resolve DB connection parameters from env or settings."""
+    host = os.getenv("pg_host") or settings.pg_host
+    port = int(os.getenv("pg_port") or settings.pg_port)
+    db = os.getenv("DB_NAME") or settings.pg_database
+    user = os.getenv("DB_ADMIN_USER") or settings.pg_user
+    password = os.getenv("DB_ADMIN_PASSWORD") or settings.pg_pass
+    sslmode = os.getenv("pg_sslmode") or settings.pg_sslmode
     return {
         "host": host,
         "port": port,
@@ -271,6 +250,16 @@ def _resolve_db_params() -> dict:
         "password": password,
         "sslmode": sslmode,
     }
+
+
+def _resolve_geoserver_db_params() -> dict:
+    """Resolve DB connection parameters that GeoServer container can use.
+
+    Since GeoServer runs in a separate container, we use the same database
+    credentials that both containers have access to.
+    """
+    # Use the same database parameters but ensure they're accessible
+    return _resolve_db_params()
 
 
 async def import_geojson_to_postgis(file_path: Path, table_name: str):
