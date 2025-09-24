@@ -393,9 +393,9 @@ jobs:
                   "ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}" \
                   "PG_HOST=${{ env.DB_SERVER_NAME }}.postgres.database.azure.com" \
                   "PG_PORT=5432" \
-                  "PG_DATABASE=${{ secrets.DB_NAME }}" \
+                  "PG_DB=${{ secrets.DB_NAME }}" \
                   "PG_USER=${{ secrets.DB_ADMIN_USER }}" \
-                  "PG_PASS=${{ secrets.DB_ADMIN_PASSWORD }}" \
+                  "PG_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}" \
                   "PG_SSLMODE=require" \
                   "GEOSERVER_URL=https://maapallo-geoserver.$CONTAINER_DOMAIN"
             else
@@ -425,9 +425,9 @@ jobs:
                   "ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}" \
                   "PG_HOST=${{ env.DB_SERVER_NAME }}.postgres.database.azure.com" \
                   "PG_PORT=5432" \
-                  "PG_DATABASE=${{ secrets.DB_NAME }}" \
+                  "PG_DB=${{ secrets.DB_NAME }}" \
                   "PG_USER=${{ secrets.DB_ADMIN_USER }}" \
-                  "PG_PASS=${{ secrets.DB_ADMIN_PASSWORD }}" \
+                  "PG_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}" \
                   "PG_SSLMODE=require" \
                   "GEOSERVER_URL=https://maapallo-geoserver.$CONTAINER_DOMAIN"
             fi
@@ -454,9 +454,9 @@ jobs:
                 "ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}" \
                 "PG_HOST=${{ env.DB_SERVER_NAME }}.postgres.database.azure.com" \
                 "PG_PORT=5432" \
-                "PG_DATABASE=${{ secrets.DB_NAME }}" \
+                "PG_DB=${{ secrets.DB_NAME }}" \
                 "PG_USER=${{ secrets.DB_ADMIN_USER }}" \
-                "PG_PASS=${{ secrets.DB_ADMIN_PASSWORD }}" \
+                "PG_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}" \
                 "PG_SSLMODE=require" \
                 "GEOSERVER_URL=https://maapallo-geoserver.$CONTAINER_DOMAIN"
           fi
