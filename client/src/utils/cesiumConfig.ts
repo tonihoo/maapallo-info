@@ -19,43 +19,67 @@ export const initializeCesiumConfig = () => {
       console.warn("Could not set CESIUM_BASE_URL:", error);
       w.CESIUM_BASE_URL = "/node_modules/cesium/Build/Cesium/";
     }
+
+    // Fix Canvas2D performance warnings by monkey-patching getContext
+    const originalGetContext = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (
+      this: HTMLCanvasElement,
+      contextType: string,
+      options?: CanvasRenderingContext2DSettings | WebGLContextAttributes
+    ) {
+      if (contextType === "2d" && options === undefined) {
+        // Add willReadFrequently option for 2D contexts to suppress performance warnings
+        return originalGetContext.call(this, contextType, {
+          willReadFrequently: true,
+        });
+      }
+      return originalGetContext.call(this, contextType, options);
+    };
   }
 
-  // Get Cesium Ion token from environment variable (bundled or window-injected)
-  const CESIUM_ION_TOKEN = env("CESIUM_ION_TOKEN", "");
-
-  if (
-    !CESIUM_ION_TOKEN ||
-    CESIUM_ION_TOKEN === "YOUR_NEW_CESIUM_ION_TOKEN_HERE"
-  ) {
-    console.warn(
-      "Warning: Cesium Ion token not set in .env file. Satellite imagery may not load properly."
-    );
-    console.warn(
-      "Please add CESIUM_ION_TOKEN to your .env file with your token from https://cesium.com/ion/tokens"
-    );
-  }
+  // Get Cesium Ion token from environment variable (webpack DefinePlugin injects this)
+  const CESIUM_ION_TOKEN =
+    process.env.CESIUM_ION_TOKEN || env("CESIUM_ION_TOKEN", "");
 
   // Set the Cesium Ion access token (build-time) or fetch from server at runtime
   const setToken = (token: string) => {
-    if (token && token !== "YOUR_NEW_CESIUM_ION_TOKEN_HERE") {
+    if (
+      token &&
+      token !== "YOUR_NEW_CESIUM_ION_TOKEN_HERE" &&
+      token.length > 10
+    ) {
       Cesium.Ion.defaultAccessToken = token;
+      return true;
     }
+    return false;
   };
 
-  if (
-    CESIUM_ION_TOKEN &&
-    CESIUM_ION_TOKEN !== "YOUR_NEW_CESIUM_ION_TOKEN_HERE"
-  ) {
-    setToken(CESIUM_ION_TOKEN);
-  } else {
+  // Try to set token immediately if available
+  const tokenSet = setToken(CESIUM_ION_TOKEN);
+
+  if (!tokenSet) {
     // Fetch token from server if not provided at build time
     fetch("/api/v1/config/public")
       .then((r) => (r.ok ? r.json() : { cesiumIonToken: "" }))
       .then((cfg) => {
-        if (cfg?.cesiumIonToken) setToken(cfg.cesiumIonToken);
+        const serverToken = cfg?.cesiumIonToken;
+        const serverTokenSet = serverToken ? setToken(serverToken) : false;
+
+        // Only show warnings if no token was found anywhere
+        if (!serverTokenSet && process.env.NODE_ENV === "development") {
+          console.info(
+            "Cesium Ion token not configured. Using default imagery."
+          );
+        }
       })
-      .catch(() => undefined);
+      .catch(() => {
+        // Only show warning in development if no token at all
+        if (!CESIUM_ION_TOKEN && process.env.NODE_ENV === "development") {
+          console.info(
+            "Cesium Ion token not configured. Using default imagery."
+          );
+        }
+      });
   }
 };
 
