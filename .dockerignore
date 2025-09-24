@@ -1,0 +1,30 @@
+# Ignore local environment files (use GitHub secrets in production)
+.env
+.env.local
+.env.*.local
+
+# Ignore development files
+node_modules
+npm-debug.log
+.npm
+.git
+.gitignore
+.dockerignore
+.nyc_output
+coverage
+.DS_Store
+
+# Ignore build artifacts and cache
+dist
+build
+*.log
+
+# Ignore IDE files
+.vscode
+.idea
+*.swp
+*.swo
+
+# Ignore deployment artifacts
+deployments/
+LogFiles/

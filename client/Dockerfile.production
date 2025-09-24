@@ -9,11 +9,13 @@ COPY package*.json ./
 # Install dependencies (including devDependencies needed for building)
 RUN npm ci
 
+# Build argument for Cesium Ion token (needed at build time for webpack)
+ARG CESIUM_ION_TOKEN
+
 # Copy source code
 COPY . .
 
-# Build argument for Cesium Ion token (needed at build time for webpack)
-ARG CESIUM_ION_TOKEN
+# Set environment variable AFTER copying source to override any .env files
 ENV CESIUM_ION_TOKEN=${CESIUM_ION_TOKEN}
 
 # Build the application
