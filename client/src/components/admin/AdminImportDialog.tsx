@@ -128,7 +128,7 @@ export const AdminImportDialog: React.FC<Props> = ({ open, onClose }) => {
 
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
           <Button variant="outlined" component="label">
-            Valitse .geojson tiedosto
+            Valitse .geojson tiedosto (max 200MB)
             <input
               type="file"
               accept=".geojson"
