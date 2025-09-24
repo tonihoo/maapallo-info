@@ -250,12 +250,20 @@ async def ensure_datastore_exists():
 
 def _resolve_db_params() -> dict:
     """Resolve DB connection parameters from env or settings."""
-    host = os.getenv("pg_host") or settings.pg_host
-    port = int(os.getenv("pg_port") or settings.pg_port)
+    # For production, use Azure PostgreSQL server
+    if os.getenv("ENVIRONMENT") == "production":
+        host = "maapallo-db-server.postgres.database.azure.com"
+        port = 5432
+        sslmode = "require"
+    else:
+        host = os.getenv("pg_host") or settings.pg_host
+        port = int(os.getenv("pg_port") or settings.pg_port)
+        sslmode = os.getenv("pg_sslmode") or settings.pg_sslmode
+    
     db = os.getenv("DB_NAME") or settings.pg_database
     user = os.getenv("DB_ADMIN_USER") or settings.pg_user
     password = os.getenv("DB_ADMIN_PASSWORD") or settings.pg_pass
-    sslmode = os.getenv("pg_sslmode") or settings.pg_sslmode
+    
     return {
         "host": host,
         "port": port,
