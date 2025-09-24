@@ -1,66 +1,3 @@
-async def ensure_layer_exists(table_name: str, datastore_name: str):
-    """Ensure the layer exists in GeoServer for the given table/datastore."""
-    headers = get_geoserver_auth()
-    headers["Content-Type"] = "application/json"
-
-    # Check if layer exists
-    featuretype_url = (
-        f"{GEOSERVER_URL}/rest/workspaces/{WORKSPACE_NAME}/"
-        f"datastores/{datastore_name}/featuretypes/{table_name}"
-    )
-    logger.info("Checking layer: %s", featuretype_url)
-    response = requests.get(featuretype_url, headers=headers, timeout=30)
-    logger.info("Layer check response: %s", response.status_code)
-
-    if response.status_code == 404:
-        # Create featuretype (layer)
-        featuretype_data = {
-            "featureType": {
-                "name": table_name,
-                "nativeName": table_name,
-                "title": table_name.replace("_", " ").title(),
-                "srs": "EPSG:4326",
-                "enabled": True,
-            }
-        }
-        create_url = (
-            f"{GEOSERVER_URL}/rest/workspaces/{WORKSPACE_NAME}/"
-            f"datastores/{datastore_name}/featuretypes"
-        )
-        logger.info("Creating layer at: %s", create_url)
-        response = requests.post(
-            create_url, headers=headers, json=featuretype_data, timeout=30
-        )
-        logger.info("Layer creation response: %s", response.status_code)
-        if response.status_code not in [200, 201]:
-            logger.error(
-                "Failed to create layer %s. Status: %s, Response: %s",
-                table_name,
-                response.status_code,
-                response.text,
-            )
-            # If 409, treat as already exists
-            if response.status_code == 409:
-                logger.info(
-                    "Layer '%s' already exists in GeoServer (409)", table_name
-                )
-                return True
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to create layer: {response.text}",
-            )
-        logger.info("Created GeoServer layer: %s", table_name)
-    elif response.status_code == 200:
-        logger.info("Layer %s already exists", table_name)
-    else:
-        logger.error(
-            "Unexpected layer check response: %s - %s",
-            response.status_code,
-            response.text,
-        )
-    return True
-
-
 """
 Admin API for background GeoJSON imports into PostGIS.
 
@@ -138,6 +75,66 @@ GEOSERVER_URL = _normalize_geoserver_base(RAW_GEOSERVER_URL)
 GEOSERVER_USER = os.getenv("GEOSERVER_USER", "admin")
 GEOSERVER_PASSWORD = os.getenv("GEOSERVER_PASSWORD", "geoserver")
 WORKSPACE_NAME = os.getenv("GEOSERVER_WORKSPACE", "maapallo")
+
+
+async def ensure_layer_exists(table_name: str, datastore_name: str):
+    """Ensure the layer exists in GeoServer for the given table/datastore."""
+    headers = get_geoserver_auth()
+    headers["Content-Type"] = "application/json"
+
+    featuretype_url = (
+        f"{GEOSERVER_URL}/rest/workspaces/{WORKSPACE_NAME}/"
+        f"datastores/{datastore_name}/featuretypes/{table_name}"
+    )
+    logger.info("Checking layer: %s", featuretype_url)
+    response = requests.get(featuretype_url, headers=headers, timeout=30)
+    logger.info("Layer check response: %s", response.status_code)
+
+    if response.status_code == 404:
+        featuretype_data = {
+            "featureType": {
+                "name": table_name,
+                "nativeName": table_name,
+                "title": table_name.replace("_", " ").title(),
+                "srs": "EPSG:4326",
+                "enabled": True,
+            }
+        }
+        create_url = (
+            f"{GEOSERVER_URL}/rest/workspaces/{WORKSPACE_NAME}/"
+            f"datastores/{datastore_name}/featuretypes"
+        )
+        logger.info("Creating layer at: %s", create_url)
+        response = requests.post(
+            create_url, headers=headers, json=featuretype_data, timeout=30
+        )
+        logger.info("Layer creation response: %s", response.status_code)
+        if response.status_code not in [200, 201]:
+            if response.status_code == 409:
+                logger.info(
+                    "Layer '%s' already exists in GeoServer (409)", table_name
+                )
+                return True
+            logger.error(
+                "Failed to create layer %s. Status: %s, Response: %s",
+                table_name,
+                response.status_code,
+                response.text,
+            )
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to create layer: {response.text}",
+            )
+        logger.info("Created GeoServer layer: %s", table_name)
+    elif response.status_code == 200:
+        logger.info("Layer %s already exists", table_name)
+    else:
+        logger.error(
+            "Unexpected layer check response: %s - %s",
+            response.status_code,
+            response.text,
+        )
+    return True
 
 print(
     "[GeoServer] base=%s workspace=%s user=%s src=%s pwd.len=%s"
@@ -274,7 +271,8 @@ async def ensure_datastore_exists():
     headers = get_geoserver_auth()
     headers["Content-Type"] = "application/json"
 
-    datastore_name = "postgis"
+    # Use a canonical datastore name (align with restore-config script)
+    datastore_name = os.getenv("GEOSERVER_DATASTORE_NAME", "postgis_maapallo")
 
     # Check if datastore exists
     datastore_url = (
@@ -288,26 +286,51 @@ async def ensure_datastore_exists():
     if response.status_code == 404:
         # Create PostGIS datastore using GeoServer-accessible params
         params = _resolve_geoserver_db_params()
-        logger.info(
-            "Creating datastore: host=%s, port=%s, db=%s",
-            params["host"],
-            params["port"],
-            params["db"],
-        )
+        # Build rich connectionParameters (mirrors shell restore script)
+        connection_params: dict[str, object] = {
+            "host": params["host"],
+            "port": str(params["port"]),
+            "database": params["db"],
+            "schema": "public",
+            "user": params["user"],
+            "passwd": params["password"],
+            "dbtype": "postgis",
+            "Loose bbox": "true",
+            "Estimated extends": "false",
+            "validate connections": "true",
+            "Connection timeout": "20",
+            "preparedStatements": "false",
+        }
+    # Include ssl mode if present (GeoServer sometimes expects either
+    # 'sslmode' or 'SSL mode')
+        sslmode = params.get("sslmode")
+        if sslmode:
+            connection_params["sslmode"] = sslmode
+            connection_params["SSL mode"] = sslmode  # defensive duplicate
+
+        # Optionally include namespace explicitly (not strictly required)
+        connection_params["namespace"] = WORKSPACE_NAME
+
         datastore_data = {
             "dataStore": {
                 "name": datastore_name,
-                "connectionParameters": {
-                    "host": params["host"],
-                    "port": params["port"],
-                    "database": params["db"],
-                    "user": params["user"],
-                    "passwd": params["password"],
-                    "dbtype": "postgis",
-                    "sslmode": params["sslmode"],
-                },
+                "connectionParameters": connection_params,
             }
         }
+
+        # Mask password for logging
+        log_preview = json.loads(json.dumps(datastore_data))
+        try:
+            log_preview["dataStore"]["connectionParameters"]["passwd"] = "***"
+        except Exception:  # noqa: BLE001
+            pass
+        logger.info(
+            "Creating datastore with parameters: %s",
+            json.dumps(
+                log_preview["dataStore"]["connectionParameters"],
+                sort_keys=True,
+            ),
+        )
         response = requests.post(
             f"{GEOSERVER_URL}/rest/workspaces/{WORKSPACE_NAME}/datastores",
             headers=headers,
@@ -315,9 +338,19 @@ async def ensure_datastore_exists():
             timeout=30,
         )
         if response.status_code not in [200, 201]:
+            body = response.text.strip()
+            logger.error(
+                "GeoServer datastore creation failed (HTTP %s) body=%s",
+                response.status_code,
+                body[:500],
+            )
+            # Provide structured failure detail to client
             raise HTTPException(
                 status_code=500,
-                detail=f"Failed to create datastore: {response.text}",
+                detail=(
+                    "Failed to create datastore: "
+                    f"status={response.status_code} body={body or '[empty]'}"
+                ),
             )
         logger.info("Created PostGIS datastore: %s", datastore_name)
 
