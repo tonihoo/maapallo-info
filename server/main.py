@@ -196,6 +196,15 @@ try:
 except ImportError as e:
     print(f"⚠️  Admin API not available: {e}")
 
+# Add GeoServer configuration admin router
+try:
+    from routes.geoserver_admin import router as geoserver_admin_router
+
+    app.include_router(geoserver_admin_router, tags=["geoserver-admin"])
+    print("✅ GeoServer Admin API loaded")
+except ImportError as e:
+    print(f"⚠️  GeoServer Admin API not available: {e}")
+
 # Add population density API
 try:
     from population_density_api import router as population_router
