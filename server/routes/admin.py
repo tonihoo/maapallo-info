@@ -22,6 +22,7 @@ from typing import Optional
 
 import requests
 from auth import require_auth
+from config import settings
 from database import async_session_maker, get_db
 from fastapi import (
     APIRouter,
@@ -206,12 +207,37 @@ async def ensure_datastore_exists():
             "dataStore": {
                 "name": datastore_name,
                 "connectionParameters": {
-                    "host": os.getenv("PG_HOST", "db"),
-                    "port": int(os.getenv("PG_PORT", "5432")),
-                    "database": os.getenv("PG_DB", "db_dev"),
-                    "user": os.getenv("PG_USER", "db_dev_user"),
-                    "passwd": os.getenv("PG_PASSWORD", "DevPassword"),
-                    "dbtype": "postgis",
+                        "host": (
+                            os.getenv("PG_HOST")
+                            or os.getenv("pg_host")
+                            or settings.pg_host
+                        ),
+                        "port": int(
+                            os.getenv("PG_PORT")
+                            or os.getenv("pg_port")
+                            or settings.pg_port
+                        ),
+                        "database": (
+                            os.getenv("PG_DB")
+                            or os.getenv("pg_database")
+                            or settings.pg_database
+                        ),
+                        "user": (
+                            os.getenv("PG_USER")
+                            or os.getenv("pg_user")
+                            or settings.pg_user
+                        ),
+                        "passwd": (
+                            os.getenv("PG_PASSWORD")
+                            or os.getenv("pg_pass")
+                            or settings.pg_pass
+                        ),
+                        "dbtype": "postgis",
+                        "sslmode": (
+                            os.getenv("PG_SSLMODE")
+                            or os.getenv("pg_sslmode")
+                            or settings.pg_sslmode
+                        ),
                 },
             }
         }
@@ -231,17 +257,43 @@ async def ensure_datastore_exists():
     return datastore_name
 
 
-async def import_geojson_to_postgis(file_path: Path, table_name: str):
-    """Import GeoJSON to PostGIS using ogr2ogr."""
-
-    # Database connection string
-    db_connection = (
-        f"PG:host={os.getenv('PG_HOST', 'db')} "
-        f"port={os.getenv('PG_PORT', '5432')} "
-        f"dbname={os.getenv('PG_DB', 'db_dev')} "
-        f"user={os.getenv('PG_USER', 'db_dev_user')} "
-        f"password={os.getenv('PG_PASSWORD', 'DevPassword')}"
+def _resolve_db_params() -> dict:
+    """Resolve DB connection parameters from env (upper/lower) or settings."""
+    host = os.getenv("PG_HOST") or os.getenv("pg_host") or settings.pg_host
+    port = int(
+        os.getenv("PG_PORT") or os.getenv("pg_port") or settings.pg_port
     )
+    db = os.getenv("PG_DB") or os.getenv("pg_database") or settings.pg_database
+    user = os.getenv("PG_USER") or os.getenv("pg_user") or settings.pg_user
+    password = (
+        os.getenv("PG_PASSWORD") or os.getenv("pg_pass") or settings.pg_pass
+    )
+    sslmode = (
+        os.getenv("PG_SSLMODE")
+        or os.getenv("pg_sslmode")
+        or settings.pg_sslmode
+    )
+    return {
+        "host": host,
+        "port": port,
+        "db": db,
+        "user": user,
+        "password": password,
+        "sslmode": sslmode,
+    }
+
+
+async def import_geojson_to_postgis(file_path: Path, table_name: str):
+    """Import GeoJSON to PostGIS using ogr2ogr (supports sslmode)."""
+
+    params = _resolve_db_params()
+    # Build ogr2ogr connection parts (avoid quoting password into logs)
+    db_connection = (
+        "PG:host={host} port={port} dbname={db} user={user} "
+        "password={password}".format(**params)
+    )
+    if params["sslmode"] and params["sslmode"].lower() != "disable":
+        db_connection += f" sslmode={params['sslmode']}"
 
     # Use ogr2ogr to import the GeoJSON
     result = subprocess.run(
@@ -265,9 +317,12 @@ async def import_geojson_to_postgis(file_path: Path, table_name: str):
     )
 
     if result.returncode != 0:
-        logger.error("ogr2ogr failed: %s", result.stderr)
+        # Redact password if it sneaks into stderr
+        stderr_safe = result.stderr.replace(params["password"], "********")
+        logger.error("ogr2ogr failed: %s", stderr_safe)
         raise HTTPException(
-            status_code=500, detail=f"Data import failed: {result.stderr}"
+            status_code=500,
+            detail=f"Data import failed: {stderr_safe}",
         )
 
     logger.info(
@@ -914,3 +969,21 @@ async def geoserver_import(
     except Exception as e:
         logger.error("GeoServer import failed: %s", str(e))
         raise HTTPException(status_code=500, detail=f"Import failed: {str(e)}")
+
+
+@router.get("/db-ping")
+async def db_ping(current_user=Depends(require_auth)):
+    """Diagnostic DB reachability check (no sensitive secrets)."""
+    params = _resolve_db_params()
+    safe = {k: v for k, v in params.items() if k != "password"}
+    # Attempt a lightweight psql connect via async engine already initialized
+    from sqlalchemy import text
+
+    try:
+        async with async_session_maker() as session:
+            await session.execute(text("SELECT 1"))
+        safe["ok"] = True
+    except Exception as e:  # noqa: BLE001
+        safe["ok"] = False
+        safe["error"] = str(e)
+    return safe
