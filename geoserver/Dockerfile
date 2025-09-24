@@ -15,8 +15,8 @@ ENV POSTGRES_PASS=DevPassword
 ENV GEOSERVER_CSRF_DISABLED=true
 ENV GEOSERVER_CSRF_WHITELIST=localhost:8080,127.0.0.1:8080
 
-# Performance optimizations for development
-ENV JAVA_OPTS="-Xms512m -Xmx1024m -DGEOSERVER_CSRF_DISABLED=true"
+# Performance optimizations and proxy configuration
+ENV JAVA_OPTS="-Xms512m -Xmx1024m -DGEOSERVER_CSRF_DISABLED=true -Dorg.geotools.referencing.forceXY=true"
 
 # Install additional tools as root, then copy our scripts
 USER root

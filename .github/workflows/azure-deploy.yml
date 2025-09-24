@@ -294,7 +294,9 @@ jobs:
                   "POSTGRES_PORT=5432" \
                   "POSTGRES_DB=${{ secrets.DB_NAME }}" \
                   "POSTGRES_USER=${{ secrets.DB_ADMIN_USER }}" \
-                  "POSTGRES_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}"
+                  "POSTGRES_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}" \
+                  "PROXY_BASE_URL=https://maapallo-geoserver.$CONTAINER_DOMAIN/geoserver" \
+                  "GEOSERVER_CSRF_DISABLED=true"
             else
               echo "Updating existing GeoServer container..."
               # For existing apps, we need to update the identity and registry configuration first
@@ -322,7 +324,9 @@ jobs:
                   "POSTGRES_PORT=5432" \
                   "POSTGRES_DB=${{ secrets.DB_NAME }}" \
                   "POSTGRES_USER=${{ secrets.DB_ADMIN_USER }}" \
-                  "POSTGRES_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}"
+                  "POSTGRES_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}" \
+                  "PROXY_BASE_URL=https://maapallo-geoserver.$CONTAINER_DOMAIN/geoserver" \
+                  "GEOSERVER_CSRF_DISABLED=true"
             fi
           else
             echo "Creating new GeoServer container..."
@@ -347,7 +351,9 @@ jobs:
                 "POSTGRES_PORT=5432" \
                 "POSTGRES_DB=${{ secrets.DB_NAME }}" \
                 "POSTGRES_USER=${{ secrets.DB_ADMIN_USER }}" \
-                "POSTGRES_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}"
+                "POSTGRES_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}" \
+                "PROXY_BASE_URL=https://maapallo-geoserver.$CONTAINER_DOMAIN/geoserver" \
+                "GEOSERVER_CSRF_DISABLED=true"
           fi
 
       # Deploy Backend API
