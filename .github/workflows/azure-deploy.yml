@@ -397,6 +397,7 @@ jobs:
                   "DB_NAME=${{ secrets.DB_NAME }}" \
                   "DB_ADMIN_USER=${{ secrets.DB_ADMIN_USER }}" \
                   "DB_ADMIN_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}" \
+                  "CESIUM_ION_TOKEN=${{ secrets.CESIUM_ION_TOKEN }}" \
                   "GEOSERVER_URL=https://maapallo-geoserver.$CONTAINER_DOMAIN" \
                   "GEOSERVER_INTERNAL_URL=http://maapallo-geoserver/geoserver" \
                   "GEOSERVER_USER=admin" \
@@ -430,6 +431,7 @@ jobs:
                   "DB_NAME=${{ secrets.DB_NAME }}" \
                   "DB_ADMIN_USER=${{ secrets.DB_ADMIN_USER }}" \
                   "DB_ADMIN_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}" \
+                  "CESIUM_ION_TOKEN=${{ secrets.CESIUM_ION_TOKEN }}" \
                   "GEOSERVER_URL=https://maapallo-geoserver.$CONTAINER_DOMAIN" \
                   "GEOSERVER_INTERNAL_URL=http://maapallo-geoserver/geoserver" \
                   "GEOSERVER_USER=admin" \
@@ -460,6 +462,7 @@ jobs:
                 "DB_NAME=${{ secrets.DB_NAME }}" \
                 "DB_ADMIN_USER=${{ secrets.DB_ADMIN_USER }}" \
                 "DB_ADMIN_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}" \
+                "CESIUM_ION_TOKEN=${{ secrets.CESIUM_ION_TOKEN }}" \
                 "GEOSERVER_URL=https://maapallo-geoserver.$CONTAINER_DOMAIN" \
                 "GEOSERVER_INTERNAL_URL=http://maapallo-geoserver/geoserver" \
                 "GEOSERVER_USER=admin" \
