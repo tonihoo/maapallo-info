@@ -288,6 +288,7 @@ jobs:
                 --registry-identity $IDENTITY_ID \
                 --registry-server ${{ env.ACR_REGISTRY }} \
                 --env-vars \
+                  "GEOSERVER_ADMIN_USER=${{ secrets.GEOSERVER_ADMIN_USER }}" \
                   "GEOSERVER_ADMIN_PASSWORD=${{ secrets.GEOSERVER_ADMIN_PASSWORD }}" \
                   "POSTGRES_HOST=${{ env.DB_SERVER_NAME }}.postgres.database.azure.com" \
                   "POSTGRES_PORT=5432" \
@@ -315,6 +316,7 @@ jobs:
                 --resource-group ${{ env.RESOURCE_GROUP }} \
                 --image ${{ env.ACR_REGISTRY }}/maapallo-geoserver:${{ github.sha }} \
                 --set-env-vars \
+                  "GEOSERVER_ADMIN_USER=${{ secrets.GEOSERVER_ADMIN_USER }}" \
                   "GEOSERVER_ADMIN_PASSWORD=${{ secrets.GEOSERVER_ADMIN_PASSWORD }}" \
                   "POSTGRES_HOST=${{ env.DB_SERVER_NAME }}.postgres.database.azure.com" \
                   "POSTGRES_PORT=5432" \
@@ -339,6 +341,7 @@ jobs:
               --registry-identity $IDENTITY_ID \
               --registry-server ${{ env.ACR_REGISTRY }} \
               --env-vars \
+                "GEOSERVER_ADMIN_USER=${{ secrets.GEOSERVER_ADMIN_USER }}" \
                 "GEOSERVER_ADMIN_PASSWORD=${{ secrets.GEOSERVER_ADMIN_PASSWORD }}" \
                 "POSTGRES_HOST=${{ env.DB_SERVER_NAME }}.postgres.database.azure.com" \
                 "POSTGRES_PORT=5432" \
