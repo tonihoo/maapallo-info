@@ -397,7 +397,11 @@ jobs:
                   "PG_USER=${{ secrets.DB_ADMIN_USER }}" \
                   "PG_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}" \
                   "PG_SSLMODE=require" \
-                  "GEOSERVER_URL=https://maapallo-geoserver.$CONTAINER_DOMAIN"
+                  "GEOSERVER_URL=https://maapallo-geoserver.$CONTAINER_DOMAIN" \
+                  "GEOSERVER_INTERNAL_URL=http://maapallo-geoserver/geoserver" \
+                  "GEOSERVER_USER=admin" \
+                  "GEOSERVER_PASSWORD=${{ secrets.GEOSERVER_ADMIN_PASSWORD }}" \
+                  "GEOSERVER_WORKSPACE=maapallo"
             else
               echo "Updating existing Server container..."
               # For existing apps, we need to update the identity and registry configuration first
@@ -429,7 +433,11 @@ jobs:
                   "PG_USER=${{ secrets.DB_ADMIN_USER }}" \
                   "PG_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}" \
                   "PG_SSLMODE=require" \
-                  "GEOSERVER_URL=https://maapallo-geoserver.$CONTAINER_DOMAIN"
+                  "GEOSERVER_URL=https://maapallo-geoserver.$CONTAINER_DOMAIN" \
+                  "GEOSERVER_INTERNAL_URL=http://maapallo-geoserver/geoserver" \
+                  "GEOSERVER_USER=admin" \
+                  "GEOSERVER_PASSWORD=${{ secrets.GEOSERVER_ADMIN_PASSWORD }}" \
+                  "GEOSERVER_WORKSPACE=maapallo"
             fi
           else
             echo "Creating new Server container..."
@@ -458,7 +466,11 @@ jobs:
                 "PG_USER=${{ secrets.DB_ADMIN_USER }}" \
                 "PG_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}" \
                 "PG_SSLMODE=require" \
-                "GEOSERVER_URL=https://maapallo-geoserver.$CONTAINER_DOMAIN"
+                "GEOSERVER_URL=https://maapallo-geoserver.$CONTAINER_DOMAIN" \
+                "GEOSERVER_INTERNAL_URL=http://maapallo-geoserver/geoserver" \
+                "GEOSERVER_USER=admin" \
+                "GEOSERVER_PASSWORD=${{ secrets.GEOSERVER_ADMIN_PASSWORD }}" \
+                "GEOSERVER_WORKSPACE=maapallo"
           fi
 
       # Deploy Frontend
