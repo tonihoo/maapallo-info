@@ -207,37 +207,37 @@ async def ensure_datastore_exists():
             "dataStore": {
                 "name": datastore_name,
                 "connectionParameters": {
-                        "host": (
-                            os.getenv("PG_HOST")
-                            or os.getenv("pg_host")
-                            or settings.pg_host
-                        ),
-                        "port": int(
-                            os.getenv("PG_PORT")
-                            or os.getenv("pg_port")
-                            or settings.pg_port
-                        ),
-                        "database": (
-                            os.getenv("PG_DB")
-                            or os.getenv("pg_database")
-                            or settings.pg_database
-                        ),
-                        "user": (
-                            os.getenv("PG_USER")
-                            or os.getenv("pg_user")
-                            or settings.pg_user
-                        ),
-                        "passwd": (
-                            os.getenv("PG_PASSWORD")
-                            or os.getenv("pg_pass")
-                            or settings.pg_pass
-                        ),
-                        "dbtype": "postgis",
-                        "sslmode": (
-                            os.getenv("PG_SSLMODE")
-                            or os.getenv("pg_sslmode")
-                            or settings.pg_sslmode
-                        ),
+                    "host": (
+                        os.getenv("PG_HOST")
+                        or os.getenv("pg_host")
+                        or settings.pg_host
+                    ),
+                    "port": int(
+                        os.getenv("PG_PORT")
+                        or os.getenv("pg_port")
+                        or settings.pg_port
+                    ),
+                    "database": (
+                        os.getenv("PG_DB")
+                        or os.getenv("pg_database")
+                        or settings.pg_database
+                    ),
+                    "user": (
+                        os.getenv("PG_USER")
+                        or os.getenv("pg_user")
+                        or settings.pg_user
+                    ),
+                    "passwd": (
+                        os.getenv("PG_PASSWORD")
+                        or os.getenv("pg_pass")
+                        or settings.pg_pass
+                    ),
+                    "dbtype": "postgis",
+                    "sslmode": (
+                        os.getenv("PG_SSLMODE")
+                        or os.getenv("pg_sslmode")
+                        or settings.pg_sslmode
+                    ),
                 },
             }
         }
