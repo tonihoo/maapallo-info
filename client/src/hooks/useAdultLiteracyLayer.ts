@@ -177,7 +177,6 @@ export function useAdultLiteracyLayer({ visible }: UseAdultLiteracyLayerProps) {
       });
 
       source.addFeatures(features);
-      console.info("Adult literacy world features: " + features.length);
       layerRef.current = layer;
 
       // Clear pending visibility state since layer is now created

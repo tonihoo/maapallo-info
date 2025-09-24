@@ -66,13 +66,11 @@ export function useLayerCache() {
     async (url: string): Promise<GeoJsonData> => {
       // Return cached data if available
       if (geoJsonCache.has(url)) {
-        console.info(`✅ Using cached data for ${url}`);
         return geoJsonCache.get(url) as GeoJsonData;
       }
 
       // Return existing promise if already loading
       if (loadingRef.current.has(url)) {
-        console.info(`⏳ Waiting for existing request for ${url}`);
         return loadingRef.current.get(url) as Promise<GeoJsonData>;
       }
 
@@ -85,7 +83,6 @@ export function useLayerCache() {
           const data = await response.json();
           geoJsonCache.set(url, data);
           loadingRef.current.delete(url);
-          console.info(`✅ Loaded and cached ${url}`);
           return data;
         })
         .catch((error) => {
@@ -143,8 +140,6 @@ export function useLayerCache() {
     } catch (error) {
       console.warn("Could not clear GeoServer cache:", error);
     }
-
-    console.info("✅ Cleared all layer caches");
   }, []);
 
   return {

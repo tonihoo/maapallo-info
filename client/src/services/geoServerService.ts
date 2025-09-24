@@ -103,13 +103,11 @@ async function fetchFromGeoServer(
 
   // Return cached data if available
   if (geoServerCache.has(cacheKey)) {
-    console.info(`✅ Using cached GeoServer data for ${layerName}`);
     return geoServerCache.get(cacheKey) as GeoJsonData;
   }
 
   // Return existing promise if already loading
   if (loadingPromises.has(cacheKey)) {
-    console.info(`⏳ Waiting for existing GeoServer request for ${layerName}`);
     return loadingPromises.get(cacheKey) as Promise<GeoJsonData>;
   }
 
@@ -148,9 +146,6 @@ async function fetchFromGeoServer(
 
       geoServerCache.set(cacheKey, data);
       loadingPromises.delete(cacheKey);
-      console.info(
-        `✅ Loaded and cached GeoServer layer: ${layerName} (${data.features.length} features)`
-      );
       return data;
     })
     .catch((error) => {
@@ -254,12 +249,10 @@ export class GeoServerService {
         key.startsWith(`${layerName}-`)
       );
       keysToDelete.forEach((key) => geoServerCache.delete(key));
-      console.info(`✅ Cleared cache for layer: ${layerName}`);
     } else {
       // Clear all cache
       geoServerCache.clear();
       loadingPromises.clear();
-      console.info("✅ Cleared all GeoServer cache");
     }
   }
 
@@ -314,12 +307,10 @@ export const clearCacheFunction = (layerName?: string): void => {
       key.startsWith(`${layerName}-`)
     );
     keysToDelete.forEach((key) => geoServerCache.delete(key));
-    console.info(`✅ Cleared cache for layer: ${layerName}`);
   } else {
     // Clear all cache
     geoServerCache.clear();
     loadingPromises.clear();
-    console.info("✅ Cleared all GeoServer cache");
   }
 };
 

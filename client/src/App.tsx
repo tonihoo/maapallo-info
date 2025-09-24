@@ -68,10 +68,8 @@ export function App() {
   useEffect(() => {
     const preloadCesium = async () => {
       try {
-        console.log("🔄 Background preloading Cesium...");
         // Preload Cesium module in the background
         const cesiumModule = await import("./components/3d/CesiumMap");
-        console.log("✅ Cesium preloaded successfully");
         dispatch(setCesiumComponent(cesiumModule.CesiumMap));
         dispatch(setCesiumPreloaded(true));
       } catch (error) {
@@ -120,19 +118,15 @@ export function App() {
   }, [dispatch]);
 
   const toggleMapModeHandler = useCallback(async () => {
-    console.log("🔄 Toggling to 3D mode, preloaded:", cesiumPreloaded);
-
     const previousMode = is3DMode ? "3d" : "2d";
     const newMode = is3DMode ? "2d" : "3d";
 
     // If switching to 3D mode and Cesium isn't loaded yet, load it now
     if (!cesiumPreloaded && !CesiumMapComponent) {
       try {
-        console.log("🔄 Loading Cesium on demand...");
         const cesiumModule = await import("./components/3d/CesiumMap");
         dispatch(setCesiumComponent(cesiumModule.CesiumMap));
         dispatch(setCesiumPreloaded(true));
-        console.log("✅ Cesium loaded on demand");
       } catch (error) {
         console.error("❌ Failed to load Cesium:", error);
         return; // Don't switch to 3D mode if loading failed

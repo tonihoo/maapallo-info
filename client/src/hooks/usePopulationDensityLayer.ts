@@ -116,7 +116,6 @@ export function usePopulationDensityLayer({
       });
 
       source.addFeatures(features);
-      console.info("✅ Population density features loaded: " + features.length);
       layerRef.current = layer;
 
       // Clear pending visibility state since layer is now created

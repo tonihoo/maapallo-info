@@ -165,7 +165,6 @@ export function useIntactForestsLayer({ visible }: UseIntactForestsLayerProps) {
       );
 
       source.addFeatures(features);
-      console.info(`✅ IFL features loaded: ${features.length}`);
 
       // Clear pending visibility state since layer is now created
       pendingVisibilityRef.current = null;
