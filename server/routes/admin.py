@@ -14,7 +14,6 @@ import base64
 import json
 import logging
 import os
-import shutil
 import subprocess
 import tempfile
 from datetime import datetime
@@ -41,11 +40,112 @@ router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
 
 logger = logging.getLogger(__name__)
 
-# GeoServer configuration
-GEOSERVER_URL = "http://geoserver:8080/geoserver"
-GEOSERVER_USER = "admin"
-GEOSERVER_PASSWORD = "geoserver"
-WORKSPACE_NAME = "maapallo"
+# GeoServer configuration (env driven). Precedence:
+# 1. GEOSERVER_INTERNAL_URL (cluster-internal)
+# 2. GEOSERVER_URL (public)
+# 3. default (docker-compose local)
+_internal_override = os.getenv("GEOSERVER_INTERNAL_URL")
+_public_override = os.getenv("GEOSERVER_URL")
+_chosen_source = "default"
+
+
+def _normalize_geoserver_base(url: str) -> str:
+    # Ensure it ends with /geoserver if user passed host root.
+    u = url.rstrip("/")
+    if not u.lower().endswith("/geoserver"):
+        # Common cases: user gave http://host or http://host/geoserver/
+        parts = u.split("/")
+        if parts[-1] != "geoserver":
+            u = u + "/geoserver"
+    return u.rstrip("/")
+
+
+if _internal_override:
+    RAW_GEOSERVER_URL = _internal_override
+    _chosen_source = "GEOSERVER_INTERNAL_URL"
+elif _public_override:
+    RAW_GEOSERVER_URL = _public_override
+    _chosen_source = "GEOSERVER_URL"
+else:
+    RAW_GEOSERVER_URL = "http://geoserver:8080/geoserver"
+
+
+GEOSERVER_URL = _normalize_geoserver_base(RAW_GEOSERVER_URL)
+GEOSERVER_USER = os.getenv("GEOSERVER_USER", "admin")
+GEOSERVER_PASSWORD = os.getenv("GEOSERVER_PASSWORD", "geoserver")
+WORKSPACE_NAME = os.getenv("GEOSERVER_WORKSPACE", "maapallo")
+
+print(
+    "[GeoServer] base=%s workspace=%s user=%s src=%s pwd.len=%s"
+    % (
+        GEOSERVER_URL,
+        WORKSPACE_NAME,
+        GEOSERVER_USER,
+        _chosen_source,
+        len(GEOSERVER_PASSWORD) if GEOSERVER_PASSWORD else 0,
+    )
+)
+
+
+def _maybe_auto_adjust_geoserver_url():
+    """Attempt to auto-switch GeoServer URL if default host is unreachable.
+
+    This helps in production if the legacy default 'geoserver:8080' does not
+    resolve but internal Container Apps DNS (e.g. 'maapallo-geoserver') is
+    available. Only runs once at import with very small timeouts.
+    """
+    global GEOSERVER_URL
+    # Only consider adjusting if user did not override via env and the
+    # current URL still points at the legacy docker-compose host.
+    if "geoserver:8080" not in GEOSERVER_URL:
+        return
+    try:
+        # Quick probe (expect 200/401/403). If it responds, keep it.
+        requests.get(f"{GEOSERVER_URL}/rest", timeout=1)
+        return
+    except Exception as probe_err:  # noqa: BLE001
+        alt = "http://maapallo-geoserver/geoserver"
+        try:
+            requests.get(f"{alt.rstrip('/')}/rest", timeout=1)
+            logger.info(
+                "GeoServer default host failed (%s); switched to %s",
+                str(probe_err).__class__.__name__,
+                alt,
+            )
+            GEOSERVER_URL = alt.rstrip("/")
+        except Exception:  # noqa: BLE001
+            logger.warning(
+                "GeoServer auto-adjust failed; still using %s (err=%s)",
+                GEOSERVER_URL,
+                probe_err,
+            )
+
+
+_maybe_auto_adjust_geoserver_url()
+
+
+@router.get("/geoserver-ping")
+async def geoserver_ping(current_user=Depends(require_auth)):
+    """Diagnostic endpoint to verify GeoServer connectivity & config.
+
+    Returns the resolved base URL, workspace, and a simple REST probe result.
+    """
+    info: dict[str, object] = {
+        "resolvedUrl": GEOSERVER_URL,
+        "workspace": WORKSPACE_NAME,
+        "source": _chosen_source,
+    }
+    try:
+        resp = requests.get(f"{GEOSERVER_URL}/rest/workspaces", timeout=5)
+        info.update(
+            {
+                "httpStatus": resp.status_code,
+                "ok": resp.status_code in (200, 401, 403),
+            }
+        )
+    except Exception as e:  # noqa: BLE001
+        info.update({"ok": False, "error": str(e)})
+    return info
 
 
 def get_geoserver_auth():
@@ -721,7 +821,10 @@ async def geoserver_upload(
         ):
             raise HTTPException(
                 status_code=400,
-                detail="Layer name must contain only letters, numbers, hyphens, and underscores",
+                detail=(
+                    "Layer name must contain only letters, numbers, "
+                    "hyphens, and underscores"
+                ),
             )
 
         # Create uploads directory if it doesn't exist
