@@ -332,13 +332,42 @@ def _resolve_db_params() -> dict:
         port = 5432
         sslmode = "require"
     else:
-        host = os.getenv("pg_host") or settings.pg_host
-        port = int(os.getenv("pg_port") or settings.pg_port)
-        sslmode = os.getenv("pg_sslmode") or settings.pg_sslmode
+        # Canonical preferred variable names: POSTGRES_HOST/PORT/SSLMBODE
+        # Backwards-compatible fallbacks: pg_host/pg_port/pg_sslmode
+        host = (
+            os.getenv("POSTGRES_HOST")
+            or os.getenv("pg_host")
+            or settings.pg_host
+        )
+        port = int(
+            os.getenv("POSTGRES_PORT")
+            or os.getenv("pg_port")
+            or settings.pg_port
+        )
+        sslmode = (
+            os.getenv("POSTGRES_SSLMODE")
+            or os.getenv("pg_sslmode")
+            or settings.pg_sslmode
+        )
 
-    db = os.getenv("DB_NAME") or settings.pg_database
-    user = os.getenv("DB_ADMIN_USER") or settings.pg_user
-    password = os.getenv("DB_ADMIN_PASSWORD") or settings.pg_pass
+    # Database name (prefer POSTGRES_DB then legacy DB_NAME)
+    db = (
+        os.getenv("POSTGRES_DB")
+        or os.getenv("DB_NAME")
+        or settings.pg_database
+    )
+    # User (prefer POSTGRES_USER then DB_ADMIN_USER)
+    user = (
+        os.getenv("POSTGRES_USER")
+        or os.getenv("DB_ADMIN_USER")
+        or settings.pg_user
+    )
+    # Password (prefer POSTGRES_PASSWORD then DB_ADMIN_PASSWORD)
+    password = (
+        os.getenv("POSTGRES_PASSWORD")
+        or os.getenv("DB_ADMIN_PASSWORD")
+        or settings.pg_pass
+    )
 
     return {
         "host": host,

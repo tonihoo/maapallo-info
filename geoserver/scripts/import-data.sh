@@ -10,7 +10,7 @@ POSTGRES_HOST=${POSTGRES_HOST:-db}
 POSTGRES_PORT=${POSTGRES_PORT:-5432}
 POSTGRES_DB=${POSTGRES_DB:-db_dev}
 POSTGRES_USER=${POSTGRES_USER:-db_dev_user}
-POSTGRES_PASS=${POSTGRES_PASS:-DevPassword}
+POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-${POSTGRES_PASS:-${DB_ADMIN_PASSWORD:-DevPassword}}}
 
 UPLOADS_DIR="/opt/geoserver/uploads"
 TEMP_DIR="/tmp/geoserver_import"
@@ -26,7 +26,7 @@ import_geojson() {
     echo "📁 Importing GeoJSON: $file_path -> $table_name"
 
     ogr2ogr -f "PostgreSQL" \
-        "PG:host=$POSTGRES_HOST port=$POSTGRES_PORT dbname=$POSTGRES_DB user=$POSTGRES_USER password=$POSTGRES_PASS" \
+        "PG:host=$POSTGRES_HOST port=$POSTGRES_PORT dbname=$POSTGRES_DB user=$POSTGRES_USER password=$POSTGRES_PASSWORD" \
         "$file_path" \
         -nln "$table_name" \
         -overwrite \
@@ -43,7 +43,7 @@ import_geopackage() {
     echo "📦 Importing GeoPackage: $file_path -> $table_name"
 
     ogr2ogr -f "PostgreSQL" \
-        "PG:host=$POSTGRES_HOST port=$POSTGRES_PORT dbname=$POSTGRES_DB user=$POSTGRES_USER password=$POSTGRES_PASS" \
+        "PG:host=$POSTGRES_HOST port=$POSTGRES_PORT dbname=$POSTGRES_DB user=$POSTGRES_USER password=$POSTGRES_PASSWORD" \
         "$file_path" \
         -nln "$table_name" \
         -overwrite \
@@ -75,7 +75,7 @@ import_shapefile() {
     fi
 
     ogr2ogr -f "PostgreSQL" \
-        "PG:host=$POSTGRES_HOST port=$POSTGRES_PORT dbname=$POSTGRES_DB user=$POSTGRES_USER password=$POSTGRES_PASS" \
+           "PG:host=$POSTGRES_HOST port=$POSTGRES_PORT dbname=$POSTGRES_DB user=$POSTGRES_USER password=$POSTGRES_PASSWORD" \
         "$shp_file" \
         -nln "$table_name" \
         -overwrite \
@@ -111,7 +111,7 @@ create_geoserver_layer() {
                     \"port\": \"$POSTGRES_PORT\",
                     \"database\": \"$POSTGRES_DB\",
                     \"user\": \"$POSTGRES_USER\",
-                    \"passwd\": \"$POSTGRES_PASS\",
+                        \"passwd\": \"$POSTGRES_PASSWORD\",\n\
                     \"dbtype\": \"postgis\"
                 }
             }

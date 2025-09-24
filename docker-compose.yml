@@ -62,7 +62,7 @@ services:
       - POSTGRES_PORT=5432
       - POSTGRES_DB=db_dev
       - POSTGRES_USER=db_dev_user
-      - POSTGRES_PASS=DevPassword
+      - POSTGRES_PASSWORD=DevPassword
       - GEOSERVER_CSRF_DISABLED=true
       # Enable CORS for frontend integration
       - GEOSERVER_CORS_ENABLED=true

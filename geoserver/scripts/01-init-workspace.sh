@@ -32,6 +32,13 @@ geoserver_curl -X POST "$GEOSERVER_URL/workspaces" -d '{
     }
 }' || echo "Workspace may already exist"
 
+# Resolve database variables (canonical first, then legacy fallbacks)
+POSTGRES_HOST="${POSTGRES_HOST:-${PG_HOST:-localhost}}"
+POSTGRES_PORT="${POSTGRES_PORT:-${PG_PORT:-5432}}"
+POSTGRES_DB="${POSTGRES_DB:-${PG_DB:-maapallo_info}}"
+POSTGRES_USER="${POSTGRES_USER:-${PG_USER:-postgres}}"
+POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-${POSTGRES_PASS:-${PG_PASSWORD:-${DB_ADMIN_PASSWORD:-postgres}}}}"
+
 # Create PostGIS datastore
 echo "Creating PostGIS datastore..."
 geoserver_curl -X POST "$GEOSERVER_URL/workspaces/maapallo/datastores" -d '{
@@ -42,7 +49,7 @@ geoserver_curl -X POST "$GEOSERVER_URL/workspaces/maapallo/datastores" -d '{
             "port": "'$POSTGRES_PORT'",
             "database": "'$POSTGRES_DB'",
             "user": "'$POSTGRES_USER'",
-            "passwd": "'$POSTGRES_PASS'",
+            "passwd": "'$POSTGRES_PASSWORD'",
             "dbtype": "postgis",
             "schema": "public",
             "Expose primary keys": "true",

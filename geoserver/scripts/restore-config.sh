@@ -11,13 +11,14 @@ GEOSERVER_URL="${GEOSERVER_INTERNAL_URL:-${GEOSERVER_URL:-http://localhost:8080/
 GEOSERVER_ADMIN_USER="${GEOSERVER_ADMIN_USER:-admin}"
 GEOSERVER_ADMIN_PASSWORD="${GEOSERVER_ADMIN_PASSWORD:-geoserver}"
 
-# PostgreSQL connection parameters (matching Azure Container Apps environment)
-POSTGRES_HOST="${POSTGRES_HOST:-localhost}"
-POSTGRES_PORT="${POSTGRES_PORT:-5432}"
-POSTGRES_DB="${DB_NAME:-maapallo_info}"
-POSTGRES_USER="${DB_ADMIN_USER:-postgres}"
-POSTGRES_PASSWORD="${DB_ADMIN_PASSWORD:-postgres}"
-POSTGRES_SSLMODE="${POSTGRES_SSLMODE:-require}"
+# PostgreSQL connection parameters (canonical POSTGRES_* with legacy fallbacks)
+# Precedence: explicit POSTGRES_* > legacy DB_ADMIN_*/DB_NAME > PG_* > hard-coded default
+POSTGRES_HOST="${POSTGRES_HOST:-${PG_HOST:-localhost}}"
+POSTGRES_PORT="${POSTGRES_PORT:-${PG_PORT:-5432}}"
+POSTGRES_DB="${POSTGRES_DB:-${DB_NAME:-${PG_DB:-maapallo_info}}}"
+POSTGRES_USER="${POSTGRES_USER:-${DB_ADMIN_USER:-${PG_USER:-postgres}}}"
+POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-${DB_ADMIN_PASSWORD:-${POSTGRES_PASS:-${PG_PASSWORD:-postgres}}}}"
+POSTGRES_SSLMODE="${POSTGRES_SSLMODE:-${PG_SSLMODE:-require}}"
 
 # Logging helpers
 log()  { echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')] $*"; }

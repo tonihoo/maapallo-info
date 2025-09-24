@@ -8,19 +8,18 @@ IFS=$'\n\t'
 
 # Config (override via environment variables if needed)
 GEOSERVER_URL="${GEOSERVER_URL:-http://localhost:8080/geoserver}"        # Internal URL from inside the container
-GEOSERVER_PUBLIC_URL="${GEOSERVER_PUBLIC_URL:-http://localhost:8081/geoserver}" # External URL for user info
 GEOSERVER_USER="${GEOSERVER_USER:-admin}"
 GEOSERVER_PASS="${GEOSERVER_PASS:-geoserver}"
 WORKSPACE="${WORKSPACE:-maapallo}"
 DATASTORE="${DATASTORE:-postgis_maapallo}"
 SRC_DIR="${SRC_DIR:-/opt/geoserver/source_data}"
 
-# Postgres connection (defaults align with common docker-compose names)
+# Postgres connection (canonical names). Support legacy POSTGRES_PASS via fallback.
 POSTGRES_HOST="${POSTGRES_HOST:-db}"
 POSTGRES_PORT="${POSTGRES_PORT:-5432}"
-POSTGRES_DB="${POSTGRES_DB:-maapallo}"
-POSTGRES_USER="${POSTGRES_USER:-postgres}"
-POSTGRES_PASS="${POSTGRES_PASS:-postgres}"
+POSTGRES_DB="${POSTGRES_DB:-${DB_NAME:-maapallo}}"
+POSTGRES_USER="${POSTGRES_USER:-${DB_ADMIN_USER:-postgres}}"
+POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-${POSTGRES_PASS:-${DB_ADMIN_PASSWORD:-postgres}}}"
 
 # Logging helpers
 log()  { echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')] $*"; }
@@ -75,7 +74,7 @@ create_datastore() {
     info "🗄️  Ensuring PostGIS datastore exists: $DATASTORE"
 
     # Validate connection parameters
-    if [[ -z "$POSTGRES_HOST" || -z "$POSTGRES_DB" || -z "$POSTGRES_USER" || -z "$POSTGRES_PASS" ]]; then
+    if [[ -z "$POSTGRES_HOST" || -z "$POSTGRES_DB" || -z "$POSTGRES_USER" || -z "$POSTGRES_PASSWORD" ]]; then
         warn "   Missing Postgres connection parameters; using defaults where applicable"
     fi
 
@@ -105,7 +104,7 @@ create_datastore() {
             "port": "$POSTGRES_PORT",
             "database": "$POSTGRES_DB",
             "user": "$POSTGRES_USER",
-            "passwd": "$POSTGRES_PASS",
+            "passwd": "$POSTGRES_PASSWORD",
             "dbtype": "postgis",
             "schema": "public",
             "Expose primary keys": "true",
@@ -207,7 +206,6 @@ main() {
     info "✅ GeoServer initialization complete!"
     echo ""
     info "📋 Access Information:"
-    info "   • GeoServer Web UI: $GEOSERVER_PUBLIC_URL"
     info "   • Username: $GEOSERVER_USER"
     info "   • Workspace: $WORKSPACE"
     echo ""

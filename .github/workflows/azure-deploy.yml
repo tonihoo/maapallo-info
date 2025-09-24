@@ -295,7 +295,7 @@ jobs:
                   "POSTGRES_DB=${{ secrets.DB_NAME }}" \
                   "POSTGRES_USER=${{ secrets.DB_ADMIN_USER }}" \
                   "POSTGRES_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}" \
-                  "PROXY_BASE_URL=https://maapallo-geoserver.$CONTAINER_DOMAIN/geoserver" \
+                  "PROXY_BASE_URL=${{ secrets.PROXY_BASE_URL }}" \
                   "GEOSERVER_CSRF_DISABLED=true"
             else
               echo "Updating existing GeoServer container..."
@@ -325,7 +325,7 @@ jobs:
                   "POSTGRES_DB=${{ secrets.DB_NAME }}" \
                   "POSTGRES_USER=${{ secrets.DB_ADMIN_USER }}" \
                   "POSTGRES_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}" \
-                  "PROXY_BASE_URL=https://maapallo-geoserver.$CONTAINER_DOMAIN/geoserver" \
+                  "PROXY_BASE_URL=${{ secrets.PROXY_BASE_URL }}" \
                   "GEOSERVER_CSRF_DISABLED=true"
             fi
           else
@@ -352,8 +352,26 @@ jobs:
                 "POSTGRES_DB=${{ secrets.DB_NAME }}" \
                 "POSTGRES_USER=${{ secrets.DB_ADMIN_USER }}" \
                 "POSTGRES_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}" \
-                "PROXY_BASE_URL=https://maapallo-geoserver.$CONTAINER_DOMAIN/geoserver" \
+                "PROXY_BASE_URL=${{ secrets.PROXY_BASE_URL }}" \
                 "GEOSERVER_CSRF_DISABLED=true"
+          fi
+
+      - name: Update GeoServer container (refresh PROXY_BASE_URL)
+        if: always()
+        run: |
+          echo "Ensuring GeoServer PROXY_BASE_URL is up to date..."
+          if az containerapp show --name maapallo-geoserver --resource-group ${{ env.RESOURCE_GROUP }} >/dev/null 2>&1; then
+            if [ -n "${{ secrets.PROXY_BASE_URL }}" ]; then
+              az containerapp update \
+                --name maapallo-geoserver \
+                --resource-group ${{ env.RESOURCE_GROUP }} \
+                --set-env-vars PROXY_BASE_URL=${{ secrets.PROXY_BASE_URL }}
+              echo "Updated GeoServer PROXY_BASE_URL to secret value."
+            else
+              echo "⚠️ PROXY_BASE_URL secret not set; skipping update." >&2
+            fi
+          else
+            echo "GeoServer container not found; skipping PROXY_BASE_URL update step."
           fi
 
       # Deploy Backend API
@@ -595,11 +613,35 @@ jobs:
         run: |
           echo "Waiting for containers to be ready..."
           sleep 60
-
-          # Get the frontend URL
+          # Resolve FQDNs
           FRONTEND_URL=$(az containerapp show --name maapallo-client --resource-group ${{ env.RESOURCE_GROUP }} --query properties.configuration.ingress.fqdn -o tsv)
+          GEOSERVER_FQDN=$(az containerapp show --name maapallo-geoserver --resource-group ${{ env.RESOURCE_GROUP }} --query properties.configuration.ingress.fqdn -o tsv)
+          SERVER_FQDN=$(az containerapp show --name maapallo-server --resource-group ${{ env.RESOURCE_GROUP }} --query properties.configuration.ingress.fqdn -o tsv)
 
+          # GeoServer smoke test (admin UI landing). First request commonly returns 302 -> ./;jsessionid... -> 200
+          echo "Performing GeoServer smoke test at https://$GEOSERVER_FQDN/geoserver/web/"
+          HTTP_CODE=$(curl -k -s -o /dev/null -w "%{http_code}" -I "https://$GEOSERVER_FQDN/geoserver/web/")
+          if [ "$HTTP_CODE" = "302" ]; then
+            echo "ℹ️ GeoServer initial response 302 (expected redirect); following to ensure final 200..."
+            FINAL_CODE=$(curl -k -s -o /dev/null -w "%{http_code}" -L "https://$GEOSERVER_FQDN/geoserver/web/")
+            if [ "$FINAL_CODE" != "200" ]; then
+              echo "❌ GeoServer smoke test failed after redirect (final HTTP $FINAL_CODE)" >&2
+              curl -k -I "https://$GEOSERVER_FQDN/geoserver/web/" | head -n 50 || true
+              exit 1
+            fi
+            echo "✅ GeoServer smoke test passed after redirect (HTTP 200)"
+          elif [ "$HTTP_CODE" = "200" ]; then
+            echo "✅ GeoServer smoke test passed (HTTP 200)"
+          else
+            echo "❌ GeoServer smoke test failed (HTTP $HTTP_CODE)" >&2
+            curl -k -I "https://$GEOSERVER_FQDN/geoserver/web/" | head -n 50 || true
+            exit 1
+          fi
+
+          echo "--- Deployment Summary ---"
           echo "✅ Application deployed successfully!"
+
           echo "🌐 Frontend URL: https://$FRONTEND_URL"
-          echo "🗺️ GeoServer Admin: https://$(az containerapp show --name maapallo-geoserver --resource-group ${{ env.RESOURCE_GROUP }} --query properties.configuration.ingress.fqdn -o tsv)/geoserver"
-          echo "🔧 API Endpoint: https://$(az containerapp show --name maapallo-server --resource-group ${{ env.RESOURCE_GROUP }} --query properties.configuration.ingress.fqdn -o tsv)"
+          echo "🗺️ GeoServer Admin: https://$GEOSERVER_FQDN/geoserver"
+          echo "🔧 API Endpoint: https://$SERVER_FQDN"
+          echo "PROXY_BASE_URL used: ${{ secrets.PROXY_BASE_URL }}"
