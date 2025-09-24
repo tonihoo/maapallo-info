@@ -69,12 +69,28 @@ get_configuration_from_db() {
 
     export PGPASSWORD="$POSTGRES_PASSWORD"
 
-    # Get configuration using the database function
-    psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
-         -t -A -F '|' -c "SELECT * FROM get_geoserver_configuration();" 2>/dev/null || {
-        warn "No configuration found in database or tables don't exist yet"
+    # Query configuration directly via LEFT JOINs (function removed)
+    local sql="SELECT w.name AS workspace_name, w.description AS workspace_description,\n"
+    sql+="       d.name AS datastore_name, d.type AS datastore_type, d.connection_params AS datastore_params,\n"
+    sql+="       l.layer_name, l.table_name, l.geom_column, l.srid, l.layer_config\n"
+    sql+="FROM geoserver_workspaces w\n"
+    sql+="LEFT JOIN geoserver_datastores d ON d.workspace_name = w.name\n"
+    sql+="LEFT JOIN geoserver_layers l ON l.workspace_name = w.name AND l.datastore_name = d.name\n"
+    sql+="ORDER BY w.name, d.name, l.layer_name;"
+
+    local result
+    if ! result=$(psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" \
+        -d "$POSTGRES_DB" -t -A -F '|' -c "$sql" 2>/dev/null); then
+        warn "Failed to query configuration (psql error)"
         return 1
-    }
+    fi
+
+    if [[ -z "${result// /}" ]]; then
+        warn "No configuration rows found in persistence tables"
+        return 1
+    fi
+
+    echo "$result"
 }
 
 # Create workspace via GeoServer REST API

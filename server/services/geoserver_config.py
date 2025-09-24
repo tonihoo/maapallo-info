@@ -98,15 +98,30 @@ class GeoServerConfigService:
         layer_config: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Register a layer in the configuration database."""
+        # NOTE: Original implementation relied on a removed DB function
+        # register_geoserver_layer(). We now perform an explicit UPSERT
+        # directly against geoserver_layers to avoid dependency on
+        # server-side functions that previously caused migration issues.
         try:
+            sql = """
+                INSERT INTO geoserver_layers (
+                    workspace_name, datastore_name, layer_name,
+                    table_name, geom_column, srid, layer_config, updated_at
+                ) VALUES (
+                    :ws, :ds, :layer, :table, :geom, :srid,
+                    :config::jsonb, NOW()
+                )
+                ON CONFLICT (workspace_name, layer_name)
+                DO UPDATE SET
+                    datastore_name = EXCLUDED.datastore_name,
+                    table_name = EXCLUDED.table_name,
+                    geom_column = EXCLUDED.geom_column,
+                    srid = EXCLUDED.srid,
+                    layer_config = EXCLUDED.layer_config,
+                    updated_at = NOW()
+            """
             await self.db.execute(
-                text(
-                    """
-                    SELECT register_geoserver_layer(
-                        :ws, :ds, :layer, :table, :geom, :srid, :config::jsonb
-                    )
-                """
-                ),
+                text(sql),
                 {
                     "ws": workspace_name,
                     "ds": datastore_name,
@@ -120,7 +135,10 @@ class GeoServerConfigService:
                 },
             )
             await self.db.commit()
-            logger.info(f"Registered layer: {workspace_name}:{layer_name}")
+            logger.info(
+                f"Registered/updated layer: {workspace_name}:{layer_name} "
+                f"-> table {table_name}"
+            )
         except Exception as e:
             await self.db.rollback()
             logger.error(
@@ -132,13 +150,32 @@ class GeoServerConfigService:
 
     async def get_full_configuration(self) -> List[Dict[str, Any]]:
         """Get the complete GeoServer configuration from database."""
+        # Replaced call to removed function get_geoserver_configuration() with
+        # an explicit LEFT JOIN across the persistence tables.
         try:
-            result = await self.db.execute(
-                text("SELECT * FROM get_geoserver_configuration()")
-            )
+            sql = """
+                SELECT
+                    w.name  AS workspace_name,
+                    w.description AS workspace_description,
+                    d.name  AS datastore_name,
+                    d.type  AS datastore_type,
+                    d.connection_params AS datastore_params,
+                    l.layer_name,
+                    l.table_name,
+                    l.geom_column,
+                    l.srid,
+                    l.layer_config
+                FROM geoserver_workspaces w
+                LEFT JOIN geoserver_datastores d
+                  ON d.workspace_name = w.name
+                LEFT JOIN geoserver_layers l
+                  ON l.workspace_name = w.name AND l.datastore_name = d.name
+                ORDER BY w.name, d.name, l.layer_name
+            """
+            result = await self.db.execute(text(sql))
             rows = result.fetchall()
 
-            config_data = []
+            config_data: List[Dict[str, Any]] = []
             for row in rows:
                 config_data.append(
                     {
@@ -155,9 +192,11 @@ class GeoServerConfigService:
                     }
                 )
 
-            logger.info(f"Retrieved {len(config_data)} configuration entries")
+            logger.info(
+                f"Retrieved {len(config_data)} configuration entries via "
+                "direct JOIN query"
+            )
             return config_data
-
         except Exception as e:
             logger.error(f"Failed to get configuration: {e}")
             raise HTTPException(
