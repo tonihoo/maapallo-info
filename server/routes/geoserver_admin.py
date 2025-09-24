@@ -48,10 +48,34 @@ async def register_workspace(
     current_user: dict = Depends(require_auth),
     config_service: GeoServerConfigService = Depends(get_config_service),
 ):
-    """Register a workspace in the configuration database."""
+    """
+    Register a workspace in the configuration database and ensure it exists
+    in GeoServer.
+    """
     try:
         await config_service.register_workspace(name, description)
-        return {"message": f"Workspace '{name}' registered successfully"}
+        # Ensure workspace exists in GeoServer (idempotent)
+        from routes.admin import ensure_workspace_exists
+
+        try:
+            await ensure_workspace_exists()
+        except Exception as ge:
+            # If 409 Conflict, treat as success (already exists)
+            if (
+                hasattr(ge, "status_code")
+                and getattr(ge, "status_code", None) == 409
+            ):
+                logger.info(
+                    f"Workspace '{name}' already exists in GeoServer (409)"
+                )
+            else:
+                logger.error(f"GeoServer workspace ensure failed: {ge}")
+                raise
+        return {
+            "message": (
+                f"Workspace '{name}' registered and ensured in GeoServer"
+            )
+        }
     except Exception as e:
         logger.error(f"Failed to register workspace: {e}")
         raise HTTPException(
@@ -168,8 +192,8 @@ async def auto_register_layer_from_table(
     try:
         # Import the existing admin functions
         from routes.admin import (
-            create_geoserver_layer,
             ensure_datastore_exists,
+            ensure_layer_exists,
             ensure_workspace_exists,
         )
 
@@ -209,23 +233,30 @@ async def auto_register_layer_from_table(
         await ensure_workspace_exists()
         actual_datastore = await ensure_datastore_exists()
 
-        # Register in persistence database
-        await config_service.register_layer(
-            workspace_name=workspace_name,
-            datastore_name=actual_datastore,
-            layer_name=layer_name,
-            table_name=table_name,
-            geom_column=geom_column,
-            srid=srid,
-            layer_config={
-                "geometry_type": geom_type,
-                "auto_registered": True,
-                "registered_at": datetime.now().isoformat(),
-            },
-        )
+        # Register in persistence database (with error logging)
+        try:
+            await config_service.register_layer(
+                workspace_name=workspace_name,
+                datastore_name=actual_datastore,
+                layer_name=layer_name,
+                table_name=table_name,
+                geom_column=geom_column,
+                srid=srid,
+                layer_config={
+                    "geometry_type": geom_type,
+                    "auto_registered": True,
+                    "registered_at": datetime.now().isoformat(),
+                },
+            )
+        except Exception as db_e:
+            logger.error(f"Failed to register layer in DB: {db_e}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to register layer in DB: {db_e}",
+            )
 
         # Create layer in GeoServer
-        await create_geoserver_layer(table_name, actual_datastore)
+        await ensure_layer_exists(table_name, actual_datastore)
 
         return {
             "message": f"Layer '{layer_name}' auto-registered successfully",

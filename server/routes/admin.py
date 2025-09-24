@@ -1,3 +1,66 @@
+async def ensure_layer_exists(table_name: str, datastore_name: str):
+    """Ensure the layer exists in GeoServer for the given table/datastore."""
+    headers = get_geoserver_auth()
+    headers["Content-Type"] = "application/json"
+
+    # Check if layer exists
+    featuretype_url = (
+        f"{GEOSERVER_URL}/rest/workspaces/{WORKSPACE_NAME}/"
+        f"datastores/{datastore_name}/featuretypes/{table_name}"
+    )
+    logger.info("Checking layer: %s", featuretype_url)
+    response = requests.get(featuretype_url, headers=headers, timeout=30)
+    logger.info("Layer check response: %s", response.status_code)
+
+    if response.status_code == 404:
+        # Create featuretype (layer)
+        featuretype_data = {
+            "featureType": {
+                "name": table_name,
+                "nativeName": table_name,
+                "title": table_name.replace("_", " ").title(),
+                "srs": "EPSG:4326",
+                "enabled": True,
+            }
+        }
+        create_url = (
+            f"{GEOSERVER_URL}/rest/workspaces/{WORKSPACE_NAME}/"
+            f"datastores/{datastore_name}/featuretypes"
+        )
+        logger.info("Creating layer at: %s", create_url)
+        response = requests.post(
+            create_url, headers=headers, json=featuretype_data, timeout=30
+        )
+        logger.info("Layer creation response: %s", response.status_code)
+        if response.status_code not in [200, 201]:
+            logger.error(
+                "Failed to create layer %s. Status: %s, Response: %s",
+                table_name,
+                response.status_code,
+                response.text,
+            )
+            # If 409, treat as already exists
+            if response.status_code == 409:
+                logger.info(
+                    "Layer '%s' already exists in GeoServer (409)", table_name
+                )
+                return True
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to create layer: {response.text}",
+            )
+        logger.info("Created GeoServer layer: %s", table_name)
+    elif response.status_code == 200:
+        logger.info("Layer %s already exists", table_name)
+    else:
+        logger.error(
+            "Unexpected layer check response: %s - %s",
+            response.status_code,
+            response.text,
+        )
+    return True
+
+
 """
 Admin API for background GeoJSON imports into PostGIS.
 
