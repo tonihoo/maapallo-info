@@ -39,7 +39,7 @@ This project uses environment variables for sensitive configuration:
 ### 1. Clone repository and navigate to folder
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/tonihoo/maapallo-info.git
 cd maapallo-info
 ```
 
