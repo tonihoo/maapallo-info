@@ -162,27 +162,37 @@ async def ensure_workspace_exists():
     headers["Content-Type"] = "application/json"
 
     # Check if workspace exists
-    response = requests.get(
-        f"{GEOSERVER_URL}/rest/workspaces/{WORKSPACE_NAME}",
-        headers=headers,
-        timeout=30,
-    )
+    workspace_url = f"{GEOSERVER_URL}/rest/workspaces/{WORKSPACE_NAME}"
+    logger.info("Checking workspace: %s", workspace_url)
+    response = requests.get(workspace_url, headers=headers, timeout=30)
+    
+    logger.info("Workspace check response: %s", response.status_code)
 
     if response.status_code == 404:
         # Create workspace
         workspace_data = {"workspace": {"name": WORKSPACE_NAME}}
+        create_url = f"{GEOSERVER_URL}/rest/workspaces"
+        logger.info("Creating workspace at: %s with data: %s",
+                    create_url, workspace_data)
         response = requests.post(
-            f"{GEOSERVER_URL}/rest/workspaces",
+            create_url,
             headers=headers,
             json=workspace_data,
             timeout=30,
         )
         if response.status_code not in [200, 201]:
+            logger.error("Failed to create workspace. Status: %s, Resp: %s",
+                         response.status_code, response.text)
             raise HTTPException(
                 status_code=500,
                 detail=f"Failed to create workspace: {response.text}",
             )
         logger.info("Created workspace: %s", WORKSPACE_NAME)
+    elif response.status_code == 200:
+        logger.info("Workspace %s already exists", WORKSPACE_NAME)
+    else:
+        logger.error("Unexpected workspace check response: %s - %s",
+                     response.status_code, response.text)
 
     return True
 
@@ -199,11 +209,15 @@ async def ensure_datastore_exists():
         f"{GEOSERVER_URL}/rest/workspaces/{WORKSPACE_NAME}/"
         f"datastores/{datastore_name}"
     )
+    logger.info("Checking datastore: %s", datastore_url)
     response = requests.get(datastore_url, headers=headers, timeout=30)
+    logger.info("Datastore check response: %s", response.status_code)
 
     if response.status_code == 404:
         # Create PostGIS datastore using GeoServer-accessible params
         params = _resolve_geoserver_db_params()
+        logger.info("Creating datastore: host=%s, port=%s, db=%s",
+                    params["host"], params["port"], params["db"])
         datastore_data = {
             "dataStore": {
                 "name": datastore_name,
@@ -330,12 +344,16 @@ async def create_geoserver_layer(table_name: str, datastore_name: str):
         f"{GEOSERVER_URL}/rest/workspaces/{WORKSPACE_NAME}/"
         f"datastores/{datastore_name}/featuretypes"
     )
+    logger.info("Creating layer: %s at URL: %s", table_name, featuretype_url)
+    logger.info("Layer data: %s", featuretype_data)
     response = requests.post(
         featuretype_url, headers=headers, json=featuretype_data, timeout=30
     )
+    logger.info("Layer creation response: %s", response.status_code)
 
     if response.status_code not in [200, 201]:
-        logger.error("Failed to create layer: %s", response.text)
+        logger.error("Failed to create layer %s. Status: %s, Response: %s",
+                     table_name, response.status_code, response.text)
         raise HTTPException(
             status_code=500, detail=f"Failed to create layer: {response.text}"
         )
