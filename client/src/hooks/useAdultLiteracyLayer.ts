@@ -146,7 +146,6 @@ export function useAdultLiteracyLayer({ visible }: UseAdultLiteracyLayerProps) {
 
     try {
       isLoadingRef.current = true;
-      console.log("🔄 Creating adult literacy layer...");
 
       // Load literacy data first
       await loadLiteracyData();
@@ -185,10 +184,6 @@ export function useAdultLiteracyLayer({ visible }: UseAdultLiteracyLayerProps) {
       pendingVisibilityRef.current = null;
       isLoadingRef.current = false;
 
-      console.log(
-        "✅ Adult literacy layer created with visibility:",
-        initialVisibility
-      );
       return layer;
     } catch (error) {
       console.error("Failed to create adult literacy layer:", error);
@@ -210,7 +205,6 @@ export function useAdultLiteracyLayer({ visible }: UseAdultLiteracyLayerProps) {
     if (layerRef.current) {
       // Layer exists, apply visibility immediately
       layerRef.current.setVisible(isVisible);
-      console.log("✅ Adult literacy layer visibility set to:", isVisible);
       // Force layer redraw and clear any cached tiles
       layerRef.current.changed();
       const source = layerRef.current.getSource();
@@ -222,8 +216,6 @@ export function useAdultLiteracyLayer({ visible }: UseAdultLiteracyLayerProps) {
     } else {
       // Layer doesn't exist yet, store the desired visibility state
       pendingVisibilityRef.current = isVisible;
-      console.log("📝 Adult literacy layer visibility pending:", isVisible);
-
       // Don't trigger layer creation here - let useDataLoading handle it
       // The layer will be created when needed and visibility will be applied then
     }

@@ -48,8 +48,6 @@ export function useIntactForestsLayer({ visible }: UseIntactForestsLayerProps) {
 
     try {
       isLoadingRef.current = true;
-      console.log("🔄 Creating intact forests layer...");
-
       // Initialize geoJsonData
       let geoJsonData: unknown = null;
 
@@ -175,10 +173,6 @@ export function useIntactForestsLayer({ visible }: UseIntactForestsLayerProps) {
 
       layerRef.current = layer;
 
-      console.log(
-        "✅ Intact forests layer created with visibility:",
-        layer.getVisible()
-      );
       return layer;
     } catch (error) {
       console.error("❌ Failed to create intact forests layer:", error);
@@ -200,7 +194,6 @@ export function useIntactForestsLayer({ visible }: UseIntactForestsLayerProps) {
     if (layerRef.current) {
       // Layer exists, apply visibility immediately
       layerRef.current.setVisible(isVisible);
-      console.log("✅ Intact forests layer visibility set to:", isVisible);
       // Force layer redraw and clear any cached tiles
       layerRef.current.changed();
       const source = layerRef.current.getSource();
@@ -212,7 +205,6 @@ export function useIntactForestsLayer({ visible }: UseIntactForestsLayerProps) {
     } else {
       // Layer doesn't exist yet, store the desired visibility state
       pendingVisibilityRef.current = isVisible;
-      console.log("📝 Intact forests layer visibility pending:", isVisible);
 
       // Don't trigger layer creation here - let useDataLoading handle it
       // The layer will be created when needed and visibility will be applied then

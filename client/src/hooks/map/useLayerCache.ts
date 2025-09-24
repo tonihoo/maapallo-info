@@ -14,12 +14,9 @@ export function useLayerCache() {
 
   const getCachedGeoJson = useCallback(
     async (url: string): Promise<GeoJsonData> => {
-      console.log("getCachedGeoJson called with:", url);
-
       // Try to dynamically import GeoServerService to avoid circular dependency issues
       try {
         const geoServerModule = await import("../../services/geoServerService");
-        console.log("GeoServerService module imported:", geoServerModule);
 
         // Try the individual function exports first (these don't have initialization issues)
         const { getLayerDataFunction } = geoServerModule;
@@ -27,7 +24,6 @@ export function useLayerCache() {
           getLayerDataFunction &&
           typeof getLayerDataFunction === "function"
         ) {
-          console.log("GeoServerService individual function available");
           return await getLayerDataFunction(url);
         }
 
@@ -37,14 +33,12 @@ export function useLayerCache() {
           GeoServerService &&
           typeof GeoServerService.getLayerData === "function"
         ) {
-          console.log("GeoServerService class method available");
           return await GeoServerService.getLayerData(url);
         }
 
         // Try the compatibility function exports
         const { getLayerData } = geoServerModule;
         if (getLayerData && typeof getLayerData === "function") {
-          console.log("GeoServerService compatibility function available");
           return await getLayerData(url);
         }
 

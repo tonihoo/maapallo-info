@@ -86,8 +86,6 @@ export function usePopulationDensityLayer({
 
     try {
       isLoadingRef.current = true;
-      console.log("🔄 Creating population density layer...");
-
       // Load population density features from GeoServer
       const geoServerModule = await import("../services/geoServerService");
       const { getLayerDataFunction } = geoServerModule;
@@ -125,10 +123,6 @@ export function usePopulationDensityLayer({
       pendingVisibilityRef.current = null;
       isLoadingRef.current = false;
 
-      console.log(
-        "✅ Population density layer created with visibility:",
-        initialVisibility
-      );
       return layer;
     } catch (error) {
       console.error("Failed to create population density layer:", error);
@@ -148,7 +142,6 @@ export function usePopulationDensityLayer({
     if (layerRef.current) {
       // Layer exists, apply visibility immediately
       layerRef.current.setVisible(isVisible);
-      console.log("✅ Population density layer visibility set to:", isVisible);
       // Force layer redraw and clear any cached tiles
       layerRef.current.changed();
       const source = layerRef.current.getSource();
@@ -160,7 +153,6 @@ export function usePopulationDensityLayer({
     } else {
       // Layer doesn't exist yet, store the desired visibility state
       pendingVisibilityRef.current = isVisible;
-      console.log("📝 Population density layer visibility pending:", isVisible);
 
       // Don't trigger layer creation here - let useDataLoading handle it
       // The layer will be created when needed and visibility will be applied then
