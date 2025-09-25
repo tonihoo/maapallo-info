@@ -1,6 +1,7 @@
 from urllib.parse import quote_plus
 
 from pydantic_settings import BaseSettings
+import os
 
 
 class Settings(BaseSettings):
@@ -22,33 +23,53 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> str:
-        # URL-encode the password to handle special characters
-        encoded_password = quote_plus(self.pg_pass)
+        """Build async SQLAlchemy DB URL.
 
-        # For local development, don't include any SSL parameters
+        Supports legacy env var names POSTGRES_* as fallbacks if PG_* are not
+        provided (production previously only injected POSTGRES_HOST etc.).
+        """
+        # Prefer explicit PG_* values, else fallback to POSTGRES_*
+        host = self.pg_host or os.getenv("POSTGRES_HOST", self.pg_host)
+        port = self.pg_port or int(os.getenv("POSTGRES_PORT", self.pg_port))
+        database = (
+            self.pg_database
+            or os.getenv("POSTGRES_DB")
+            or os.getenv("POSTGRES_DATABASE")
+            or self.pg_database
+        )
+        user = self.pg_user or os.getenv("POSTGRES_USER", self.pg_user)
+        password = self.pg_pass or os.getenv("POSTGRES_PASSWORD", self.pg_pass)
+
+        encoded_password = quote_plus(password)
+
         if self.environment == "development":
             return (
-                f"postgresql+asyncpg://{self.pg_user}:{encoded_password}"
-                f"@{self.pg_host}:{self.pg_port}/"
-                f"{self.pg_database}"
+                f"postgresql+asyncpg://{user}:{encoded_password}"
+                f"@{host}:{port}/{database}"
             )
 
-        # For production with asyncpg, handle SSL properly
-        # When SSL is disabled, don't include SSL parameter at all
         base_url = (
-            f"postgresql+asyncpg://{self.pg_user}:{encoded_password}"
-            f"@{self.pg_host}:{self.pg_port}/{self.pg_database}"
+            f"postgresql+asyncpg://{user}:{encoded_password}"
+            f"@{host}:{port}/{database}"
         )
-
         if self.pg_sslmode == "disable":
             return base_url
-        else:
-            return f"{base_url}?ssl={self.pg_sslmode}"
+        return f"{base_url}?ssl={self.pg_sslmode}"
 
     @property
     def database_url_sync(self) -> str:
-        # URL-encode the password to handle special characters
-        encoded_password = quote_plus(self.pg_pass)
+        # Fallback logic mirrors database_url for synchronous usage.
+        host = self.pg_host or os.getenv("POSTGRES_HOST", self.pg_host)
+        port = self.pg_port or int(os.getenv("POSTGRES_PORT", self.pg_port))
+        database = (
+            self.pg_database
+            or os.getenv("POSTGRES_DB")
+            or os.getenv("POSTGRES_DATABASE")
+            or self.pg_database
+        )
+        user = self.pg_user or os.getenv("POSTGRES_USER", self.pg_user)
+        password = self.pg_pass or os.getenv("POSTGRES_PASSWORD", self.pg_pass)
+        encoded_password = quote_plus(password)
 
         # Ensure sslmode is valid
         valid_ssl_modes = [
@@ -64,9 +85,8 @@ class Settings(BaseSettings):
         )
 
         return (
-            f"postgresql://{self.pg_user}:{encoded_password}"
-            f"@{self.pg_host}:{self.pg_port}/"
-            f"{self.pg_database}?sslmode={ssl_mode}"
+            f"postgresql://{user}:{encoded_password}"
+            f"@{host}:{port}/{database}?sslmode={ssl_mode}"
         )
 
     @property

@@ -42,6 +42,52 @@ router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
 
 logger = logging.getLogger(__name__)
 
+
+@router.get("/geoserver-persistence/diagnostics")
+async def geoserver_persistence_diagnostics(
+    current_user=Depends(require_auth),
+):
+    """Return runtime DB target & geoserver_* table stats (sanitized).
+
+    Helps verify that the API process is connected to the same database the
+    operator is inspecting (common issue: PG_* vs POSTGRES_* env mismatch).
+    """
+    from sqlalchemy import text
+
+    async with async_session_maker() as session:  # type: ignore
+        # Capture db identity & counts; ignore failures individually
+        out = {}
+        try:
+            row = (
+                await session.execute(
+                    text(
+                        "SELECT current_database() db, "
+                        "inet_server_addr() host, inet_server_port() port"
+                    )
+                )
+            ).first()
+            if row:
+                out["database"] = row.db
+                out["server_addr"] = str(row.host)
+                out["server_port"] = row.port
+        except Exception as e:  # noqa: BLE001
+            out["identity_error"] = str(e)
+
+        for tbl in [
+            "geoserver_workspaces",
+            "geoserver_datastores",
+            "geoserver_layers",
+        ]:
+            try:
+                res = await session.execute(
+                    text(f"SELECT count(*) AS c FROM {tbl}")
+                )
+                out[f"count_{tbl}"] = res.scalar()
+            except Exception as e:  # noqa: BLE001
+                out[f"count_{tbl}_error"] = str(e)
+
+        return out
+
 # GeoServer configuration (env driven). Precedence:
 # 1. GEOSERVER_INTERNAL_URL (cluster-internal)
 # 2. GEOSERVER_URL (public)
@@ -1144,6 +1190,13 @@ async def geoserver_import(
     try:
         file_name = request.get("fileName")
         layer_name = request.get("layerName")
+        debug = bool(request.get("debug"))
+        logger.info(
+            "[geoserver_import] start file=%s layer=%s debug=%s",
+            file_name,
+            layer_name,
+            debug,
+        )
 
         if not file_name:
             raise HTTPException(status_code=400, detail="fileName is required")
@@ -1176,6 +1229,11 @@ async def geoserver_import(
 
         # Create GeoServer layer
         await create_geoserver_layer(table_name, datastore_name)
+        logger.info(
+            "[geoserver_import] created GeoServer layer %s in datastore %s",
+            table_name,
+            datastore_name,
+        )
 
         # Persist configuration
         try:
@@ -1230,6 +1288,14 @@ async def geoserver_import(
                     "detected_geometry_type": geom_type,
                     "registered_at": datetime.utcnow().isoformat(),
                 }
+                logger.info(
+                    "[g_imp] layer ws=%s ds=%s layer=%s geom=%s srid=%s",
+                    WORKSPACE_NAME,
+                    datastore_name,
+                    table_name,
+                    geom_column,
+                    srid,
+                )
                 await config_service.register_layer(
                     workspace_name=WORKSPACE_NAME,
                     datastore_name=datastore_name,
@@ -1252,10 +1318,43 @@ async def geoserver_import(
                 persist_e,
             )
 
+        # Optional post-persistence counts for debugging
+        persistence_counts = None
+        if debug:
+            from sqlalchemy import text
+            async with async_session_maker() as count_session:  # type: ignore
+                try:
+                    res = await count_session.execute(
+                        text(
+                            "SELECT (SELECT count(*) FROM geoserver_workspaces) w,"  # noqa: E501
+                            " (SELECT count(*) FROM geoserver_datastores) d,"  # noqa: E501
+                            " (SELECT count(*) FROM geoserver_layers) l"  # noqa: E501
+                        )
+                    )
+                    row = res.first()
+                    if row:
+                        # Access by index because of shorter aliases
+                        persistence_counts = {
+                            "workspaces": row[0],
+                            "datastores": row[1],
+                            "layers": row[2],
+                        }
+                        logger.info(
+                            "[geoserver_import] counts after import %s",
+                            persistence_counts,
+                        )
+                except Exception as e:  # noqa: BLE001
+                    logger.error(
+                        "[geoserver_import] failed to get counts: %s", e
+                    )
+
         logger.info(
-            "Successfully imported %s as layer %s", file_name, layer_name
+            "Successfully imported %s as layer %s (debug=%s)",
+            file_name,
+            layer_name,
+            debug,
         )
-        return {
+        response_payload = {
             "message": "Layer imported successfully",
             "fileName": file_name,
             "layerName": layer_name,
@@ -1268,6 +1367,9 @@ async def geoserver_import(
                 f"{GEOSERVER_URL}/rest/layers/{WORKSPACE_NAME}:{table_name}"
             ),
         }
+        if persistence_counts is not None:
+            response_payload["persistenceCounts"] = persistence_counts
+        return response_payload
     except HTTPException:
         raise
     except Exception as e:  # noqa: BLE001

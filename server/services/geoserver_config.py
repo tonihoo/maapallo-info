@@ -54,10 +54,15 @@ class GeoServerConfigService:
             connection_params = self._get_default_postgis_params()
 
         try:
+            # NOTE: Avoid using :params::jsonb because SQLAlchemy will treat
+            # the whole token ("params::jsonb") as the parameter name and not
+            # substitute it, leaving a literal colon in the final SQL which
+            # asyncpg then reports as a syntax error. Use CAST() instead so
+            # the parameter name is cleanly parsed and bound.
             sql = """
                 INSERT INTO geoserver_datastores
                 (workspace_name, name, type, connection_params, updated_at)
-                VALUES (:ws, :name, :type, :params::jsonb, NOW())
+                VALUES (:ws, :name, :type, CAST(:params AS jsonb), NOW())
                 ON CONFLICT (workspace_name, name)
                 DO UPDATE SET
                     type = EXCLUDED.type,
@@ -109,7 +114,7 @@ class GeoServerConfigService:
                     table_name, geom_column, srid, layer_config, updated_at
                 ) VALUES (
                     :ws, :ds, :layer, :table, :geom, :srid,
-                    :config::jsonb, NOW()
+                    CAST(:config AS jsonb), NOW()
                 )
                 ON CONFLICT (workspace_name, layer_name)
                 DO UPDATE SET
