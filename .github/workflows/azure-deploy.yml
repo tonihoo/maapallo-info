@@ -612,35 +612,78 @@ jobs:
       - name: Initialize Application
         run: |
           echo "Waiting for containers to be ready..."
-          sleep 60
-          # Resolve FQDNs
+          # Increase overall wait but use progressive readiness checks
+          TOTAL_WAIT=240   # seconds max
+          SLEEP_INTERVAL=10
+          ELAPSED=0
+
           FRONTEND_URL=$(az containerapp show --name maapallo-client --resource-group ${{ env.RESOURCE_GROUP }} --query properties.configuration.ingress.fqdn -o tsv)
           GEOSERVER_FQDN=$(az containerapp show --name maapallo-geoserver --resource-group ${{ env.RESOURCE_GROUP }} --query properties.configuration.ingress.fqdn -o tsv)
           SERVER_FQDN=$(az containerapp show --name maapallo-server --resource-group ${{ env.RESOURCE_GROUP }} --query properties.configuration.ingress.fqdn -o tsv)
 
-          # GeoServer smoke test (admin UI landing). First request commonly returns 302 -> ./;jsessionid... -> 200
-          echo "Performing GeoServer smoke test at https://$GEOSERVER_FQDN/geoserver/web/"
-          HTTP_CODE=$(curl -k -s -o /dev/null -w "%{http_code}" -I "https://$GEOSERVER_FQDN/geoserver/web/")
-          if [ "$HTTP_CODE" = "302" ]; then
-            echo "ℹ️ GeoServer initial response 302 (expected redirect); following to ensure final 200..."
-            FINAL_CODE=$(curl -k -s -o /dev/null -w "%{http_code}" -L "https://$GEOSERVER_FQDN/geoserver/web/")
-            if [ "$FINAL_CODE" != "200" ]; then
-              echo "❌ GeoServer smoke test failed after redirect (final HTTP $FINAL_CODE)" >&2
-              curl -k -I "https://$GEOSERVER_FQDN/geoserver/web/" | head -n 50 || true
-              exit 1
+          echo "Resolved FQDNs:\n  Frontend=$FRONTEND_URL\n  GeoServer=$GEOSERVER_FQDN\n  API=$SERVER_FQDN"
+
+          # Admin credentials (optional secrets, fallback to defaults)
+          ADMIN_USER="${{ secrets.GEOSERVER_ADMIN_USER }}"; [ -z "$ADMIN_USER" ] && ADMIN_USER="admin"
+            ADMIN_PASS="${{ secrets.GEOSERVER_ADMIN_PASSWORD }}"; [ -z "$ADMIN_PASS" ] && ADMIN_PASS="geoserver"
+
+          SMOKE_UI_URL="https://$GEOSERVER_FQDN/geoserver/web/"
+          SMOKE_REST_VERSION="https://$GEOSERVER_FQDN/geoserver/rest/about/version"
+          SMOKE_WMS_CAPS="https://$GEOSERVER_FQDN/geoserver/ows?service=WMS&request=GetCapabilities"
+
+          echo "Starting GeoServer readiness loop (max ${TOTAL_WAIT}s)..."
+          READY=0
+          while [ $ELAPSED -lt $TOTAL_WAIT ]; do
+            # Try lightweight REST first (requires auth); capture curl exit separately
+            set +e
+            REST_OUT=$(curl -k -s -w "|HTTP_CODE:%{http_code}|" -u "$ADMIN_USER:$ADMIN_PASS" "$SMOKE_REST_VERSION")
+            CURL_STATUS=$?
+            set -e
+            REST_CODE=$(echo "$REST_OUT" | sed -n 's/.*|HTTP_CODE:\([0-9]*\)|.*/\1/p')
+
+            if [ $CURL_STATUS -eq 47 ]; then
+              echo "⚠️  Redirect loop (curl 47) on REST endpoint; will retry..." >&2
+            elif [ $CURL_STATUS -ne 0 ]; then
+              echo "(Not ready yet) curl status=$CURL_STATUS http=$REST_CODE"
+            elif [ "$REST_CODE" = "200" ]; then
+              echo "✅ REST version endpoint returned 200"
+              READY=1
+              break
             fi
-            echo "✅ GeoServer smoke test passed after redirect (HTTP 200)"
-          elif [ "$HTTP_CODE" = "200" ]; then
-            echo "✅ GeoServer smoke test passed (HTTP 200)"
-          else
-            echo "❌ GeoServer smoke test failed (HTTP $HTTP_CODE)" >&2
-            curl -k -I "https://$GEOSERVER_FQDN/geoserver/web/" | head -n 50 || true
+
+            # Fallback to UI (allow redirect) only if REST not yet 200
+            if [ $READY -eq 0 ]; then
+              set +e
+              UI_CODE=$(curl -k -s -o /dev/null -w "%{http_code}" --location --max-redirs 10 "$SMOKE_UI_URL")
+              UI_STATUS=$?
+              set -e
+              if [ $UI_STATUS -eq 47 ]; then
+                echo "⚠️  UI redirect loop detected (curl 47); will retry..."
+              elif [ $UI_STATUS -eq 0 ] && [ "$UI_CODE" = "200" ]; then
+                echo "✅ UI endpoint responded 200"
+                READY=1
+                break
+              else
+                echo "(UI not ready) code=$UI_CODE status=$UI_STATUS"
+              fi
+            fi
+
+            sleep $SLEEP_INTERVAL
+            ELAPSED=$((ELAPSED+SLEEP_INTERVAL))
+          done
+
+          if [ $READY -ne 1 ]; then
+            echo "❌ GeoServer did not become ready within ${TOTAL_WAIT}s" >&2
+            echo "Attempting to dump limited debug headers:"
+            curl -k -I "$SMOKE_UI_URL" || true
+            curl -k -u "$ADMIN_USER:$ADMIN_PASS" -I "$SMOKE_REST_VERSION" || true
+            # Final attempt unauthenticated GetCapabilities (often 200 even if UI not yet fully initialized)
+            curl -k -s -o /dev/null -w "Capabilities HTTP:%{http_code}\n" "$SMOKE_WMS_CAPS" || true
             exit 1
           fi
 
           echo "--- Deployment Summary ---"
           echo "✅ Application deployed successfully!"
-
           echo "🌐 Frontend URL: https://$FRONTEND_URL"
           echo "🗺️ GeoServer Admin: https://$GEOSERVER_FQDN/geoserver"
           echo "🔧 API Endpoint: https://$SERVER_FQDN"
