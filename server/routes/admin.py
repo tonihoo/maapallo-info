@@ -88,6 +88,7 @@ async def geoserver_persistence_diagnostics(
 
         return out
 
+
 # GeoServer configuration (env driven). Precedence:
 # 1. GEOSERVER_INTERNAL_URL (cluster-internal)
 # 2. GEOSERVER_URL (public)
@@ -1322,6 +1323,7 @@ async def geoserver_import(
         persistence_counts = None
         if debug:
             from sqlalchemy import text
+
             async with async_session_maker() as count_session:  # type: ignore
                 try:
                     res = await count_session.execute(
