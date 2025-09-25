@@ -6,6 +6,11 @@
 set -Eeuo pipefail
 IFS=$'\n\t'
 
+# Debug tracing (export DEBUG_RESTORE=1 to enable verbose tracing)
+if [[ "${DEBUG_RESTORE:-}" == "1" || "${DEBUG_RESTORE:-}" == "true" ]]; then
+    set -x
+fi
+
 # Configuration from environment variables
 GEOSERVER_URL="${GEOSERVER_INTERNAL_URL:-${GEOSERVER_URL:-http://localhost:8080/geoserver}}"
 GEOSERVER_ADMIN_USER="${GEOSERVER_ADMIN_USER:-admin}"
@@ -26,8 +31,35 @@ info() { log "INFO  $*"; }
 warn() { log "WARN  $*"; }
 error(){ log "ERROR $*"; }
 
+# Optional persistent log file (can be disabled with PERSIST_RESTORE_LOG=0)
+RESTORE_LOG_FILE="${RESTORE_LOG_FILE:-/opt/geoserver/data_dir/restore-config.log}"
+if [[ "${PERSIST_RESTORE_LOG:-1}" == "1" ]]; then
+    # Ensure directory exists
+    mkdir -p "$(dirname "$RESTORE_LOG_FILE")" || true
+    # Redirect all subsequent stdout/stderr through tee (append mode)
+    exec > >(tee -a "$RESTORE_LOG_FILE") 2>&1
+    echo "[$(date +'%Y-%m-%dT%H:%M:%S%z')] INFO  🔄 Restore script log persisted to $RESTORE_LOG_FILE"
+fi
+
 # Error handling
-trap 'error "Configuration restoration failed at line $LINENO"; exit 1' ERR
+trap 'error "Configuration restoration failed at line $LINENO (exit=$?)"; exit 1' ERR
+
+# Summarize critical env (sanitized) for diagnostics
+env_summary() {
+    cat <<EOF
+GeoServer restore environment summary:
+    GEOSERVER_URL=${GEOSERVER_URL}
+    GEOSERVER_ADMIN_USER=${GEOSERVER_ADMIN_USER}
+    POSTGRES_HOST=${POSTGRES_HOST}
+    POSTGRES_PORT=${POSTGRES_PORT}
+    POSTGRES_DB=${POSTGRES_DB}
+    POSTGRES_USER=${POSTGRES_USER}
+    POSTGRES_SSLMODE=${POSTGRES_SSLMODE}
+    RESTORE_RETRIES=${RESTORE_RETRIES:-5}
+    NO_BOOTSTRAP_ON_EMPTY=${NO_BOOTSTRAP_ON_EMPTY:-0}
+    DEBUG_RESTORE=${DEBUG_RESTORE:-0}
+EOF
+}
 
 # Wait for services to be ready
 wait_for_service() {
@@ -56,10 +88,17 @@ test_database_connection() {
 
     export PGPASSWORD="$POSTGRES_PASSWORD"
 
-    if psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT 1;" > /dev/null 2>&1; then
-        info "✅ Database connection successful"
+    local sql_diag="SELECT current_database() AS db, current_user AS usr, inet_server_addr() AS srv_addr, version() AS pg_version;"
+    if psql -v ON_ERROR_STOP=1 -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT 1;" > /dev/null 2>&1; then
+        info "✅ Basic database connectivity OK"
+        local diag_out
+        if diag_out=$(psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -A -F '|' -c "$sql_diag" 2>/dev/null); then
+            info "   DB diagnostic: $diag_out"
+        else
+            warn "   Could not fetch extended diagnostics"
+        fi
     else
-        error "❌ Database connection failed"
+        error "❌ Database connection failed (host=$POSTGRES_HOST port=$POSTGRES_PORT db=$POSTGRES_DB user=$POSTGRES_USER)"
         return 1
     fi
 }
@@ -70,7 +109,18 @@ get_configuration_from_db() {
 
     export PGPASSWORD="$POSTGRES_PASSWORD"
 
-    # Query configuration directly via LEFT JOINs (function removed)
+    # Table counts for diagnostics first
+    local counts_sql="SELECT (SELECT count(*) FROM geoserver_workspaces) AS workspaces, (SELECT count(*) FROM geoserver_datastores) AS datastores, (SELECT count(*) FROM geoserver_layers) AS layers;"
+    local counts
+    if counts=$(psql -v ON_ERROR_STOP=1 -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -A -F '|' -c "$counts_sql" 2>&1); then
+        local w d l
+        IFS='|' read -r w d l <<<"$counts"
+        info "   Persistence table counts: workspaces=$w datastores=$d layers=$l"
+    else
+        warn "   Could not fetch table counts: $counts"
+    fi
+
+    # Query configuration directly via LEFT JOINs
     local sql="SELECT w.name AS workspace_name, w.description AS workspace_description,\n"
     sql+="       d.name AS datastore_name, d.type AS datastore_type, d.connection_params AS datastore_params,\n"
     sql+="       l.layer_name, l.table_name, l.geom_column, l.srid, l.layer_config\n"
@@ -80,14 +130,19 @@ get_configuration_from_db() {
     sql+="ORDER BY w.name, d.name, l.layer_name;"
 
     local result
-    if ! result=$(psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" \
-        -d "$POSTGRES_DB" -t -A -F '|' -c "$sql" 2>/dev/null); then
-        warn "Failed to query configuration (psql error)"
+    if ! result=$(psql -v ON_ERROR_STOP=1 -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" \
+        -d "$POSTGRES_DB" -t -A -F '|' -c "$sql" 2>&1); then
+        warn "Failed to query configuration (psql error): $result"
         return 1
     fi
 
+    # Record raw line count (excluding empty)
+    local non_empty_lines
+    non_empty_lines=$(echo "$result" | grep -Ev '^[[:space:]]*$' | wc -l | tr -d ' ')
+    info "   Retrieved config row lines: $non_empty_lines"
+
     if [[ -z "${result// /}" ]]; then
-        warn "No configuration rows found in persistence tables"
+        warn "No configuration rows returned by join query"
         return 1
     fi
 
@@ -278,9 +333,14 @@ restore_geoserver_configuration() {
     done
 
     if [[ -z "${config_data// /}" ]]; then
-        warn "No stored configuration found after retries. Bootstrapping default configuration."
-        bootstrap_default_configuration
-        return 0
+        if [[ "${NO_BOOTSTRAP_ON_EMPTY:-0}" == "1" ]]; then
+            warn "No stored configuration after retries AND NO_BOOTSTRAP_ON_EMPTY=1 -> skipping bootstrap (manual intervention required)"
+            return 0
+        else
+            warn "No stored configuration found after retries. Bootstrapping default configuration. (Set NO_BOOTSTRAP_ON_EMPTY=1 to suppress)"
+            bootstrap_default_configuration
+            return 0
+        fi
     fi
 
     # Track processed workspaces and datastores to avoid duplicates
@@ -362,6 +422,7 @@ verify_configuration() {
 # Main execution
 main() {
     info "🚀 Starting enhanced GeoServer initialization..."
+    env_summary | while read -r line; do info "$line"; done
 
     # Wait for services
     wait_for_service "GeoServer" "$GEOSERVER_URL/web/"
