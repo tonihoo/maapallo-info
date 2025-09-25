@@ -136,6 +136,7 @@ async def ensure_layer_exists(table_name: str, datastore_name: str):
         )
     return True
 
+
 print(
     "[GeoServer] base=%s workspace=%s user=%s src=%s pwd.len=%s"
     % (
@@ -301,8 +302,8 @@ async def ensure_datastore_exists():
             "Connection timeout": "20",
             "preparedStatements": "false",
         }
-    # Include ssl mode if present (GeoServer sometimes expects either
-    # 'sslmode' or 'SSL mode')
+        # Include ssl mode if present (GeoServer sometimes expects either
+        # 'sslmode' or 'SSL mode')
         sslmode = params.get("sslmode")
         if sslmode:
             connection_params["sslmode"] = sslmode
@@ -353,6 +354,25 @@ async def ensure_datastore_exists():
                 ),
             )
         logger.info("Created PostGIS datastore: %s", datastore_name)
+
+    # Persist datastore registration in DB (best effort)
+    try:
+        async with async_session_maker() as session:  # type: ignore
+            from services.geoserver_config import GeoServerConfigService
+
+            svc = GeoServerConfigService(session)
+            await svc.register_workspace(WORKSPACE_NAME, description=None)
+            _cp = connection_params if "connection_params" in locals() else {}
+            await svc.register_datastore(
+                WORKSPACE_NAME,
+                datastore_name,
+                datastore_type="postgis",
+                connection_params=_cp,
+            )
+    except Exception as e:  # noqa: BLE001
+        logger.warning(
+            "Failed to persist datastore registration (non-fatal): %s", e
+        )
 
     return datastore_name
 

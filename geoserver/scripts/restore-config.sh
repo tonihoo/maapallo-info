@@ -255,7 +255,8 @@ restore_geoserver_configuration() {
     # Get configuration from database
     local config_data
     if ! config_data=$(get_configuration_from_db); then
-        warn "No stored configuration found. Skipping restoration."
+        warn "No stored configuration found (query failed or empty). Bootstrapping default configuration."
+        bootstrap_default_configuration
         return 0
     fi
 
@@ -289,6 +290,21 @@ restore_geoserver_configuration() {
     done <<< "$config_data"
 
     info "✅ GeoServer configuration restoration completed"
+}
+
+# Bootstrap a minimal default configuration when persistence tables are empty.
+bootstrap_default_configuration() {
+    local default_workspace="${DEFAULT_GEOSERVER_WORKSPACE:-maapallo}"
+    local default_datastore="${DEFAULT_GEOSERVER_DATASTORE:-postgis_maapallo}"
+    info "🆕 Bootstrapping default workspace='$default_workspace' datastore='$default_datastore'"
+
+    # Create workspace if missing
+    create_workspace "$default_workspace" "Default Maapallo workspace"
+
+    # Create datastore if missing
+    create_datastore "$default_workspace" "$default_datastore" "{}"
+
+    info "✅ Default GeoServer configuration bootstrapped"
 }
 
 # Verify configuration
