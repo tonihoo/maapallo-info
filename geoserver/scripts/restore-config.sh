@@ -252,10 +252,33 @@ EOF
 restore_geoserver_configuration() {
     info "🔄 Starting GeoServer configuration restoration..."
 
-    # Get configuration from database
+    # Get configuration from database with retry/backoff to avoid
+    # mistakenly bootstrapping during transient DB issues.
     local config_data
-    if ! config_data=$(get_configuration_from_db); then
-        warn "No stored configuration found (query failed or empty). Bootstrapping default configuration."
+    local attempts=0
+    local max_attempts="${RESTORE_RETRIES:-5}"
+    local backoff=1
+    while true; do
+        if config_data=$(get_configuration_from_db); then
+            break
+        fi
+        attempts=$((attempts+1))
+        if [[ $attempts -ge $max_attempts ]]; then
+            warn "Configuration still unavailable after ${attempts} attempts"
+            break
+        fi
+        info "Retrying configuration fetch in ${backoff}s (attempt ${attempts}/${max_attempts})..."
+        sleep $backoff
+        # Fibonacci-ish backoff: 1,2,3,5,8...
+        if [[ $backoff -lt 5 ]]; then
+            backoff=$((backoff+1))
+        else
+            backoff=$((backoff+3))
+        fi
+    done
+
+    if [[ -z "${config_data// /}" ]]; then
+        warn "No stored configuration found after retries. Bootstrapping default configuration."
         bootstrap_default_configuration
         return 0
     fi

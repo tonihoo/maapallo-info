@@ -34,6 +34,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from services.geoserver_config import GeoServerConfigService
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -454,6 +455,19 @@ async def import_geojson_to_postgis(file_path: Path, table_name: str):
     if params["sslmode"] and params["sslmode"].lower() != "disable":
         db_connection += f" sslmode={params['sslmode']}"
 
+    # Log the resolved target (without password) to help diagnose any future
+    # "table disappeared" situations caused by pointing at a different DB.
+    try:
+        logger.info(
+            "OGR import target DB resolved host=%s db=%s user=%s sslmode=%s",
+            params.get("host"),
+            params.get("db"),
+            params.get("user"),
+            params.get("sslmode"),
+        )
+    except Exception:  # pragma: no cover - log safety
+        pass
+
     # Use ogr2ogr to import the GeoJSON
     result = subprocess.run(
         [
@@ -530,6 +544,37 @@ async def create_geoserver_layer(table_name: str, datastore_name: str):
 
     logger.info("Created GeoServer layer: %s", table_name)
     return True
+
+
+# --- Geometry / metadata helpers for persistence integration ---
+async def detect_table_geometry(
+    db: AsyncSession, table_name: str
+) -> tuple[str, int, Optional[str]]:
+    """Detect geometry column, SRID and type for a PostGIS table.
+
+    Returns (geom_column, srid, geom_type). Falls back to ("geom", 4326, None)
+    if detection fails. Errors are logged but not raised so that imports
+    continue even if metadata introspection fails.
+    """
+    try:
+        result = await db.execute(
+            text(
+                """
+                SELECT g.f_geometry_column, g.srid, g.type
+                FROM geometry_columns g
+                WHERE g.f_table_schema = 'public'
+                  AND g.f_table_name = :tbl
+                LIMIT 1
+                """
+            ),
+            {"tbl": table_name},
+        )
+        row = result.fetchone()
+        if row:
+            return row.f_geometry_column, int(row.srid), row.type
+    except Exception as e:  # pragma: no cover - defensive
+        logger.warning("Geometry detection failed for %s: %s", table_name, e)
+    return "geom", 4326, None
 
 
 async def _ensure_tables(db: AsyncSession) -> None:
@@ -1112,8 +1157,48 @@ async def geoserver_import(
         table_name = layer_name.lower().replace("-", "_")
         await import_geojson_to_postgis(file_path, table_name)
 
-        # Create GeoServer layer
+        # Detect geometry metadata now that the table exists
+        # Need a DB session to detect geometry metadata. Open a short-lived
+        # session explicitly instead of adding another dependency param to
+        # keep the existing signature stable for callers.
+        async with async_session_maker() as detect_session:  # type: ignore
+            geom_column, srid, geom_type = await detect_table_geometry(
+                detect_session, table_name
+            )
+
+        # Create GeoServer layer (raises HTTPException on failure)
         await create_geoserver_layer(table_name, datastore_name)
+
+        # Persist layer configuration so it survives restarts.
+        try:
+            # type: ignore for session maker import in this context
+            async with async_session_maker() as persist_session:  # noqa: E501
+                config_service = GeoServerConfigService(persist_session)
+                layer_config = {
+                    "imported_via": "geoserver-import",
+                    "detected_geometry_type": geom_type,
+                    "registered_at": datetime.utcnow().isoformat(),
+                }
+                await config_service.register_layer(
+                    workspace_name=WORKSPACE_NAME,
+                    datastore_name=datastore_name,
+                    layer_name=table_name,
+                    table_name=table_name,
+                    geom_column=geom_column,
+                    srid=srid,
+                    layer_config=layer_config,
+                )
+            logger.info(
+                "Persisted layer %s (geom=%s srid=%s type=%s)",
+                table_name,
+                geom_column,
+                srid,
+                geom_type,
+            )
+        except Exception as e:  # pragma: no cover - we don't abort import
+            logger.error(
+                "Failed to persist layer %s after import: %s", table_name, e
+            )
 
         logger.info(
             "Successfully imported %s as layer %s", file_name, layer_name
@@ -1125,6 +1210,9 @@ async def geoserver_import(
             "layerName": layer_name,
             "tableName": table_name,
             "workspace": WORKSPACE_NAME,
+            "geomColumn": geom_column,
+            "srid": srid,
+            "geometryType": geom_type,
             "geoserverUrl": (
                 f"{GEOSERVER_URL}/rest/layers/{WORKSPACE_NAME}:{table_name}"
             ),
