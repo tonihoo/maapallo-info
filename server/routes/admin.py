@@ -336,13 +336,19 @@ async def ensure_datastore_exists():
         # Create PostGIS datastore using GeoServer-accessible params
         params = _resolve_geoserver_db_params()
         # Build rich connectionParameters (mirrors shell restore script)
-        connection_params: dict[str, object] = {
+        # Build connection parameters WITHOUT storing the raw password.
+        # GeoServer requires the password on creation, but we avoid
+        # persisting it in our own configuration database to reduce
+        # accidental secret exposure. We therefore keep a local copy with
+        # password for the GeoServer POST, and a redacted copy for
+        # persistence.
+        connection_params_full: dict[str, object] = {
             "host": params["host"],
             "port": str(params["port"]),
             "database": params["db"],
             "schema": "public",
             "user": params["user"],
-            "passwd": params["password"],
+            "passwd": params["password"],  # only used for GeoServer call
             "dbtype": "postgis",
             "Loose bbox": "true",
             "Estimated extends": "false",
@@ -354,23 +360,26 @@ async def ensure_datastore_exists():
         # 'sslmode' or 'SSL mode')
         sslmode = params.get("sslmode")
         if sslmode:
-            connection_params["sslmode"] = sslmode
-            connection_params["SSL mode"] = sslmode  # defensive duplicate
+            connection_params_full["sslmode"] = sslmode
+            connection_params_full["SSL mode"] = sslmode  # defensive duplicate
 
         # Optionally include namespace explicitly (not strictly required)
-        connection_params["namespace"] = WORKSPACE_NAME
+        connection_params_full["namespace"] = WORKSPACE_NAME
 
         datastore_data = {
             "dataStore": {
                 "name": datastore_name,
-                "connectionParameters": connection_params,
+                "connectionParameters": connection_params_full,
             }
         }
 
         # Mask password for logging
         log_preview = json.loads(json.dumps(datastore_data))
-        try:
-            log_preview["dataStore"]["connectionParameters"]["passwd"] = "***"
+        try:  # mask password for log output
+            if "passwd" in log_preview["dataStore"]["connectionParameters"]:
+                log_preview["dataStore"]["connectionParameters"][
+                    "passwd"
+                ] = "***"
         except Exception:  # noqa: BLE001
             pass
         logger.info(
@@ -410,7 +419,26 @@ async def ensure_datastore_exists():
 
             svc = GeoServerConfigService(session)
             await svc.register_workspace(WORKSPACE_NAME, description=None)
-            _cp = connection_params if "connection_params" in locals() else {}
+            # Prepare sanitized copy (remove password) for persistence
+            sanitized = {}
+            try:
+                raw = (
+                    connection_params_full
+                    if "connection_params_full" in locals()
+                    else {}
+                )
+                # Copy only non-secret keys
+                sanitized = {
+                    k: v
+                    for k, v in raw.items()
+                    if k != "passwd"  # drop secret
+                }
+                # Provide explicit marker that secret was intentionally omitted
+                if raw:
+                    sanitized["password_redacted"] = True
+            except Exception:  # noqa: BLE001
+                pass
+            _cp = sanitized
             await svc.register_datastore(
                 WORKSPACE_NAME,
                 datastore_name,
@@ -1255,19 +1283,21 @@ async def geoserver_import(
                 # Datastore (idempotent)
                 try:
                     db_params = _resolve_db_params()
+                    # Sanitize password before persisting datastore params
                     ds_params = {
                         "dbtype": "postgis",
                         "host": db_params.get("host"),
                         "port": db_params.get("port"),
                         "database": db_params.get("db"),
                         "user": db_params.get("user"),
-                        "passwd": db_params.get("password"),
+                        # password deliberately omitted
                         "schema": "public",
                         "Loose bbox": True,
                         "Estimated extends": False,
                         "validate connections": True,
                         "Connection timeout": 20,
                         "preparedStatements": False,
+                        "password_redacted": True,
                     }
                     await config_service.register_datastore(
                         WORKSPACE_NAME,
