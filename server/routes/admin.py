@@ -1130,7 +1130,17 @@ async def geoserver_import(
     request: dict,
     current_user=Depends(require_auth),
 ):
-    """Import uploaded file to GeoServer using REST API."""
+    """Import an already-uploaded GeoJSON file into PostGIS and publish as a
+    GeoServer layer.
+
+    Steps:
+      1. Validate request payload & uploaded file.
+      2. Ensure workspace & datastore exist (idempotent).
+      3. Load GeoJSON into PostGIS (ogr2ogr wrapper).
+      4. Detect geometry metadata from the created table.
+      5. Create/publish GeoServer layer via REST.
+      6. Persist workspace, datastore, and layer metadata in application DB.
+    """
     try:
         file_name = request.get("fileName")
         layer_name = request.get("layerName")
@@ -1142,38 +1152,79 @@ async def geoserver_import(
                 status_code=400, detail="layerName is required"
             )
 
-        # Validate file exists
         file_path = Path("/app/uploads") / file_name
         if not file_path.exists():
             raise HTTPException(
                 status_code=404, detail=f"File {file_name} not found"
             )
 
-        # Ensure GeoServer workspace and datastore exist
+        # Normalize table name
+        table_name = layer_name.lower().replace("-", "_")
+
+        # Ensure GeoServer workspace/datastore exist
         await ensure_workspace_exists()
         datastore_name = await ensure_datastore_exists()
 
-        # Import to PostGIS
-        table_name = layer_name.lower().replace("-", "_")
+        # Import data into PostGIS
         await import_geojson_to_postgis(file_path, table_name)
 
-        # Detect geometry metadata now that the table exists
-        # Need a DB session to detect geometry metadata. Open a short-lived
-        # session explicitly instead of adding another dependency param to
-        # keep the existing signature stable for callers.
+        # Detect geometry metadata
         async with async_session_maker() as detect_session:  # type: ignore
             geom_column, srid, geom_type = await detect_table_geometry(
                 detect_session, table_name
             )
 
-        # Create GeoServer layer (raises HTTPException on failure)
+        # Create GeoServer layer
         await create_geoserver_layer(table_name, datastore_name)
 
-        # Persist layer configuration so it survives restarts.
+        # Persist configuration
         try:
-            # type: ignore for session maker import in this context
-            async with async_session_maker() as persist_session:  # noqa: E501
+            # Open a session dedicated to persistence writes
+            async with async_session_maker() as persist_session:
                 config_service = GeoServerConfigService(persist_session)
+
+                # Workspace (idempotent)
+                try:
+                    await config_service.register_workspace(WORKSPACE_NAME)
+                except Exception as ws_e:  # pragma: no cover
+                    logger.error(
+                        "Workspace persistence failed %s: %s",
+                        WORKSPACE_NAME,
+                        ws_e,
+                    )
+
+                # Datastore (idempotent)
+                try:
+                    db_params = _resolve_db_params()
+                    ds_params = {
+                        "dbtype": "postgis",
+                        "host": db_params.get("host"),
+                        "port": db_params.get("port"),
+                        "database": db_params.get("db"),
+                        "user": db_params.get("user"),
+                        "passwd": db_params.get("password"),
+                        "schema": "public",
+                        "Loose bbox": True,
+                        "Estimated extends": False,
+                        "validate connections": True,
+                        "Connection timeout": 20,
+                        "preparedStatements": False,
+                    }
+                    await config_service.register_datastore(
+                        WORKSPACE_NAME,
+                        datastore_name,
+                        "postgis",
+                        ds_params,
+                    )
+                except Exception as ds_e:  # pragma: no cover
+                    logger.error(
+                        "Datastore persistence failed %s:%s: %s",
+                        WORKSPACE_NAME,
+                        datastore_name,
+                        ds_e,
+                    )
+
+                # Layer
                 layer_config = {
                     "imported_via": "geoserver-import",
                     "detected_geometry_type": geom_type,
@@ -1189,21 +1240,21 @@ async def geoserver_import(
                     layer_config=layer_config,
                 )
             logger.info(
-                "Persisted layer %s (geom=%s srid=%s type=%s)",
+                "Persisted workspace=%s datastore=%s layer=%s",
+                WORKSPACE_NAME,
+                datastore_name,
                 table_name,
-                geom_column,
-                srid,
-                geom_type,
             )
-        except Exception as e:  # pragma: no cover - we don't abort import
+        except Exception as persist_e:  # pragma: no cover
             logger.error(
-                "Failed to persist layer %s after import: %s", table_name, e
+                "Failed to persist GeoServer config for layer %s: %s",
+                table_name,
+                persist_e,
             )
 
         logger.info(
             "Successfully imported %s as layer %s", file_name, layer_name
         )
-
         return {
             "message": "Layer imported successfully",
             "fileName": file_name,
@@ -1217,13 +1268,11 @@ async def geoserver_import(
                 f"{GEOSERVER_URL}/rest/layers/{WORKSPACE_NAME}:{table_name}"
             ),
         }
-
     except HTTPException:
-        # Re-raise HTTP exceptions
         raise
-    except Exception as e:
-        logger.error("GeoServer import failed: %s", str(e))
-        raise HTTPException(status_code=500, detail=f"Import failed: {str(e)}")
+    except Exception as e:  # noqa: BLE001
+        logger.error("GeoServer import failed: %s", e)
+        raise HTTPException(status_code=500, detail=f"Import failed: {e}")
 
 
 @router.get("/db-ping")
