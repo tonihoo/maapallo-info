@@ -282,6 +282,8 @@ jobs:
         run: |
           # Debug subscription ID
           echo "Subscription ID length: ${#AZURE_SUBSCRIPTION_ID}"
+          echo "Subscription ID first 4 chars: ${AZURE_SUBSCRIPTION_ID:0:4}"
+          echo "Subscription ID last 4 chars: ${AZURE_SUBSCRIPTION_ID: -4}"
           if [ -z "$AZURE_SUBSCRIPTION_ID" ]; then
             echo "ERROR: AZURE_SUBSCRIPTION_ID is empty or not set"
             exit 1
