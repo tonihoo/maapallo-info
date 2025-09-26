@@ -35,9 +35,29 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS_NGO }}
 
+      - name: Verify and select Azure subscription
+        run: |
+          echo "Listing available subscriptions (for diagnostics):"
+          az account list --output table || true
+
+          if [ -z "${{ secrets.AZURE_SUBSCRIPTION_ID }}" ]; then
+            echo "AZURE_SUBSCRIPTION_ID secret not set. Configure it in repo secrets." >&2
+            exit 1
+          fi
+
+          echo "Setting subscription to ${{ secrets.AZURE_SUBSCRIPTION_ID }}..."
+          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}" || {
+            echo "Failed to select subscription. Ensure the service principal has access and the ID is correct." >&2
+            exit 1
+          }
+
+          echo "Active subscription: $(az account show --query id -o tsv)"
+
       - name: Log in to ACR
         run: |
-          az acr login --name ${{ env.ACR_REGISTRY }}
+          ACR_NAME="$(echo "${{ env.ACR_REGISTRY }}" | cut -d'.' -f1)"
+          echo "Logging in to ACR: $ACR_NAME"
+          az acr login --name "$ACR_NAME"
 
       # Build and push all container images
       - name: Build and push Client image
