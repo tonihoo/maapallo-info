@@ -305,7 +305,6 @@ docker compose exec server python -c "from migrate import check_migration_status
 
 - PostgreSQL 13 with PostGIS 3.3
 - Spatial data support for geographic features
-- SRID 3067 (Finland coordinate system) for locations
 - Automatic spatial indexing for imported layers
 
 ## Troubleshooting
