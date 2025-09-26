@@ -96,18 +96,25 @@ test_database_connection() {
         if psql -v ON_ERROR_STOP=1 -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT 1;" > /dev/null 2>&1; then
             info "✅ Database connection successful"
 
-            # Check if persistence tables exist
-            local tables_exist
-            tables_exist=$(psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "
-                SELECT COUNT(*) FROM information_schema.tables
-                WHERE table_name IN ('geoserver_workspaces', 'geoserver_datastores', 'geoserver_layers')
-            " 2>/dev/null | tr -d ' ' || echo "0")
+            # Check persistence tables and update datastore config
+            local health_check
+            health_check=$(psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "SELECT check_geoserver_config_health();" 2>/dev/null || echo "health_check_failed")
+            info "Database health check: $health_check"
 
-            if [ "$tables_exist" -eq 3 ]; then
-                info "✅ All persistence tables found"
-            else
-                warn "⚠️ Only $tables_exist/3 persistence tables found - may need migration"
-            fi
+            # Update datastore connection parameters with runtime values
+            info "Updating datastore connection parameters..."
+            psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "
+                SELECT update_datastore_connection_params(
+                    'maapallo',
+                    'postgis',
+                    '$POSTGRES_HOST',
+                    $POSTGRES_PORT,
+                    '$POSTGRES_DB',
+                    '$POSTGRES_USER',
+                    '$POSTGRES_SSLMODE'
+                );
+            " || warn "Failed to update datastore connection parameters"
+
             return 0
         else
             warn "Database connection failed, attempt $attempt/$max_attempts"

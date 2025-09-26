@@ -29,26 +29,33 @@ RUN apt-get update && \
 # Create uploads directory
 RUN mkdir -p /opt/geoserver/uploads
 
-# Copy our scripts
+# Copy scripts and configuration files (as root)
 COPY scripts/import-data.sh /usr/local/bin/import-data.sh
 COPY scripts/init-geoserver.sh /docker-entrypoint-geoserver.d/init-geoserver.sh
 COPY scripts/00-proxy-base.sh /docker-entrypoint-geoserver.d/00-proxy-base.sh
 COPY scripts/restore-config.sh /docker-entrypoint-geoserver.d/10-restore-config.sh
 
-# Copy restore configuration script
-COPY scripts/restore-config.sh /docker-entrypoint-geoserver.d/10-restore-config.sh
-RUN chmod +x /docker-entrypoint-geoserver.d/10-restore-config.sh
+# Install additional packages as root
+RUN apt-get update && \
+    apt-get install -y postgresql-client curl jq && \
+    rm -rf /var/lib/apt/lists/*
 
-# Install PostgreSQL client for restore script
-USER root
-RUN apt-get update && apt-get install -y postgresql-client curl jq && rm -rf /var/lib/apt/lists/*
-USER geoserver
-
-# Make scripts executable
+# Make scripts executable (as root, before switching user)
 RUN chmod +x /usr/local/bin/import-data.sh \
     && chmod +x /docker-entrypoint-geoserver.d/init-geoserver.sh \
     && chmod +x /docker-entrypoint-geoserver.d/00-proxy-base.sh \
     && chmod +x /docker-entrypoint-geoserver.d/10-restore-config.sh
+
+# Ensure proper ownership of GeoServer directories
+RUN mkdir -p /opt/geoserver/data_dir && \
+    chown -R geoserver:geoserver /opt/geoserver/data_dir
+
+# Switch to geoserver user only at the end
+USER geoserver
+
+# Copy restore configuration script
+COPY scripts/restore-config.sh /docker-entrypoint-geoserver.d/10-restore-config.sh
+RUN chmod +x /docker-entrypoint-geoserver.d/10-restore-config.sh
 
 # Don't switch back to user - let the base image handle it
 
