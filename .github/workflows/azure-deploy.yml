@@ -277,6 +277,8 @@ jobs:
 
       # Deploy GeoServer with Persistent Storage
       - name: Deploy GeoServer Container
+        env:
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
           # Debug subscription ID
           echo "Subscription ID length: ${#AZURE_SUBSCRIPTION_ID}"
@@ -377,8 +379,6 @@ jobs:
             --azure-file-account-key "$STORAGE_KEY" \
             --azure-file-share-name "$FILE_SHARE" \
             --azure-file-mount-path "/opt/geoserver/data_dir"
-        env:
-          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Update GeoServer container (refresh PROXY_BASE_URL)
         if: always()
