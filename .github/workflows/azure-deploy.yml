@@ -19,6 +19,10 @@ env:
   # Container Apps environment
   CONTAINER_ENV_NAME: maapallo-env
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   build-and-deploy:
     name: Build and Deploy GeoServer Stack
