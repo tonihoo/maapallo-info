@@ -278,6 +278,10 @@ jobs:
       # Deploy GeoServer with Persistent Storage
       - name: Deploy GeoServer Container
         run: |
+          # Ensure we're using the correct subscription
+          echo "Current subscription: $(az account show --query id -o tsv)"
+          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+
           # Create Azure Files storage account and file share if not exists
           STORAGE_ACCOUNT="maapallostorageacct"
           FILE_SHARE="geoserver-data"
@@ -379,6 +383,9 @@ jobs:
       # Deploy Backend API
       - name: Deploy Server Container
         run: |
+          # Ensure we're using the correct subscription
+          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+
           # Get managed identity details
           IDENTITY_ID=$(az identity show --name maapallo-container-identity --resource-group ${{ env.RESOURCE_GROUP }} --query id -o tsv)
 
@@ -499,6 +506,9 @@ jobs:
       # Deploy Frontend
       - name: Deploy Client Container
         run: |
+          # Ensure we're using the correct subscription
+          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+
           # Get managed identity details
           IDENTITY_ID=$(az identity show --name maapallo-container-identity --resource-group ${{ env.RESOURCE_GROUP }} --query id -o tsv)
 
