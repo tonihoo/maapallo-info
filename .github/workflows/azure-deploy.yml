@@ -251,110 +251,88 @@ jobs:
             -d ${{ secrets.DB_NAME }} \
             -c "CREATE EXTENSION IF NOT EXISTS postgis; CREATE EXTENSION IF NOT EXISTS postgis_topology; CREATE EXTENSION IF NOT EXISTS pg_stat_statements;" || echo "PostGIS extensions may already exist"
 
-      # Deploy GeoServer
+      # Deploy GeoServer with Persistent Storage
       - name: Deploy GeoServer Container
         run: |
+          # Create Azure Files storage account and file share if not exists
+          STORAGE_ACCOUNT="maapallostorageacct"
+          FILE_SHARE="geoserver-data"
+
+          echo "Creating storage account for persistent data..."
+          if ! az storage account show --name "$STORAGE_ACCOUNT" --resource-group ${{ env.RESOURCE_GROUP }} >/dev/null 2>&1; then
+            az storage account create \
+              --name "$STORAGE_ACCOUNT" \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --location ${{ env.LOCATION }} \
+              --sku Standard_LRS \
+              --kind StorageV2
+          fi
+
+          # Get storage account key
+          STORAGE_KEY=$(az storage account keys list \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --account-name "$STORAGE_ACCOUNT" \
+            --query "[0].value" -o tsv)
+
+          # Create file share if not exists
+          if ! az storage share show --name "$FILE_SHARE" --account-name "$STORAGE_ACCOUNT" --account-key "$STORAGE_KEY" >/dev/null 2>&1; then
+            az storage share create \
+              --name "$FILE_SHARE" \
+              --account-name "$STORAGE_ACCOUNT" \
+              --account-key "$STORAGE_KEY" \
+              --quota 10
+          fi
+
           # Get managed identity details
           IDENTITY_ID=$(az identity show --name maapallo-container-identity --resource-group ${{ env.RESOURCE_GROUP }} --query id -o tsv)
 
-          # Check if GeoServer container app exists and its state
+          # Check if GeoServer container app exists
           if az containerapp show --name maapallo-geoserver --resource-group ${{ env.RESOURCE_GROUP }} >/dev/null 2>&1; then
-            # Check if the container app is in a failed state
-            PROVISIONING_STATE=$(az containerapp show --name maapallo-geoserver --resource-group ${{ env.RESOURCE_GROUP }} --query properties.provisioningState -o tsv 2>/dev/null || echo "Unknown")
+            echo "Updating existing GeoServer container with persistent storage..."
 
-            if [ "$PROVISIONING_STATE" = "Failed" ]; then
-              echo "GeoServer container is in failed state. Deleting and recreating..."
-              az containerapp delete \
-                --name maapallo-geoserver \
-                --resource-group ${{ env.RESOURCE_GROUP }} \
-                --yes
-
-              # Wait a moment for deletion to complete
-              sleep 30
-
-              echo "Creating new GeoServer container..."
-              az containerapp create \
-                --name maapallo-geoserver \
-                --resource-group ${{ env.RESOURCE_GROUP }} \
-                --environment ${{ env.CONTAINER_ENV_NAME }} \
-                --image ${{ env.ACR_REGISTRY }}/maapallo-geoserver:${{ github.sha }} \
-                --target-port 8080 \
-                --ingress external \
-                --cpu 2.0 \
-                --memory 4.0Gi \
-                --min-replicas 1 \
-                --max-replicas 3 \
-                --user-assigned $IDENTITY_ID \
-                --registry-identity $IDENTITY_ID \
-                --registry-server ${{ env.ACR_REGISTRY }} \
-                --env-vars \
-                  "GEOSERVER_ADMIN_USER=${{ secrets.GEOSERVER_ADMIN_USER }}" \
-                  "GEOSERVER_ADMIN_PASSWORD=${{ secrets.GEOSERVER_ADMIN_PASSWORD }}" \
-                  "POSTGRES_HOST=${{ env.DB_SERVER_NAME }}.postgres.database.azure.com" \
-                  "POSTGRES_PORT=5432" \
-                  "POSTGRES_DB=${{ secrets.DB_NAME }}" \
-                  "POSTGRES_USER=${{ secrets.DB_ADMIN_USER }}" \
-                  "POSTGRES_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}" \
-                  "PROXY_BASE_URL=${{ secrets.PROXY_BASE_URL }}" \
-                  "GEOSERVER_CSRF_DISABLED=true"
-            else
-              echo "Updating existing GeoServer container..."
-              # For existing apps, we need to update the identity and registry configuration first
-              az containerapp identity assign \
-                --name maapallo-geoserver \
-                --resource-group ${{ env.RESOURCE_GROUP }} \
-                --user-assigned $IDENTITY_ID || echo "Identity may already be assigned"
-
-              # Update registry configuration
-              az containerapp registry set \
-                --name maapallo-geoserver \
-                --resource-group ${{ env.RESOURCE_GROUP }} \
-                --server ${{ env.ACR_REGISTRY }} \
-                --identity $IDENTITY_ID || echo "Registry may already be configured"
-
-              # Now update the container with new image
-              az containerapp update \
-                --name maapallo-geoserver \
-                --resource-group ${{ env.RESOURCE_GROUP }} \
-                --image ${{ env.ACR_REGISTRY }}/maapallo-geoserver:${{ github.sha }} \
-                --set-env-vars \
-                  "GEOSERVER_ADMIN_USER=${{ secrets.GEOSERVER_ADMIN_USER }}" \
-                  "GEOSERVER_ADMIN_PASSWORD=${{ secrets.GEOSERVER_ADMIN_PASSWORD }}" \
-                  "POSTGRES_HOST=${{ env.DB_SERVER_NAME }}.postgres.database.azure.com" \
-                  "POSTGRES_PORT=5432" \
-                  "POSTGRES_DB=${{ secrets.DB_NAME }}" \
-                  "POSTGRES_USER=${{ secrets.DB_ADMIN_USER }}" \
-                  "POSTGRES_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}" \
-                  "PROXY_BASE_URL=${{ secrets.PROXY_BASE_URL }}" \
-                  "GEOSERVER_CSRF_DISABLED=true"
-            fi
-          else
-            echo "Creating new GeoServer container..."
-            az containerapp create \
+            # Delete and recreate to add volume (Container Apps doesn't support volume updates)
+            echo "Deleting existing container to add persistent storage..."
+            az containerapp delete \
               --name maapallo-geoserver \
               --resource-group ${{ env.RESOURCE_GROUP }} \
-              --environment ${{ env.CONTAINER_ENV_NAME }} \
-              --image ${{ env.ACR_REGISTRY }}/maapallo-geoserver:${{ github.sha }} \
-              --target-port 8080 \
-              --ingress external \
-              --cpu 2.0 \
-              --memory 4.0Gi \
-              --min-replicas 1 \
-              --max-replicas 3 \
-              --user-assigned $IDENTITY_ID \
-              --registry-identity $IDENTITY_ID \
-              --registry-server ${{ env.ACR_REGISTRY }} \
-              --env-vars \
-                "GEOSERVER_ADMIN_USER=${{ secrets.GEOSERVER_ADMIN_USER }}" \
-                "GEOSERVER_ADMIN_PASSWORD=${{ secrets.GEOSERVER_ADMIN_PASSWORD }}" \
-                "POSTGRES_HOST=${{ env.DB_SERVER_NAME }}.postgres.database.azure.com" \
-                "POSTGRES_PORT=5432" \
-                "POSTGRES_DB=${{ secrets.DB_NAME }}" \
-                "POSTGRES_USER=${{ secrets.DB_ADMIN_USER }}" \
-                "POSTGRES_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}" \
-                "PROXY_BASE_URL=${{ secrets.PROXY_BASE_URL }}" \
-                "GEOSERVER_CSRF_DISABLED=true"
+              --yes
+
+            sleep 30
           fi
+
+          echo "Creating GeoServer container with persistent storage..."
+          az containerapp create \
+            --name maapallo-geoserver \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --environment ${{ env.CONTAINER_ENV_NAME }} \
+            --image ${{ env.ACR_REGISTRY }}/maapallo-geoserver:${{ github.sha }} \
+            --target-port 8080 \
+            --ingress external \
+            --cpu 2.0 \
+            --memory 4.0Gi \
+            --min-replicas 1 \
+            --max-replicas 3 \
+            --user-assigned $IDENTITY_ID \
+            --registry-identity $IDENTITY_ID \
+            --registry-server ${{ env.ACR_REGISTRY }} \
+            --env-vars \
+              "GEOSERVER_ADMIN_USER=${{ secrets.GEOSERVER_ADMIN_USER }}" \
+              "GEOSERVER_ADMIN_PASSWORD=${{ secrets.GEOSERVER_ADMIN_PASSWORD }}" \
+              "POSTGRES_HOST=${{ env.DB_SERVER_NAME }}.postgres.database.azure.com" \
+              "POSTGRES_PORT=5432" \
+              "POSTGRES_DB=${{ secrets.DB_NAME }}" \
+              "POSTGRES_USER=${{ secrets.DB_ADMIN_USER }}" \
+              "POSTGRES_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}" \
+              "POSTGRES_SSLMODE=require" \
+              "PROXY_BASE_URL=${{ secrets.PROXY_BASE_URL }}" \
+              "GEOSERVER_CSRF_DISABLED=true" \
+              "PERSIST_RESTORE_LOG=1" \
+              "DEBUG_RESTORE=0" \
+            --azure-file-volume-name "geoserver-data-volume" \
+            --azure-file-account-name "$STORAGE_ACCOUNT" \
+            --azure-file-account-key "$STORAGE_KEY" \
+            --azure-file-share-name "$FILE_SHARE" \
+            --azure-file-mount-path "/opt/geoserver/data_dir"
 
       - name: Update GeoServer container (refresh PROXY_BASE_URL)
         if: always()
@@ -666,6 +644,28 @@ jobs:
               else
                 echo "(UI not ready) code=$UI_CODE status=$UI_STATUS"
               fi
+            fi
+
+            sleep $SLEEP_INTERVAL
+            ELAPSED=$((ELAPSED+SLEEP_INTERVAL))
+          done
+
+          if [ $READY -ne 1 ]; then
+            echo "❌ GeoServer did not become ready within ${TOTAL_WAIT}s" >&2
+            echo "Attempting to dump limited debug headers:"
+            curl -k -I "$SMOKE_UI_URL" || true
+            curl -k -u "$ADMIN_USER:$ADMIN_PASS" -I "$SMOKE_REST_VERSION" || true
+            # Final attempt unauthenticated GetCapabilities (often 200 even if UI not yet fully initialized)
+            curl -k -s -o /dev/null -w "Capabilities HTTP:%{http_code}\n" "$SMOKE_WMS_CAPS" || true
+            exit 1
+          fi
+
+          echo "--- Deployment Summary ---"
+          echo "✅ Application deployed successfully!"
+          echo "🌐 Frontend URL: https://$FRONTEND_URL"
+          echo "🗺️ GeoServer Admin: https://$GEOSERVER_FQDN/geoserver"
+          echo "🔧 API Endpoint: https://$SERVER_FQDN"
+          echo "PROXY_BASE_URL used: ${{ secrets.PROXY_BASE_URL }}"
             fi
 
             sleep $SLEEP_INTERVAL

@@ -35,6 +35,15 @@ COPY scripts/init-geoserver.sh /docker-entrypoint-geoserver.d/init-geoserver.sh
 COPY scripts/00-proxy-base.sh /docker-entrypoint-geoserver.d/00-proxy-base.sh
 COPY scripts/restore-config.sh /docker-entrypoint-geoserver.d/10-restore-config.sh
 
+# Copy restore configuration script
+COPY scripts/restore-config.sh /docker-entrypoint-geoserver.d/10-restore-config.sh
+RUN chmod +x /docker-entrypoint-geoserver.d/10-restore-config.sh
+
+# Install PostgreSQL client for restore script
+USER root
+RUN apt-get update && apt-get install -y postgresql-client curl jq && rm -rf /var/lib/apt/lists/*
+USER geoserver
+
 # Make scripts executable
 RUN chmod +x /usr/local/bin/import-data.sh \
     && chmod +x /docker-entrypoint-geoserver.d/init-geoserver.sh \

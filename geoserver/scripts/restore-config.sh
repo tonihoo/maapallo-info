@@ -82,25 +82,44 @@ wait_for_service() {
     info "✅ $service_name is ready"
 }
 
-# Test database connection
+# Test database connection with retry
 test_database_connection() {
     info "🔌 Testing database connection..."
-
     export PGPASSWORD="$POSTGRES_PASSWORD"
 
-    local sql_diag="SELECT current_database() AS db, current_user AS usr, inet_server_addr() AS srv_addr, version() AS pg_version;"
-    if psql -v ON_ERROR_STOP=1 -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT 1;" > /dev/null 2>&1; then
-        info "✅ Basic database connectivity OK"
-        local diag_out
-        if diag_out=$(psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -A -F '|' -c "$sql_diag" 2>/dev/null); then
-            info "   DB diagnostic: $diag_out"
+    local max_attempts=5
+    local attempt=1
+
+    while [ $attempt -le $max_attempts ]; do
+        info "Database connection attempt $attempt/$max_attempts"
+
+        if psql -v ON_ERROR_STOP=1 -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "SELECT 1;" > /dev/null 2>&1; then
+            info "✅ Database connection successful"
+
+            # Check if persistence tables exist
+            local tables_exist
+            tables_exist=$(psql -h "$POSTGRES_HOST" -p "$POSTGRES_PORT" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "
+                SELECT COUNT(*) FROM information_schema.tables
+                WHERE table_name IN ('geoserver_workspaces', 'geoserver_datastores', 'geoserver_layers')
+            " 2>/dev/null | tr -d ' ' || echo "0")
+
+            if [ "$tables_exist" -eq 3 ]; then
+                info "✅ All persistence tables found"
+            else
+                warn "⚠️ Only $tables_exist/3 persistence tables found - may need migration"
+            fi
+            return 0
         else
-            warn "   Could not fetch extended diagnostics"
+            warn "Database connection failed, attempt $attempt/$max_attempts"
+            if [ $attempt -lt $max_attempts ]; then
+                sleep $((attempt * 2))  # Progressive backoff
+            fi
         fi
-    else
-        error "❌ Database connection failed (host=$POSTGRES_HOST port=$POSTGRES_PORT db=$POSTGRES_DB user=$POSTGRES_USER)"
-        return 1
-    fi
+        attempt=$((attempt + 1))
+    done
+
+    error "❌ Database connection failed after $max_attempts attempts"
+    return 1
 }
 
 # Get configuration from database
@@ -419,7 +438,32 @@ verify_configuration() {
     fi
 }
 
-# Main execution
+# Guard against running restore on non-empty data_dir
+should_run_restore() {
+    # If data_dir has workspaces but missing expected workspace, run restore
+    if [ -d "/opt/geoserver/data_dir/workspaces" ]; then
+        if [ ! -d "/opt/geoserver/data_dir/workspaces/${WORKSPACE_NAME:-maapallo}" ]; then
+            info "🔄 Workspace directory exists but missing expected workspace - running restore"
+            return 0
+        fi
+
+        # Check if workspace has any actual content
+        local ws_count
+        ws_count=$(find "/opt/geoserver/data_dir/workspaces" -name "*.xml" | wc -l)
+        if [ "$ws_count" -eq 0 ]; then
+            info "🔄 Workspace directory empty - running restore"
+            return 0
+        fi
+
+        info "ℹ️ Workspaces directory appears populated - skipping restore"
+        return 1
+    else
+        info "🔄 No workspaces directory - running restore"
+        return 0
+    fi
+}
+
+# Main execution with guards
 main() {
     info "🚀 Starting enhanced GeoServer initialization..."
     env_summary | while read -r line; do info "$line"; done
@@ -430,10 +474,14 @@ main() {
     # Test database connection
     test_database_connection
 
-    # Restore configuration from database
-    restore_geoserver_configuration
+    # Only run restore if needed
+    if should_run_restore; then
+        restore_geoserver_configuration
+    else
+        info "ℹ️ Skipping configuration restoration (data_dir appears populated)"
+    fi
 
-    # Verify final configuration
+    # Always verify final configuration
     verify_configuration
 
     info "🎉 GeoServer initialization completed successfully!"
