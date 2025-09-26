@@ -278,14 +278,20 @@ jobs:
       # Deploy GeoServer with Persistent Storage
       - name: Deploy GeoServer Container
         run: |
+          # Debug subscription ID
+          echo "Subscription ID length: ${#AZURE_SUBSCRIPTION_ID}"
+          if [ -z "$AZURE_SUBSCRIPTION_ID" ]; then
+            echo "ERROR: AZURE_SUBSCRIPTION_ID is empty or not set"
+            exit 1
+          fi
+
           # Ensure we're using the correct subscription
           echo "Current subscription: $(az account show --query id -o tsv)"
-          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          az account set --subscription "$AZURE_SUBSCRIPTION_ID"
 
           # Create Azure Files storage account and file share if not exists
           STORAGE_ACCOUNT="maapallostorageacct"
           FILE_SHARE="geoserver-data"
-
           echo "Creating storage account for persistent data..."
           if ! az storage account show --name "$STORAGE_ACCOUNT" --resource-group ${{ env.RESOURCE_GROUP }} >/dev/null 2>&1; then
             az storage account create \
@@ -361,6 +367,8 @@ jobs:
             --azure-file-account-key "$STORAGE_KEY" \
             --azure-file-share-name "$FILE_SHARE" \
             --azure-file-mount-path "/opt/geoserver/data_dir"
+        env:
+          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       - name: Update GeoServer container (refresh PROXY_BASE_URL)
         if: always()
