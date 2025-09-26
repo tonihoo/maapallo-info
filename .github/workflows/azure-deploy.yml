@@ -285,6 +285,10 @@ jobs:
             exit 1
           fi
 
+          # List available subscriptions to debug permissions
+          echo "Available subscriptions:"
+          az account list --output table
+
           # Ensure we're using the correct subscription
           echo "Current subscription: $(az account show --query id -o tsv)"
           az account set --subscription "$AZURE_SUBSCRIPTION_ID"
@@ -293,6 +297,8 @@ jobs:
           STORAGE_ACCOUNT="maapallostorageacct"
           FILE_SHARE="geoserver-data"
           echo "Creating storage account for persistent data..."
+          # Ensure subscription is set before each Azure CLI command
+          az account set --subscription "$AZURE_SUBSCRIPTION_ID"
           if ! az storage account show --name "$STORAGE_ACCOUNT" --resource-group ${{ env.RESOURCE_GROUP }} >/dev/null 2>&1; then
             az storage account create \
               --name "$STORAGE_ACCOUNT" \
@@ -303,6 +309,7 @@ jobs:
           fi
 
           # Get storage account key
+          az account set --subscription "$AZURE_SUBSCRIPTION_ID"
           STORAGE_KEY=$(az storage account keys list \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --account-name "$STORAGE_ACCOUNT" \
@@ -318,9 +325,11 @@ jobs:
           fi
 
           # Get managed identity details
+          az account set --subscription "$AZURE_SUBSCRIPTION_ID"
           IDENTITY_ID=$(az identity show --name maapallo-container-identity --resource-group ${{ env.RESOURCE_GROUP }} --query id -o tsv)
 
           # Check if GeoServer container app exists
+          az account set --subscription "$AZURE_SUBSCRIPTION_ID"
           if az containerapp show --name maapallo-geoserver --resource-group ${{ env.RESOURCE_GROUP }} >/dev/null 2>&1; then
             echo "Updating existing GeoServer container with persistent storage..."
 
@@ -335,6 +344,7 @@ jobs:
           fi
 
           echo "Creating GeoServer container with persistent storage..."
+          az account set --subscription "$AZURE_SUBSCRIPTION_ID"
           az containerapp create \
             --name maapallo-geoserver \
             --resource-group ${{ env.RESOURCE_GROUP }} \
