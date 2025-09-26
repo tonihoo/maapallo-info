@@ -300,11 +300,18 @@ jobs:
 
           # List available subscriptions to debug permissions
           echo "Available subscriptions:"
-          az account list --output table --subscription "$SUBSCRIPTION"
+          az account list --output table
 
           # Ensure we're using the correct subscription (explicit)
           echo "Setting CLI subscription context to $SUBSCRIPTION"
           az account set --subscription "$SUBSCRIPTION"
+
+          CURRENT_SUB=$(az account show --query id -o tsv)
+          echo "Current subscription after set: $CURRENT_SUB"
+          if [ "$CURRENT_SUB" != "$SUBSCRIPTION" ]; then
+            echo "ERROR: Failed to switch to subscription $SUBSCRIPTION" >&2
+            exit 1
+          fi
 
           # Create Azure Files storage account and file share if not exists
           STORAGE_ACCOUNT="maapallostorageacct"
