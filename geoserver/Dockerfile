@@ -1,67 +1,47 @@
 # GeoServer Docker Configuration for Maapallo GIS
 FROM kartoza/geoserver:2.24.0
 
-# Base (non-secret) environment defaults. Secrets (admin password, DB creds) are provided at runtime via deployment.
-ENV GEOSERVER_DATA_DIR=/opt/geoserver/data_dir
-ENV GEOSERVER_CSRF_DISABLED=true
-ENV GEOSERVER_CSRF_WHITELIST=localhost:8080,127.0.0.1:8080
+# Base (non-secret) env. Real secrets come from deployment.
+ENV GEOSERVER_DATA_DIR=/opt/geoserver/data_dir \
+    GEOSERVER_CSRF_DISABLED=true \
+    GEOSERVER_CSRF_WHITELIST=localhost:8080,127.0.0.1:8080 \
+    JAVA_OPTS="-Xms512m -Xmx1024m -DGEOSERVER_CSRF_DISABLED=true -Dorg.geotools.referencing.forceXY=true"
 
-# Do NOT bake credentials in the image. Expect runtime env vars:
-#   GEOSERVER_ADMIN_USER (default: admin if omitted)
-#   GEOSERVER_ADMIN_PASSWORD
-#   POSTGRES_HOST / POSTGRES_PORT / POSTGRES_DB / POSTGRES_USER / POSTGRES_PASSWORD
-#   PROXY_BASE_URL
-
-# Performance optimizations and proxy configuration
-ENV JAVA_OPTS="-Xms512m -Xmx1024m -DGEOSERVER_CSRF_DISABLED=true -Dorg.geotools.referencing.forceXY=true"
-
-# Install additional tools as root, then copy our scripts
 USER root
 
-# Install GDAL and PostgreSQL client
+# Install tools (single layer)
 RUN apt-get update && \
-    apt-get install -y \
+    apt-get install -y --no-install-recommends \
     gdal-bin \
     postgresql-client \
     curl \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create uploads directory
-RUN mkdir -p /opt/geoserver/uploads
-
-# Copy scripts and configuration files (as root)
-COPY scripts/import-data.sh /usr/local/bin/import-data.sh
-COPY scripts/init-geoserver.sh /docker-entrypoint-geoserver.d/init-geoserver.sh
-COPY scripts/00-proxy-base.sh /docker-entrypoint-geoserver.d/00-proxy-base.sh
-COPY scripts/restore-config.sh /docker-entrypoint-geoserver.d/10-restore-config.sh
-
-# Install additional packages as root
-RUN apt-get update && \
-    apt-get install -y postgresql-client curl jq && \
+    jq \
+    ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
-# Make scripts executable (as root, before switching user)
-RUN chmod +x /usr/local/bin/import-data.sh \
-    && chmod +x /docker-entrypoint-geoserver.d/init-geoserver.sh \
-    && chmod +x /docker-entrypoint-geoserver.d/00-proxy-base.sh \
-    && chmod +x /docker-entrypoint-geoserver.d/10-restore-config.sh
+# Create uploads dir
+RUN mkdir -p /opt/geoserver/uploads
 
-# Ensure proper ownership of GeoServer directories
-RUN mkdir -p /opt/geoserver/data_dir && \
-    chown -R geoserver:geoserver /opt/geoserver/data_dir
-
-# Switch to geoserver user only at the end
-USER geoserver
-
-# Copy restore configuration script
+# Copy scripts once
+COPY scripts/import-data.sh /usr/local/bin/import-data.sh
+COPY scripts/00-proxy-base.sh /docker-entrypoint-geoserver.d/00-proxy-base.sh
+COPY scripts/init-geoserver.sh /docker-entrypoint-geoserver.d/init-geoserver.sh
 COPY scripts/restore-config.sh /docker-entrypoint-geoserver.d/10-restore-config.sh
-RUN chmod +x /docker-entrypoint-geoserver.d/10-restore-config.sh
 
-# Don't switch back to user - let the base image handle it
+# Permissions + data dir (guard chown if user exists)
+RUN chmod +x /usr/local/bin/import-data.sh && \
+    chmod +x /docker-entrypoint-geoserver.d/*.sh && \
+    mkdir -p /opt/geoserver/data_dir && \
+    if id -u geoserver >/dev/null 2>&1; then \
+    chown -R geoserver:geoserver /opt/geoserver/data_dir /usr/local/bin/import-data.sh /docker-entrypoint-geoserver.d; \
+    else \
+    echo "geoserver user not found in base image; skipping chown"; \
+    fi
 
-# Expose GeoServer port
+# Do not bake credentials; they are injected at deploy time:
+# GEOSERVER_ADMIN_USER / GEOSERVER_ADMIN_PASSWORD / POSTGRES_* / PROXY_BASE_URL
+
 EXPOSE 8080
 
-# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:8080/geoserver/web/ || exit 1
+    CMD curl -fsS http://localhost:8080/geoserver/web/ || exit 1
