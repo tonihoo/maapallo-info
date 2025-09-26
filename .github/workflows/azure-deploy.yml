@@ -27,6 +27,9 @@ jobs:
   build-and-deploy:
     name: Build and Deploy GeoServer Stack
     runs-on: ubuntu-latest
+    env:
+      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      AZURE_TENANT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS_NGO).tenantId }}
 
     steps:
       - uses: actions/checkout@v4
@@ -38,8 +41,6 @@ jobs:
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS_NGO }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-          tenant-id: ${{ fromJSON(secrets.AZURE_CREDENTIALS_NGO).tenantId }}
           environment: azurecloud
 
       - name: Verify and select Azure subscription
@@ -47,18 +48,21 @@ jobs:
           echo "Listing available subscriptions (for diagnostics):"
           az account list --output table || true
 
-          if [ -z "${{ secrets.AZURE_SUBSCRIPTION_ID }}" ]; then
+          if [ -z "$AZURE_SUBSCRIPTION_ID" ]; then
             echo "AZURE_SUBSCRIPTION_ID secret not set. Configure it in repo secrets." >&2
             exit 1
           fi
 
-          echo "Setting subscription to ${{ secrets.AZURE_SUBSCRIPTION_ID }}..."
-          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}" || {
+          echo "Setting subscription to $AZURE_SUBSCRIPTION_ID..."
+          az account set --subscription "$AZURE_SUBSCRIPTION_ID" || {
             echo "Failed to select subscription. Ensure the service principal has access and the ID is correct." >&2
             exit 1
           }
 
           echo "Active subscription: $(az account show --query id -o tsv)"
+
+          echo "Configuring CLI defaults for subscription/resource group/location"
+          az configure --defaults subscription="$AZURE_SUBSCRIPTION_ID" group="${{ env.RESOURCE_GROUP }}" location="${{ env.LOCATION }}"
 
       - name: Log in to ACR
         run: |
