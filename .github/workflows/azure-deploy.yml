@@ -296,7 +296,11 @@ jobs:
             exit 1
           fi
 
-          SUBSCRIPTION="$AZURE_SUBSCRIPTION_ID"
+          SUBSCRIPTION=$(echo "$AZURE_SUBSCRIPTION_ID" | tr -d '\n' | tr -d '\r' | xargs)
+
+          echo "Normalized subscription ID length: ${#SUBSCRIPTION}"
+          echo "Normalized subscription first 4: ${SUBSCRIPTION:0:4}"
+          echo "Normalized subscription last 4: ${SUBSCRIPTION: -4}"
 
           # List available subscriptions to debug permissions
           echo "Available subscriptions:"
