@@ -297,6 +297,16 @@ jobs:
           echo "Current subscription: $(az account show --query id -o tsv)"
           az account set --subscription "$AZURE_SUBSCRIPTION_ID"
 
+          # Verify subscription is set correctly
+          echo "Verifying subscription after setting:"
+          CURRENT_SUB=$(az account show --query id -o tsv)
+          echo "Current subscription: $CURRENT_SUB"
+          echo "Expected subscription: $AZURE_SUBSCRIPTION_ID"
+          if [ "$CURRENT_SUB" != "$AZURE_SUBSCRIPTION_ID" ]; then
+            echo "ERROR: Subscription mismatch!"
+            exit 1
+          fi
+
           # Create Azure Files storage account and file share if not exists
           STORAGE_ACCOUNT="maapallostorageacct"
           FILE_SHARE="geoserver-data"
