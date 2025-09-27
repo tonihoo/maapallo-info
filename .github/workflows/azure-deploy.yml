@@ -356,6 +356,7 @@ jobs:
             echo "⚠️ GeoServer provisioning still $STATE after waiting; continuing to apply volume mount." >&2
           fi
 
+          # Apply volume mount using jq to patch the JSON spec
           SPEC_FILE=$(mktemp)
           PATCH_FILE=$(mktemp)
 
@@ -364,45 +365,26 @@ jobs:
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --output json > "$SPEC_FILE"
 
-          python3 <<'PY' "$SPEC_FILE" "$PATCH_FILE" "$IMAGE"
-import json
-import sys
-
-source_path, patch_path, image = sys.argv[1:4]
-
-with open(source_path, "r", encoding="utf-8") as fp:
-    spec = json.load(fp)
-
-properties = spec.setdefault("properties", {})
-template = properties.setdefault("template", {})
-
-template["volumes"] = [
-    {
-        "name": "geoserver-volume",
-        "storageType": "AzureFile",
-        "storageName": "geoserver-data"
-    }
-]
-
-containers = template.setdefault("containers", [])
-if containers:
-    container = containers[0]
-else:
-    container = {"name": "geoserver"}
-    containers.append(container)
-
-container.setdefault("name", "geoserver")
-container["image"] = image
-container["volumeMounts"] = [
-    {
-        "volumeName": "geoserver-volume",
-        "mountPath": "/opt/geoserver/data_dir"
-    }
-]
-
-with open(patch_path, "w", encoding="utf-8") as fp:
-    json.dump(spec, fp)
-PY
+          jq --arg image "$IMAGE" '
+            .properties.template.volumes = [
+              {
+                "name": "geoserver-volume",
+                "storageType": "AzureFile",
+                "storageName": "geoserver-data"
+              }
+            ] |
+            .properties.template.containers |= (
+              if length > 0 then .
+              else [{"name": "geoserver"}]
+            end) |
+            .properties.template.containers[0].volumeMounts = [
+              {
+                "volumeName": "geoserver-volume",
+                "mountPath": "/opt/geoserver/data_dir"
+              }
+            ] |
+            .properties.template.containers[0].image = $image
+          ' "$SPEC_FILE" > "$PATCH_FILE"
 
           az containerapp update \
             --name "$APP_NAME" \
