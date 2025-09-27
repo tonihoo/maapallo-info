@@ -321,21 +321,19 @@ jobs:
           STORAGE_ACCOUNT="maapallostorageacct"
           FILE_SHARE="geoserver-data"
           echo "Creating storage account for persistent data..."
-          if ! az storage account show --name "$STORAGE_ACCOUNT" --resource-group ${{ env.RESOURCE_GROUP }} --subscription "$SUBSCRIPTION" >/dev/null 2>&1; then
+          if ! az storage account show --name "$STORAGE_ACCOUNT" --resource-group ${{ env.RESOURCE_GROUP }} >/dev/null 2>&1; then
             az storage account create \
               --name "$STORAGE_ACCOUNT" \
               --resource-group ${{ env.RESOURCE_GROUP }} \
               --location ${{ env.LOCATION }} \
               --sku Standard_LRS \
-              --kind StorageV2 \
-              --subscription "$SUBSCRIPTION"
+              --kind StorageV2
           fi
 
           # Get storage account key
           STORAGE_KEY=$(az storage account keys list \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --account-name "$STORAGE_ACCOUNT" \
-            --subscription "$SUBSCRIPTION" \
             --query "[0].value" -o tsv)
 
           # Create file share if not exists
@@ -348,10 +346,10 @@ jobs:
           fi
 
           # Get managed identity details
-          IDENTITY_ID=$(az identity show --name maapallo-container-identity --resource-group ${{ env.RESOURCE_GROUP }} --subscription "$SUBSCRIPTION" --query id -o tsv)
+          IDENTITY_ID=$(az identity show --name maapallo-container-identity --resource-group ${{ env.RESOURCE_GROUP }} --query id -o tsv)
 
           # Check if GeoServer container app exists
-          if az containerapp show --name maapallo-geoserver --resource-group ${{ env.RESOURCE_GROUP }} --subscription "$SUBSCRIPTION" >/dev/null 2>&1; then
+          if az containerapp show --name maapallo-geoserver --resource-group ${{ env.RESOURCE_GROUP }} >/dev/null 2>&1; then
             echo "Updating existing GeoServer container with persistent storage..."
 
             # Delete and recreate to add volume (Container Apps doesn't support volume updates)
@@ -359,7 +357,6 @@ jobs:
             az containerapp delete \
               --name maapallo-geoserver \
               --resource-group ${{ env.RESOURCE_GROUP }} \
-              --subscription "$SUBSCRIPTION" \
               --yes
 
             sleep 30
@@ -393,7 +390,6 @@ jobs:
               "GEOSERVER_CSRF_DISABLED=true" \
               "PERSIST_RESTORE_LOG=1" \
               "DEBUG_RESTORE=0" \
-            --subscription "$SUBSCRIPTION" \
             --azure-file-volume-name "geoserver-data-volume" \
             --azure-file-account-name "$STORAGE_ACCOUNT" \
             --azure-file-account-key "$STORAGE_KEY" \
