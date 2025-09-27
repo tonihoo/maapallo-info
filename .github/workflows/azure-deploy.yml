@@ -63,6 +63,7 @@ jobs:
           echo "Subscription SHA1: $(printf '%s' "$CLEAN_SUBSCRIPTION_ID" | shasum | cut -d' ' -f1)"
 
           echo "AZ_SUBSCRIPTION_ID=$CLEAN_SUBSCRIPTION_ID" >> $GITHUB_ENV
+          echo "AZURE_SUBSCRIPTION_ID=$CLEAN_SUBSCRIPTION_ID" >> $GITHUB_ENV
 
       - name: Confirm CLI subscription context
         run: |
