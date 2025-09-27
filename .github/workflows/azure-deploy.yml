@@ -94,6 +94,15 @@ jobs:
           echo "Configuring CLI defaults for subscription/resource group/location"
           az configure --defaults subscription="$AZ_SUBSCRIPTION_ID" group="${{ env.RESOURCE_GROUP }}" location="${{ env.LOCATION }}"
 
+      - name: Debug identity context
+        run: |
+          echo "Subscription / Identity details:"
+          az account show --query '{id:id, name:name, tenantId:tenantId, user:user}'
+          echo "Registered providers (not Registered):"
+          az provider list --query "[?registrationState!='Registered'].{Namespace:namespace,State:registrationState}" -o table || true
+          echo "Resource group status:"
+          az group show --name ${{ env.RESOURCE_GROUP }} --query '{id:id, location:location, provisioning:properties.provisioningState}' || true
+
       - name: Log in to ACR
         run: |
           ACR_NAME="$(echo "${{ env.ACR_REGISTRY }}" | cut -d'.' -f1)"
