@@ -40,10 +40,7 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v2
         with:
-          client-id: ${{ fromJSON(secrets.AZURE_CREDENTIALS_NGO).clientId }}
-          tenant-id: ${{ fromJSON(secrets.AZURE_CREDENTIALS_NGO).tenantId }}
-          client-secret: ${{ fromJSON(secrets.AZURE_CREDENTIALS_NGO).clientSecret }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          creds: ${{ secrets.AZURE_CREDENTIALS_NGO }}
           environment: azurecloud
 
       - name: Verify and select Azure subscription
