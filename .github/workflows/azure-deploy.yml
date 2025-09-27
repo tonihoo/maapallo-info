@@ -45,9 +45,9 @@ jobs:
 
       - name: Ensure subscription context
         run: |
-          az account set --subscription "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          az account set --subscription "${{ env.AZURE_SUBSCRIPTION_ID }}"
           az provider register --namespace Microsoft.Storage --wait
-          az configure --defaults subscription="${{ secrets.AZURE_SUBSCRIPTION_ID }}" group="${{ env.RESOURCE_GROUP }}" location="${{ env.LOCATION }}"
+          az configure --defaults subscription="${{ env.AZURE_SUBSCRIPTION_ID }}" group="${{ env.RESOURCE_GROUP }}" location="${{ env.LOCATION }}"
 
       - name: Log in to ACR
         run: |
