@@ -296,11 +296,20 @@ jobs:
             exit 1
           fi
 
-          SUBSCRIPTION=$(echo "$AZURE_SUBSCRIPTION_ID" | tr -d '\n' | tr -d '\r' | xargs)
+          SUBSCRIPTION=$(az account show --query id -o tsv | tr -d '\n' | tr -d '\r' | xargs)
 
-          echo "Normalized subscription ID length: ${#SUBSCRIPTION}"
-          echo "Normalized subscription first 4: ${SUBSCRIPTION:0:4}"
-          echo "Normalized subscription last 4: ${SUBSCRIPTION: -4}"
+          if [ -z "$SUBSCRIPTION" ]; then
+            echo "ERROR: Unable to resolve subscription ID from az account show" >&2
+            exit 1
+          fi
+
+          echo "Resolved subscription ID length: ${#SUBSCRIPTION}"
+          echo "Resolved subscription first 4: ${SUBSCRIPTION:0:4}"
+          echo "Resolved subscription last 4: ${SUBSCRIPTION: -4}"
+          SUBSCRIPTION_SHA=$(printf "%s" "$SUBSCRIPTION" | shasum | cut -d' ' -f1)
+          EXPECTED_SHA=$(printf "%s" "$AZURE_SUBSCRIPTION_ID" | tr -d '\n' | tr -d '\r' | xargs | shasum | cut -d' ' -f1)
+          echo "Resolved subscription SHA1: $SUBSCRIPTION_SHA"
+          echo "Secret subscription SHA1:   $EXPECTED_SHA"
 
           # List available subscriptions to debug permissions
           echo "Available subscriptions:"
@@ -312,6 +321,8 @@ jobs:
 
           CURRENT_SUB=$(az account show --query id -o tsv)
           echo "Current subscription after set: $CURRENT_SUB"
+          CURRENT_SHA=$(printf "%s" "$CURRENT_SUB" | shasum | cut -d' ' -f1)
+          echo "Current subscription SHA1: $CURRENT_SHA"
           if [ "$CURRENT_SUB" != "$SUBSCRIPTION" ]; then
             echo "ERROR: Failed to switch to subscription $SUBSCRIPTION" >&2
             exit 1
