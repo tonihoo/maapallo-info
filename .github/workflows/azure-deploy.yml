@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - geoserver
   workflow_dispatch: # Allow manual triggering
 
 env:
@@ -78,6 +77,10 @@ jobs:
           docker push ${{ env.ACR_REGISTRY }}/maapallo-geoserver:${{ github.sha }}
           docker tag ${{ env.ACR_REGISTRY }}/maapallo-geoserver:${{ github.sha }} ${{ env.ACR_REGISTRY }}/maapallo-geoserver:latest
           docker push ${{ env.ACR_REGISTRY }}/maapallo-geoserver:latest
+
+      - name: Ensure containerapp CLI extension
+        run: |
+          az extension add --name containerapp --upgrade
 
       # Deploy infrastructure using Azure Container Apps
       - name: Deploy Container Apps Environment
@@ -273,7 +276,7 @@ jobs:
             --name maapallo-geoserver \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --image ${{ env.ACR_REGISTRY }}/maapallo-geoserver:${{ github.sha }} \
-            --storage-mounts "storageName=geoserver-data,mountPath=/opt/geoserver/data_dir,accessMode=ReadWrite" \
+            --storage-mounts "name=geoserver-data,mountPath=/opt/geoserver/data_dir,accessMode=ReadWrite" \
             --set-env-vars \
               GEOSERVER_ADMIN_USER=${{ secrets.GEOSERVER_ADMIN_USER }} \
               GEOSERVER_ADMIN_PASSWORD=${{ secrets.GEOSERVER_ADMIN_PASSWORD }} \
