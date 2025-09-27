@@ -28,7 +28,6 @@ jobs:
     name: Build and Deploy GeoServer Stack
     runs-on: ubuntu-latest
     env:
-      AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       AZURE_TENANT_ID: ${{ fromJSON(secrets.AZURE_CREDENTIALS_NGO).tenantId }}
 
     steps:
@@ -43,18 +42,38 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS_NGO }}
           environment: azurecloud
 
+      - name: Capture Azure subscription
+        id: capture-subscription
+        run: |
+          SUBSCRIPTION_ID=$(az account show --query id -o tsv | tr -d '\r\n')
+          if [ -z "$SUBSCRIPTION_ID" ]; then
+            echo "ERROR: Failed to determine subscription ID from az account show" >&2
+            exit 1
+          fi
+
+          echo "Normalized subscription ID: $SUBSCRIPTION_ID"
+          echo "Subscription SHA1: $(printf '%s' "$SUBSCRIPTION_ID" | shasum | cut -d' ' -f1)"
+
+          echo "AZ_SUBSCRIPTION_ID=$SUBSCRIPTION_ID" >> $GITHUB_ENV
+
+      - name: Confirm CLI subscription context
+        run: |
+          echo "Using subscription: $AZ_SUBSCRIPTION_ID"
+          az account set --subscription "$AZ_SUBSCRIPTION_ID"
+          az account show --query '{id:id, isDefault:isDefault, name:name}'
+
       - name: Verify and select Azure subscription
         run: |
           echo "Listing available subscriptions (for diagnostics):"
           az account list --output table || true
 
-          if [ -z "$AZURE_SUBSCRIPTION_ID" ]; then
-            echo "AZURE_SUBSCRIPTION_ID secret not set. Configure it in repo secrets." >&2
+          if [ -z "$AZ_SUBSCRIPTION_ID" ]; then
+            echo "AZ_SUBSCRIPTION_ID not captured. Ensure capture-subscription step ran." >&2
             exit 1
           fi
 
-          echo "Setting subscription to $AZURE_SUBSCRIPTION_ID..."
-          az account set --subscription "$AZURE_SUBSCRIPTION_ID" || {
+          echo "Setting subscription to $AZ_SUBSCRIPTION_ID..."
+          az account set --subscription "$AZ_SUBSCRIPTION_ID" || {
             echo "Failed to select subscription. Ensure the service principal has access and the ID is correct." >&2
             exit 1
           }
@@ -62,7 +81,7 @@ jobs:
           echo "Active subscription: $(az account show --query id -o tsv)"
 
           echo "Configuring CLI defaults for subscription/resource group/location"
-          az configure --defaults subscription="$AZURE_SUBSCRIPTION_ID" group="${{ env.RESOURCE_GROUP }}" location="${{ env.LOCATION }}"
+          az configure --defaults subscription="$AZ_SUBSCRIPTION_ID" group="${{ env.RESOURCE_GROUP }}" location="${{ env.LOCATION }}"
 
       - name: Log in to ACR
         run: |
@@ -284,49 +303,28 @@ jobs:
 
       # Deploy GeoServer with Persistent Storage
       - name: Deploy GeoServer Container
-        env:
-          AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
         run: |
           # Debug subscription ID
-          echo "Subscription ID length: ${#AZURE_SUBSCRIPTION_ID}"
-          echo "Subscription ID first 4 chars: ${AZURE_SUBSCRIPTION_ID:0:4}"
-          echo "Subscription ID last 4 chars: ${AZURE_SUBSCRIPTION_ID: -4}"
-          if [ -z "$AZURE_SUBSCRIPTION_ID" ]; then
-            echo "ERROR: AZURE_SUBSCRIPTION_ID is empty or not set"
+          echo "Using subscription ID from capture step: $AZ_SUBSCRIPTION_ID"
+
+          if [ -z "$AZ_SUBSCRIPTION_ID" ]; then
+            echo "ERROR: AZ_SUBSCRIPTION_ID not available" >&2
             exit 1
           fi
 
-          SUBSCRIPTION=$(az account show --query id -o tsv | tr -d '\n' | tr -d '\r' | xargs)
-
-          if [ -z "$SUBSCRIPTION" ]; then
-            echo "ERROR: Unable to resolve subscription ID from az account show" >&2
-            exit 1
+          # Double-check CLI context
+          ACTIVE_SUB=$(az account show --query id -o tsv)
+          echo "Active subscription from az account show: $ACTIVE_SUB"
+          if [ "$ACTIVE_SUB" != "$AZ_SUBSCRIPTION_ID" ]; then
+            echo "Mismatch detected; forcing subscription context" >&2
+            az account set --subscription "$AZ_SUBSCRIPTION_ID"
           fi
-
-          echo "Resolved subscription ID length: ${#SUBSCRIPTION}"
-          echo "Resolved subscription first 4: ${SUBSCRIPTION:0:4}"
-          echo "Resolved subscription last 4: ${SUBSCRIPTION: -4}"
-          SUBSCRIPTION_SHA=$(printf "%s" "$SUBSCRIPTION" | shasum | cut -d' ' -f1)
-          EXPECTED_SHA=$(printf "%s" "$AZURE_SUBSCRIPTION_ID" | tr -d '\n' | tr -d '\r' | xargs | shasum | cut -d' ' -f1)
-          echo "Resolved subscription SHA1: $SUBSCRIPTION_SHA"
-          echo "Secret subscription SHA1:   $EXPECTED_SHA"
 
           # List available subscriptions to debug permissions
           echo "Available subscriptions:"
           az account list --output table
 
-          # Ensure we're using the correct subscription (explicit)
-          echo "Setting CLI subscription context to $SUBSCRIPTION"
-          az account set --subscription "$SUBSCRIPTION"
-
-          CURRENT_SUB=$(az account show --query id -o tsv)
-          echo "Current subscription after set: $CURRENT_SUB"
-          CURRENT_SHA=$(printf "%s" "$CURRENT_SUB" | shasum | cut -d' ' -f1)
-          echo "Current subscription SHA1: $CURRENT_SHA"
-          if [ "$CURRENT_SUB" != "$SUBSCRIPTION" ]; then
-            echo "ERROR: Failed to switch to subscription $SUBSCRIPTION" >&2
-            exit 1
-          fi
+          SUBSCRIPTION="$AZ_SUBSCRIPTION_ID"
 
           # Create Azure Files storage account and file share if not exists
           STORAGE_ACCOUNT="maapallostorageacct"
