@@ -356,11 +356,56 @@ jobs:
             echo "⚠️ GeoServer provisioning still $STATE after waiting; continuing to apply volume mount." >&2
           fi
 
+          SPEC_FILE=$(mktemp)
+          az containerapp show \
+            --name "$APP_NAME" \
+            --resource-group ${{ env.RESOURCE_GROUP }} > "$SPEC_FILE"
+
+          python3 <<'PY' "$SPEC_FILE" "$IMAGE"
+import json
+import sys
+
+spec_path, image = sys.argv[1:3]
+
+with open(spec_path, "r") as fh:
+    spec = json.load(fh)
+
+properties = spec.setdefault("properties", {})
+template = properties.setdefault("template", {})
+template["volumes"] = [
+    {
+        "name": "geoserver-volume",
+        "storageType": "AzureFile",
+        "storageName": "geoserver-data"
+    }
+]
+
+containers = template.setdefault("containers", [])
+if containers:
+    container = containers[0]
+else:
+    container = {}
+    containers.append(container)
+
+container.setdefault("name", "geoserver")
+container["image"] = image
+container["volumeMounts"] = [
+    {
+        "volumeName": "geoserver-volume",
+        "mountPath": "/opt/geoserver/data_dir"
+    }
+]
+
+with open(spec_path, "w") as fh:
+    json.dump(spec, fh)
+PY
+
           az containerapp update \
             --name "$APP_NAME" \
             --resource-group ${{ env.RESOURCE_GROUP }} \
-            --set properties.template.volumes='[{"name":"geoservervolume","storageType":"AzureFile","storageName":"geoserver-data"}]' \
-            --set properties.template.containers[0].volumeMounts='[{"volumeName":"geoservervolume","mountPath":"/opt/geoserver/data_dir"}]'
+            --yaml "$SPEC_FILE"
+
+          rm -f "$SPEC_FILE"
 
       - name: Update GeoServer container (refresh PROXY_BASE_URL)
         if: always()
