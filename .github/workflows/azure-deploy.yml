@@ -272,11 +272,36 @@ jobs:
 
       - name: Deploy GeoServer Container
         run: |
-          az containerapp update \
+          STORAGE_KEY=$(az storage account keys list \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --account-name maapallostorageacct \
+            --query "[0].value" -o tsv)
+
+          az containerapp env storage set \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ env.CONTAINER_ENV_NAME }} \
+            --storage-name geoserver-data \
+            --access-mode ReadWrite \
+            --azure-file-account-name maapallostorageacct \
+            --azure-file-account-key "$STORAGE_KEY" \
+            --azure-file-share-name geoserver-data
+
+          IDENTITY_ID=$(az identity show --name maapallo-container-identity --resource-group ${{ env.RESOURCE_GROUP }} --query id -o tsv)
+
+          az containerapp create \
             --name maapallo-geoserver \
             --resource-group ${{ env.RESOURCE_GROUP }} \
+            --environment ${{ env.CONTAINER_ENV_NAME }} \
             --image ${{ env.ACR_REGISTRY }}/maapallo-geoserver:${{ github.sha }} \
-            --storage-mounts "name=geoserver-data,mountPath=/opt/geoserver/data_dir,accessMode=ReadWrite" \
+            --target-port 8080 \
+            --ingress external \
+            --cpu 2.0 \
+            --memory 4.0Gi \
+            --min-replicas 1 \
+            --max-replicas 3 \
+            --user-assigned "$IDENTITY_ID" \
+            --registry-identity "$IDENTITY_ID" \
+            --registry-server ${{ env.ACR_REGISTRY }} \
             --set-env-vars \
               GEOSERVER_ADMIN_USER=${{ secrets.GEOSERVER_ADMIN_USER }} \
               GEOSERVER_ADMIN_PASSWORD=${{ secrets.GEOSERVER_ADMIN_PASSWORD }} \
@@ -289,7 +314,9 @@ jobs:
               PROXY_BASE_URL=${{ secrets.PROXY_BASE_URL }} \
               GEOSERVER_CSRF_DISABLED=true \
               PERSIST_RESTORE_LOG=1 \
-              DEBUG_RESTORE=0
+              DEBUG_RESTORE=0 \
+            --storage-mounts "name=geoserver-volume,storageName=geoserver-data,mountPath=/opt/geoserver/data_dir,accessMode=ReadWrite" \
+            --force-replace
 
       - name: Update GeoServer container (refresh PROXY_BASE_URL)
         if: always()
@@ -314,10 +341,20 @@ jobs:
           IDENTITY_ID=$(az identity show --name maapallo-container-identity --resource-group ${{ env.RESOURCE_GROUP }} --query id -o tsv)
           CONTAINER_DOMAIN=$(az containerapp env show --name ${{ env.CONTAINER_ENV_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query properties.defaultDomain -o tsv)
 
-          az containerapp update \
+          az containerapp create \
             --name maapallo-server \
             --resource-group ${{ env.RESOURCE_GROUP }} \
+            --environment ${{ env.CONTAINER_ENV_NAME }} \
             --image ${{ env.ACR_REGISTRY }}/maapallo-server:${{ github.sha }} \
+            --target-port 3003 \
+            --ingress external \
+            --cpu 1.0 \
+            --memory 2.0Gi \
+            --min-replicas 1 \
+            --max-replicas 5 \
+            --user-assigned "$IDENTITY_ID" \
+            --registry-identity "$IDENTITY_ID" \
+            --registry-server ${{ env.ACR_REGISTRY }} \
             --set-env-vars \
               ENVIRONMENT=production \
               JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }} \
@@ -332,8 +369,7 @@ jobs:
               GEOSERVER_USER=admin \
               GEOSERVER_PASSWORD=${{ secrets.GEOSERVER_ADMIN_PASSWORD }} \
               GEOSERVER_WORKSPACE=maapallo \
-            --min-replicas 1 \
-            --max-replicas 5
+            --force-replace
 
       # Deploy Frontend
       - name: Deploy Client Container
@@ -341,17 +377,26 @@ jobs:
           IDENTITY_ID=$(az identity show --name maapallo-container-identity --resource-group ${{ env.RESOURCE_GROUP }} --query id -o tsv)
           ENV_DEFAULT_DOMAIN=$(az containerapp env show --name ${{ env.CONTAINER_ENV_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} --query properties.defaultDomain -o tsv)
 
-          az containerapp update \
+          az containerapp create \
             --name maapallo-client \
             --resource-group ${{ env.RESOURCE_GROUP }} \
+            --environment ${{ env.CONTAINER_ENV_NAME }} \
             --image ${{ env.ACR_REGISTRY }}/maapallo-client:${{ github.sha }} \
+            --target-port 8080 \
+            --ingress external \
+            --cpu 0.5 \
+            --memory 1.0Gi \
+            --min-replicas 1 \
+            --max-replicas 3 \
+            --user-assigned "$IDENTITY_ID" \
+            --registry-identity "$IDENTITY_ID" \
+            --registry-server ${{ env.ACR_REGISTRY }} \
             --set-env-vars \
               API_SERVER_URL=https://maapallo-server.${ENV_DEFAULT_DOMAIN} \
               GEOSERVER_URL=https://maapallo-geoserver.${ENV_DEFAULT_DOMAIN}/geoserver \
               BASIC_AUTH_USERNAME=${{ secrets.BASIC_AUTH_USERNAME }} \
               BASIC_AUTH_PASSWORD=${{ secrets.BASIC_AUTH_PASSWORD }} \
-            --min-replicas 1 \
-            --max-replicas 3
+            --force-replace
 
       # Run initial setup
       - name: Initialize Application
