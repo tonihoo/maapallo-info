@@ -270,21 +270,52 @@ jobs:
             -d ${{ secrets.DB_NAME }} \
             -c "CREATE EXTENSION IF NOT EXISTS postgis; CREATE EXTENSION IF NOT EXISTS postgis_topology; CREATE EXTENSION IF NOT EXISTS pg_stat_statements;" || echo "PostGIS extensions may already exist"
 
-      - name: Deploy GeoServer Container
+      - name: Ensure GeoServer storage resources
         run: |
+          set -euo pipefail
+
+          STORAGE_ACCOUNT="maapallostorageacct"
+          FILE_SHARE="geoserver-data"
+
+          echo "Ensuring storage account $STORAGE_ACCOUNT exists..."
+          if ! az storage account show --name "$STORAGE_ACCOUNT" --resource-group ${{ env.RESOURCE_GROUP }} >/dev/null 2>&1; then
+            az storage account create \
+              --name "$STORAGE_ACCOUNT" \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --location ${{ env.LOCATION }} \
+              --sku Standard_LRS \
+              --kind StorageV2 \
+              --min-tls-version TLS1_2 \
+              --allow-blob-public-access false
+          fi
+
+          echo "Fetching storage access key..."
           STORAGE_KEY=$(az storage account keys list \
             --resource-group ${{ env.RESOURCE_GROUP }} \
-            --account-name maapallostorageacct \
+            --account-name "$STORAGE_ACCOUNT" \
             --query "[0].value" -o tsv)
+          echo "::add-mask::$STORAGE_KEY"
 
+          echo "Ensuring file share $FILE_SHARE exists..."
+          az storage share create \
+            --name "$FILE_SHARE" \
+            --account-name "$STORAGE_ACCOUNT" \
+            --account-key "$STORAGE_KEY" \
+            --quota 100 >/dev/null
+
+          echo "Registering storage with Container Apps environment..."
           az containerapp env storage set \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --name ${{ env.CONTAINER_ENV_NAME }} \
             --storage-name geoserver-data \
             --access-mode ReadWrite \
-            --azure-file-account-name maapallostorageacct \
+            --azure-file-account-name "$STORAGE_ACCOUNT" \
             --azure-file-account-key "$STORAGE_KEY" \
-            --azure-file-share-name geoserver-data
+            --azure-file-share-name "$FILE_SHARE"
+
+      - name: Deploy GeoServer Container
+        run: |
+          set -euo pipefail
 
           IDENTITY_ID=$(az identity show --name maapallo-container-identity --resource-group ${{ env.RESOURCE_GROUP }} --query id -o tsv)
 
@@ -302,19 +333,19 @@ jobs:
             --user-assigned "$IDENTITY_ID" \
             --registry-identity "$IDENTITY_ID" \
             --registry-server ${{ env.ACR_REGISTRY }} \
-            --set-env-vars \
-              GEOSERVER_ADMIN_USER=${{ secrets.GEOSERVER_ADMIN_USER }} \
-              GEOSERVER_ADMIN_PASSWORD=${{ secrets.GEOSERVER_ADMIN_PASSWORD }} \
-              POSTGRES_HOST=${{ env.DB_SERVER_NAME }}.postgres.database.azure.com \
-              POSTGRES_PORT=5432 \
-              POSTGRES_DB=${{ secrets.DB_NAME }} \
-              POSTGRES_USER=${{ secrets.DB_ADMIN_USER }} \
-              POSTGRES_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }} \
-              POSTGRES_SSLMODE=require \
-              PROXY_BASE_URL=${{ secrets.PROXY_BASE_URL }} \
-              GEOSERVER_CSRF_DISABLED=true \
-              PERSIST_RESTORE_LOG=1 \
-              DEBUG_RESTORE=0 \
+            --env-vars \
+              GEOSERVER_ADMIN_USER="${{ secrets.GEOSERVER_ADMIN_USER }}" \
+              GEOSERVER_ADMIN_PASSWORD="${{ secrets.GEOSERVER_ADMIN_PASSWORD }}" \
+              POSTGRES_HOST="${{ env.DB_SERVER_NAME }}.postgres.database.azure.com" \
+              POSTGRES_PORT="5432" \
+              POSTGRES_DB="${{ secrets.DB_NAME }}" \
+              POSTGRES_USER="${{ secrets.DB_ADMIN_USER }}" \
+              POSTGRES_PASSWORD="${{ secrets.DB_ADMIN_PASSWORD }}" \
+              POSTGRES_SSLMODE="require" \
+              PROXY_BASE_URL="${{ secrets.PROXY_BASE_URL }}" \
+              GEOSERVER_CSRF_DISABLED="true" \
+              PERSIST_RESTORE_LOG="1" \
+              DEBUG_RESTORE="0" \
             --storage-mounts "name=geoserver-volume,storageName=geoserver-data,mountPath=/opt/geoserver/data_dir,accessMode=ReadWrite" \
             --force-replace
 
@@ -355,20 +386,20 @@ jobs:
             --user-assigned "$IDENTITY_ID" \
             --registry-identity "$IDENTITY_ID" \
             --registry-server ${{ env.ACR_REGISTRY }} \
-            --set-env-vars \
-              ENVIRONMENT=production \
-              JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }} \
-              ADMIN_USERNAME=admin \
-              ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }} \
-              DB_NAME=${{ secrets.DB_NAME }} \
-              DB_ADMIN_USER=${{ secrets.DB_ADMIN_USER }} \
-              DB_ADMIN_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }} \
-              CESIUM_ION_TOKEN=${{ secrets.CESIUM_ION_TOKEN }} \
-              GEOSERVER_URL=https://maapallo-geoserver.$CONTAINER_DOMAIN \
-              GEOSERVER_INTERNAL_URL=http://maapallo-geoserver/geoserver \
-              GEOSERVER_USER=admin \
-              GEOSERVER_PASSWORD=${{ secrets.GEOSERVER_ADMIN_PASSWORD }} \
-              GEOSERVER_WORKSPACE=maapallo \
+            --env-vars \
+              ENVIRONMENT="production" \
+              JWT_SECRET_KEY="${{ secrets.JWT_SECRET_KEY }}" \
+              ADMIN_USERNAME="admin" \
+              ADMIN_PASSWORD="${{ secrets.ADMIN_PASSWORD }}" \
+              DB_NAME="${{ secrets.DB_NAME }}" \
+              DB_ADMIN_USER="${{ secrets.DB_ADMIN_USER }}" \
+              DB_ADMIN_PASSWORD="${{ secrets.DB_ADMIN_PASSWORD }}" \
+              CESIUM_ION_TOKEN="${{ secrets.CESIUM_ION_TOKEN }}" \
+              GEOSERVER_URL="https://maapallo-geoserver.$CONTAINER_DOMAIN" \
+              GEOSERVER_INTERNAL_URL="http://maapallo-geoserver/geoserver" \
+              GEOSERVER_USER="admin" \
+              GEOSERVER_PASSWORD="${{ secrets.GEOSERVER_ADMIN_PASSWORD }}" \
+              GEOSERVER_WORKSPACE="maapallo" \
             --force-replace
 
       # Deploy Frontend
@@ -391,11 +422,11 @@ jobs:
             --user-assigned "$IDENTITY_ID" \
             --registry-identity "$IDENTITY_ID" \
             --registry-server ${{ env.ACR_REGISTRY }} \
-            --set-env-vars \
-              API_SERVER_URL=https://maapallo-server.${ENV_DEFAULT_DOMAIN} \
-              GEOSERVER_URL=https://maapallo-geoserver.${ENV_DEFAULT_DOMAIN}/geoserver \
-              BASIC_AUTH_USERNAME=${{ secrets.BASIC_AUTH_USERNAME }} \
-              BASIC_AUTH_PASSWORD=${{ secrets.BASIC_AUTH_PASSWORD }} \
+            --env-vars \
+              API_SERVER_URL="https://maapallo-server.${ENV_DEFAULT_DOMAIN}" \
+              GEOSERVER_URL="https://maapallo-geoserver.${ENV_DEFAULT_DOMAIN}/geoserver" \
+              BASIC_AUTH_USERNAME="${{ secrets.BASIC_AUTH_USERNAME }}" \
+              BASIC_AUTH_PASSWORD="${{ secrets.BASIC_AUTH_PASSWORD }}" \
             --force-replace
 
       # Run initial setup
