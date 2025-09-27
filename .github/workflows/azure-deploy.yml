@@ -51,14 +51,24 @@ jobs:
             exit 1
           fi
 
-          echo "Normalized subscription ID: $SUBSCRIPTION_ID"
-          echo "Subscription SHA1: $(printf '%s' "$SUBSCRIPTION_ID" | shasum | cut -d' ' -f1)"
+          echo "Normalized subscription ID: '$SUBSCRIPTION_ID'"
+          printf 'Subscription bytes: '
+          printf '%s' "$SUBSCRIPTION_ID" | hexdump -C
 
-          echo "AZ_SUBSCRIPTION_ID=$SUBSCRIPTION_ID" >> $GITHUB_ENV
+          CLEAN_SUBSCRIPTION_ID=$(printf '%s' "$SUBSCRIPTION_ID" | tr -d '\r' | tr -d '\n')
+          echo "Cleaned subscription ID: '$CLEAN_SUBSCRIPTION_ID'"
+          printf 'Cleaned subscription bytes: '
+          printf '%s' "$CLEAN_SUBSCRIPTION_ID" | hexdump -C
+
+          echo "Subscription SHA1: $(printf '%s' "$CLEAN_SUBSCRIPTION_ID" | shasum | cut -d' ' -f1)"
+
+          echo "AZ_SUBSCRIPTION_ID=$CLEAN_SUBSCRIPTION_ID" >> $GITHUB_ENV
 
       - name: Confirm CLI subscription context
         run: |
           echo "Using subscription: $AZ_SUBSCRIPTION_ID"
+          printf 'Captured subscription bytes: '
+          printf '%s' "$AZ_SUBSCRIPTION_ID" | hexdump -C
           az account set --subscription "$AZ_SUBSCRIPTION_ID"
           az account show --query '{id:id, isDefault:isDefault, name:name}'
 
