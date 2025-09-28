@@ -1,11 +1,11 @@
-import { useState } from "react";
-import TileLayer from "ol/layer/Tile";
-import OSM from "ol/source/OSM.js";
-import XYZ from "ol/source/XYZ";
-import WMTS from "ol/source/WMTS";
-import WMTSTileGrid from "ol/tilegrid/WMTS";
-import { get as getProjection } from "ol/proj";
 import { getTopLeft, getWidth } from "ol/extent";
+import TileLayer from "ol/layer/Tile";
+import { get as getProjection } from "ol/proj";
+import OSM from "ol/source/OSM.js";
+import WMTS from "ol/source/WMTS";
+import XYZ from "ol/source/XYZ";
+import WMTSTileGrid from "ol/tilegrid/WMTS";
+import { useState } from "react";
 
 export const BASE_MAPS = {
   satellite: {
@@ -62,15 +62,6 @@ export const BASE_MAPS = {
       });
     },
   },
-  osm: {
-    name: "OpenStreetMap",
-    icon: "🗺️",
-    layer: () =>
-      new TileLayer({
-        source: new OSM(),
-        properties: { name: "osm" },
-      }),
-  },
   topo: {
     name: "Topografinen",
     icon: "🏔️",
@@ -84,7 +75,6 @@ export const BASE_MAPS = {
         properties: { name: "topo" },
       }),
   },
-
   cartoLight: {
     name: "Vaalea",
     icon: "🌕",
@@ -109,6 +99,15 @@ export const BASE_MAPS = {
             '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
         }),
         properties: { name: "carto-dark" },
+      }),
+  },
+  osm: {
+    name: "OpenStreetMap",
+    icon: "🗺️",
+    layer: () =>
+      new TileLayer({
+        source: new OSM(),
+        properties: { name: "osm" },
       }),
   },
 } as const;
