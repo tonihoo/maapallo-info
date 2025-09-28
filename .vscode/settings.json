@@ -26,5 +26,8 @@
   "files.exclude": {
     "**/__pycache__": true,
     "**/*.pyc": true
-  }
+  },
+  "cursorpyright.analysis.diagnosticMode": "workspace",
+  "cursorpyright.analysis.extraPaths": ["./server"],
+  "cursorpyright.analysis.typeCheckingMode": "basic"
 }
