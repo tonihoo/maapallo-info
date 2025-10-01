@@ -1,12 +1,19 @@
-import React from "react";
 import { Typography } from "@mui/material";
 import { BaseMapKey } from "../2d/BaseMapSelector";
 
 interface BaseMapAttributionProps {
   currentBaseMap: BaseMapKey;
+  is3DMode?: boolean;
 }
 
-const getAttributionText = (baseMapKey: BaseMapKey): string => {
+const getAttributionText = (
+  baseMapKey: BaseMapKey,
+  is3DMode: boolean = false
+): string => {
+  if (is3DMode) {
+    return "Imagery from NASA GIBS (Blue Marble), courtesy of NASA EOSDIS Worldview";
+  }
+
   switch (baseMapKey) {
     case "topo":
       return "Map data: © OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap";
@@ -24,8 +31,9 @@ const getAttributionText = (baseMapKey: BaseMapKey): string => {
 
 export function BaseMapAttribution({
   currentBaseMap,
+  is3DMode = false,
 }: BaseMapAttributionProps) {
-  const attributionText = getAttributionText(currentBaseMap);
+  const attributionText = getAttributionText(currentBaseMap, is3DMode);
 
   if (!attributionText) {
     return null;

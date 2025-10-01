@@ -1,41 +1,41 @@
-import { useCallback, useEffect } from "react";
 import {
   Box,
-  Paper,
-  Typography,
   IconButton,
+  Paper,
   Tooltip,
+  Typography,
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-import { Map } from "./components/2d/Map";
-import { FeatureInfo } from "./components/common/FeatureInfo";
-import { AppHeader } from "./components/common/AppHeader";
-import { CookieConsent } from "./components/common/CookieConsent";
-import { BaseMapAttribution } from "./components/common/BaseMapAttribution";
+import { useCallback, useEffect } from "react";
 import { BaseMapKey } from "./components/2d/BaseMapSelector";
+import { Map } from "./components/2d/Map";
+import { AppHeader } from "./components/common/AppHeader";
+import { BaseMapAttribution } from "./components/common/BaseMapAttribution";
+import { CookieConsent } from "./components/common/CookieConsent";
+import { FeatureInfo } from "./components/common/FeatureInfo";
 import { useAppDispatch, useAppSelector } from "./store/hooks";
 import {
-  setSelectedFeatureId,
+  selectCesiumComponent,
+  selectCesiumPreloaded,
+  selectCurrentBaseMap,
+  selectHeaderFooterColor,
+  selectIs3DMode,
+  selectMapFeatures,
+  selectRefreshTrigger,
+  selectSelectedFeatureId,
+} from "./store/selectors";
+import { verifyStoredToken } from "./store/slices/authSlice";
+import { fetchAllFeatures } from "./store/slices/featuresSlice";
+import {
   clearSelectedFeature,
-  toggleMapMode,
-  setCesiumPreloaded,
   setCesiumComponent,
+  setCesiumPreloaded,
   setCurrentBaseMap,
   setLayerVisibility,
+  setSelectedFeatureId,
+  toggleMapMode,
 } from "./store/slices/mapSlice";
-import { fetchAllFeatures } from "./store/slices/featuresSlice";
-import { verifyStoredToken } from "./store/slices/authSlice";
-import {
-  selectSelectedFeatureId,
-  selectIs3DMode,
-  selectCesiumPreloaded,
-  selectCesiumComponent,
-  selectRefreshTrigger,
-  selectMapFeatures,
-  selectHeaderFooterColor,
-  selectCurrentBaseMap,
-} from "./store/selectors";
 import { analytics } from "./utils/analytics";
 
 export function App() {
@@ -294,7 +294,10 @@ export function App() {
         )}
       </Box>
       <Box sx={footerStyle}>
-        {!is3DMode && <BaseMapAttribution currentBaseMap={currentBaseMap} />}
+        <BaseMapAttribution
+          currentBaseMap={currentBaseMap}
+          is3DMode={is3DMode}
+        />
       </Box>
       <CookieConsent />
     </>
