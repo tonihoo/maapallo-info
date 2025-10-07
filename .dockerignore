@@ -1,30 +1,61 @@
-# Ignore local environment files (use GitHub secrets in production)
+# Environment files
 .env
 .env.local
 .env.*.local
 
-# Ignore development files
+# Development dependencies
 node_modules
 npm-debug.log
 .npm
+.pnpm-debug.log
+
+# Version control
 .git
 .gitignore
-.dockerignore
-.nyc_output
-coverage
-.DS_Store
+.gitattributes
 
-# Ignore build artifacts and cache
+# Build artifacts
 dist
 build
 *.log
+coverage
+.nyc_output
 
-# Ignore IDE files
+# IDE and editor files
 .vscode
 .idea
 *.swp
 *.swo
+.DS_Store
+Thumbs.db
 
-# Ignore deployment artifacts
+# Documentation and deployment
+README.md
+docs/
 deployments/
 LogFiles/
+
+# Test files
+cypress/
+test/
+tests/
+__tests__/
+*.test.js
+*.test.ts
+*.spec.js
+*.spec.ts
+
+# Temporary files
+tmp/
+temp/
+.tmp/
+.temp/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
