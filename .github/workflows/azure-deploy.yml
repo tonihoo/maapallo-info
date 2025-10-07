@@ -20,7 +20,7 @@ env:
 
 jobs:
   build-and-deploy:
-    name: Build and Deploy GeoServer Stack
+    name: Build and Deploy Maapallo Info Application
     runs-on: ubuntu-latest
 
     steps:
@@ -65,13 +65,17 @@ jobs:
       # Deploy infrastructure using Azure Container Apps
       - name: Deploy Container Apps Environment
         run: |
-          # Register required resource providers
-          echo "Registering Azure resource providers..."
-          az provider register --namespace Microsoft.App --wait
-          az provider register --namespace Microsoft.ContainerRegistry --wait
-          az provider register --namespace Microsoft.DBforPostgreSQL --wait
-          az provider register --namespace Microsoft.OperationalInsights --wait
-          az provider register --namespace Microsoft.ManagedIdentity --wait
+          # Only register resource providers if not already registered
+          echo "Checking resource provider registration status..."
+          for provider in Microsoft.App Microsoft.ContainerRegistry Microsoft.DBforPostgreSQL Microsoft.OperationalInsights Microsoft.ManagedIdentity; do
+            REGISTRATION_STATE=$(az provider show --namespace "$provider" --query registrationState -o tsv 2>/dev/null || echo "NotRegistered")
+            if [ "$REGISTRATION_STATE" != "Registered" ]; then
+              echo "Registering $provider..."
+              az provider register --namespace "$provider" --wait
+            else
+              echo "$provider is already registered"
+            fi
+          done
 
           # Create resource group if it doesn't exist
           az group create --name ${{ env.RESOURCE_GROUP }} --location ${{ env.LOCATION }}
@@ -250,6 +254,7 @@ jobs:
             -d ${{ secrets.DB_NAME }} \
             -c "CREATE EXTENSION IF NOT EXISTS postgis; CREATE EXTENSION IF NOT EXISTS postgis_topology; CREATE EXTENSION IF NOT EXISTS pg_stat_statements;" || echo "PostGIS extensions may already exist"
 
+      # CRITICAL: Ensure GeoServer persistent storage (PRESERVED)
       - name: Ensure GeoServer persistent storage
         run: |
           set -euo pipefail
@@ -293,7 +298,7 @@ jobs:
             --azure-file-account-key "$STORAGE_KEY" \
             --azure-file-share-name "$FILE_SHARE"
 
-      # Deploy GeoServer
+      # CRITICAL: Deploy GeoServer with persistence (OPTIMIZED)
       - name: Deploy GeoServer Container
         run: |
           set -euo pipefail
@@ -320,6 +325,7 @@ jobs:
               --registry-server ${{ env.ACR_REGISTRY }}
           fi
 
+          # Combined update with PROXY_BASE_URL included (eliminates redundant step)
           az containerapp update \
             --name "$APP_NAME" \
             --resource-group ${{ env.RESOURCE_GROUP }} \
@@ -341,13 +347,14 @@ jobs:
             --max-replicas 3
 
           echo "Waiting for GeoServer update to complete..."
-          for attempt in $(seq 1 30); do
+          # Optimized polling with shorter intervals
+          for attempt in $(seq 1 15); do
             STATE=$(az containerapp show --name "$APP_NAME" --resource-group ${{ env.RESOURCE_GROUP }} --query properties.provisioningState -o tsv || echo "Unknown")
             if [ "$STATE" = "Succeeded" ]; then
               break
             fi
-            echo "Provisioning state: $STATE (attempt $attempt). Sleeping 10s..."
-            sleep 10
+            echo "Provisioning state: $STATE (attempt $attempt). Sleeping 5s..."
+            sleep 5
           done
 
           STATE=$(az containerapp show --name "$APP_NAME" --resource-group ${{ env.RESOURCE_GROUP }} --query properties.provisioningState -o tsv || echo "Unknown")
@@ -355,7 +362,7 @@ jobs:
             echo "⚠️ GeoServer provisioning still $STATE after waiting; continuing to apply volume mount." >&2
           fi
 
-          # Apply volume mount using jq to patch the JSON spec
+          # CRITICAL: Apply volume mount using jq to patch the JSON spec (PRESERVED)
           SPEC_FILE=$(mktemp)
           PATCH_FILE=$(mktemp)
 
@@ -392,24 +399,6 @@ jobs:
 
           rm -f "$SPEC_FILE" "$PATCH_FILE"
 
-      - name: Update GeoServer container (refresh PROXY_BASE_URL)
-        if: always()
-        run: |
-          echo "Ensuring GeoServer PROXY_BASE_URL is up to date..."
-          if az containerapp show --name maapallo-geoserver --resource-group ${{ env.RESOURCE_GROUP }} >/dev/null 2>&1; then
-            if [ -n "${{ secrets.PROXY_BASE_URL }}" ]; then
-              az containerapp update \
-                --name maapallo-geoserver \
-                --resource-group ${{ env.RESOURCE_GROUP }} \
-                --set-env-vars PROXY_BASE_URL=${{ secrets.PROXY_BASE_URL }}
-              echo "Updated GeoServer PROXY_BASE_URL to secret value."
-            else
-              echo "⚠️ PROXY_BASE_URL secret not set; skipping update." >&2
-            fi
-          else
-            echo "GeoServer container not found; skipping PROXY_BASE_URL update step."
-          fi
-
       # Deploy Backend API
       - name: Deploy Server Container
         run: |
@@ -431,8 +420,8 @@ jobs:
                 --resource-group ${{ env.RESOURCE_GROUP }} \
                 --yes
 
-              # Wait a moment for deletion to complete
-              sleep 30
+              # Reduced wait time
+              sleep 10
 
               echo "Creating new Server container..."
               az containerapp create \
@@ -465,18 +454,14 @@ jobs:
                   "GEOSERVER_WORKSPACE=maapallo"
             else
               echo "Updating existing Server container..."
-              # For existing apps, we need to update the identity and registry configuration first
-              az containerapp identity assign \
-                --name maapallo-server \
-                --resource-group ${{ env.RESOURCE_GROUP }} \
-                --user-assigned $IDENTITY_ID || echo "Identity may already be assigned"
-
-              # Update registry configuration
-              az containerapp registry set \
-                --name maapallo-server \
-                --resource-group ${{ env.RESOURCE_GROUP }} \
-                --server ${{ env.ACR_REGISTRY }} \
-                --identity $IDENTITY_ID || echo "Registry may already be configured"
+              # Only update identity/registry if needed
+              CURRENT_IDENTITY=$(az containerapp show --name maapallo-server --resource-group ${{ env.RESOURCE_GROUP }} --query identity.userAssignedIdentities -o tsv 2>/dev/null || echo "")
+              if [ -z "$CURRENT_IDENTITY" ]; then
+                az containerapp identity assign \
+                  --name maapallo-server \
+                  --resource-group ${{ env.RESOURCE_GROUP }} \
+                  --user-assigned $IDENTITY_ID || echo "Identity may already be assigned"
+              fi
 
               # Now update the container with new image
               az containerapp update \
@@ -548,8 +533,8 @@ jobs:
                 --resource-group ${{ env.RESOURCE_GROUP }} \
                 --yes
 
-              # Wait a moment for deletion to complete
-              sleep 30
+              # Reduced wait time
+              sleep 10
 
               echo "Creating new Client container..."
 
@@ -589,18 +574,14 @@ jobs:
                 --query properties.defaultDomain \
                 --output tsv)
 
-              # For existing apps, we need to update the identity and registry configuration first
-              az containerapp identity assign \
-                --name maapallo-client \
-                --resource-group ${{ env.RESOURCE_GROUP }} \
-                --user-assigned $IDENTITY_ID || echo "Identity may already be assigned"
-
-              # Update registry configuration
-              az containerapp registry set \
-                --name maapallo-client \
-                --resource-group ${{ env.RESOURCE_GROUP }} \
-                --server ${{ env.ACR_REGISTRY }} \
-                --identity $IDENTITY_ID || echo "Registry may already be configured"
+              # Only update identity/registry if needed
+              CURRENT_IDENTITY=$(az containerapp show --name maapallo-client --resource-group ${{ env.RESOURCE_GROUP }} --query identity.userAssignedIdentities -o tsv 2>/dev/null || echo "")
+              if [ -z "$CURRENT_IDENTITY" ]; then
+                az containerapp identity assign \
+                  --name maapallo-client \
+                  --resource-group ${{ env.RESOURCE_GROUP }} \
+                  --user-assigned $IDENTITY_ID || echo "Identity may already be assigned"
+              fi
 
               # Now update the container with new image
               az containerapp update \
@@ -644,12 +625,12 @@ jobs:
                 "BASIC_AUTH_PASSWORD=${{ secrets.BASIC_AUTH_PASSWORD }}"
           fi
 
-      # Run initial setup
-      - name: Initialize Application
+      # Optimized verification with reduced timeout
+      - name: Verify Deployment
         run: |
           echo "Waiting for containers to be ready..."
-          # Increase overall wait but use progressive readiness checks
-          TOTAL_WAIT=240   # seconds max
+          # Reduced overall wait time
+          TOTAL_WAIT=120   # seconds max (reduced from 240)
           SLEEP_INTERVAL=10
           ELAPSED=0
 
@@ -661,7 +642,7 @@ jobs:
 
           # Admin credentials (optional secrets, fallback to defaults)
           ADMIN_USER="${{ secrets.GEOSERVER_ADMIN_USER }}"; [ -z "$ADMIN_USER" ] && ADMIN_USER="admin"
-            ADMIN_PASS="${{ secrets.GEOSERVER_ADMIN_PASSWORD }}"; [ -z "$ADMIN_PASS" ] && ADMIN_PASS="geoserver"
+          ADMIN_PASS="${{ secrets.GEOSERVER_ADMIN_PASSWORD }}"; [ -z "$ADMIN_PASS" ] && ADMIN_PASS="geoserver"
 
           SMOKE_UI_URL="https://$GEOSERVER_FQDN/geoserver/web/"
           SMOKE_REST_VERSION="https://$GEOSERVER_FQDN/geoserver/rest/about/version"
