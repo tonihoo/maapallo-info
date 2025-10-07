@@ -70,7 +70,7 @@ docker compose exec server python run_migrations.py
 - **GeoServer**: [http://localhost:8081/geoserver](http://localhost:8081/geoserver) (admin/geoserver)
 - **PgAdmin**: [http://localhost:5050](http://localhost:5050)
 
-## Daily Development
+## Development
 
 ### Starting the application
 
@@ -218,7 +218,6 @@ sleep 10
 docker compose exec server python run_migrations.py
 ```
 
-
 ## Testing
 
 ### Frontend tests (Cypress E2E)
@@ -261,7 +260,6 @@ docker compose exec server python -c "from migrate import check_migration_status
 3. Write SQL commands to the file
 4. Run migrations: `docker compose exec server python run_migrations.py`
 
-
 ## Technical Documentation
 
 ### FastAPI Backend
@@ -297,7 +295,7 @@ docker compose exec server python -c "from migrate import check_migration_status
 - **Material-UI**: UI component library
 - **OpenLayers**: 2D mapping with static geospatial data
 - **Cesium**: 3D globe visualization
-- **Vite**: Fast build tool
+- **Webpack**: Module bundler for JavaScript
 
 ### PostgreSQL + PostGIS Database
 
