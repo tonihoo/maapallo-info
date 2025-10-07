@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - geoserver
   workflow_dispatch: # Allow manual triggering
 
 env:
