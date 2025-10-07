@@ -7,6 +7,13 @@ interface LayerConfig {
   visible: boolean;
 }
 
+interface LayerSwitcherProps {
+  layers: LayerConfig[];
+  onLayerToggle: (layerId: string, visible: boolean) => void;
+  className?: string;
+  style?: React.CSSProperties;
+}
+
 export function LayerSwitcher({
   layers,
   onLayerToggle,

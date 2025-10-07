@@ -5,7 +5,6 @@ export interface GeoJsonData {
 }
 
 // GeoServer configuration
-// GeoServer configuration with environment detection
 const getGeoServerBaseUrl = (): string => {
   // In Docker environment, use internal service name
   if (typeof window === "undefined") {
@@ -164,7 +163,7 @@ async function fetchFromGeoServer(
  */
 export class GeoServerService {
   /**
-   * Fetches layer data from GeoServer, with fallback to static files for development
+   * Fetches layer data from GeoServer.
    */
   static async getLayerData(
     urlOrLayerName: string,
@@ -174,7 +173,6 @@ export class GeoServerService {
     const geoServerLayerName = LAYER_MAPPING[urlOrLayerName];
 
     if (geoServerLayerName) {
-      // Always use GeoServer for layers; no static fallback
       if (isGeoServerDisabled()) {
         throw new Error(
           `GeoServer disabled by REACT_APP_DISABLE_GEOSERVER (cannot fetch '${geoServerLayerName}')`
@@ -193,8 +191,6 @@ export class GeoServerService {
       return await fetchFromGeoServer(urlOrLayerName, params);
     }
 
-    // For absolute/relative URLs that are not known GeoServer layers, static
-    // fetches are no longer supported for map layers.
     throw new Error(
       `Static file fetches are disabled for map layers ('${urlOrLayerName}'). Use GeoServer layer names instead.`
     );

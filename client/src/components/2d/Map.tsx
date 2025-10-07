@@ -1,20 +1,19 @@
 import { GlobalStyles } from "@mui/material";
-import { ReactNode, useEffect } from "react";
 import {
   Feature as GeoJSONFeature,
-  Geometry,
   GeoJsonProperties,
+  Geometry,
 } from "geojson";
+import React, { ReactNode, useEffect } from "react";
+import { useOpenLayersMap } from "../../hooks/useOpenLayersMap";
 import { CoordinatesDisplay } from "../common/CoordinatesDisplay";
 import { LocationSearch } from "../common/LocationSearch";
-import { BaseMapSelector } from "./BaseMapSelector";
+import { AdultLiteracyLegend } from "./AdultLiteracyLegend";
+import { BaseMapKey, BaseMapSelector } from "./BaseMapSelector";
+import { LayerSwitcher } from "./LayerSwitcher";
 import { MapControls } from "./MapControls";
 import { MeasurementTool } from "./MeasurementTool";
-import { LayerSwitcher } from "./LayerSwitcher";
-import { AdultLiteracyLegend } from "./AdultLiteracyLegend";
 import { PopulationDensityLegend } from "./PopulationDensityLegend";
-import { useOpenLayersMap } from "../../hooks/useOpenLayersMap";
-import { BaseMapKey } from "./BaseMapSelector";
 
 interface Props {
   children?: ReactNode;
@@ -173,15 +172,15 @@ export function Map({
 
       <CoordinatesDisplay coordinates={mouseCoordinates} />
 
-      <AdultLiteracyLegend
-        visible={layerVisibility.adultLiteracy}
-        legendData={adultLiteracyLegendData}
-      />
+      {React.createElement(AdultLiteracyLegend, {
+        visible: layerVisibility.adultLiteracy,
+        legendData: adultLiteracyLegendData as any,
+      })}
 
-      <PopulationDensityLegend
-        visible={layerVisibility.populationDensity}
-        legendData={populationDensityLegendData}
-      />
+      {React.createElement(PopulationDensityLegend, {
+        visible: layerVisibility.populationDensity,
+        legendData: populationDensityLegendData as any,
+      })}
     </div>
   );
 }

@@ -25,8 +25,8 @@ export const initializeCesiumConfig = () => {
     HTMLCanvasElement.prototype.getContext = function (
       this: HTMLCanvasElement,
       contextType: string,
-      options?: CanvasRenderingContext2DSettings | WebGLContextAttributes
-    ) {
+      options?: any
+    ): any {
       if (contextType === "2d" && options === undefined) {
         // Add willReadFrequently option for 2D contexts to suppress performance warnings
         return originalGetContext.call(this, contextType, {
@@ -55,7 +55,7 @@ export const initializeCesiumConfig = () => {
   };
 
   // Try to set token immediately if available
-  const tokenSet = setToken(CESIUM_ION_TOKEN);
+  const tokenSet = setToken(CESIUM_ION_TOKEN || "");
 
   if (!tokenSet) {
     // Fetch token from server if not provided at build time

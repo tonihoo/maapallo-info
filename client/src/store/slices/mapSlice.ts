@@ -59,7 +59,7 @@ const initialState: MapState = {
   currentMeasurement: "",
   mouseCoordinates: null,
   viewState: {
-    center: INITIAL_VIEW.center,
+    center: INITIAL_VIEW.center as [number, number],
     zoom: INITIAL_VIEW.zoom,
     rotation: 0,
   },

@@ -2,8 +2,6 @@ import { z } from "zod";
 
 /**
  * Feature interface for client-side use
- * Originally shared between server and client, but now the Python server
- * uses Pydantic schemas instead of these TypeScript types.
  */
 
 export const featureSchema = z.object({
