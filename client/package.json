@@ -19,7 +19,6 @@
         "@emotion/babel-plugin": "^11.10.5",
         "@emotion/react": "^11.11.0",
         "@trivago/prettier-plugin-sort-imports": "^4.0.0",
-        "@types/arcgis-rest-api": "^10.4.5",
         "@types/cesium": "^1.67.14",
         "@types/geojson": "^7946.0.10",
         "@types/node": "^18.19.111",
