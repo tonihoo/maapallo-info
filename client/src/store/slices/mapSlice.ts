@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { Feature, Geometry, GeoJsonProperties } from "geojson";
+import { Feature, GeoJsonProperties, Geometry } from "geojson";
 import { BaseMapKey } from "../../components/2d/BaseMapSelector";
 import { INITIAL_VIEW } from "../../constants/mapConstants";
 
@@ -17,6 +17,7 @@ interface CesiumMapProps {
   selectedFeatureId?: number | null;
   onMapClick?: (coordinates: number[]) => void;
   onFeatureClick?: (featureId: number) => void;
+  articleLocatorsVisible?: boolean;
 }
 
 interface MapState {

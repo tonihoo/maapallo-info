@@ -1,5 +1,3 @@
-import React from "react";
-import { Box } from "@mui/material";
 import { HeaderMenu } from "./HeaderMenu";
 
 interface AppHeaderProps {
@@ -9,12 +7,12 @@ interface AppHeaderProps {
   is3DMode?: boolean;
 }
 
-export const AppHeader: React.FC<AppHeaderProps> = ({
+export const AppHeader = ({
   onSelectFeature,
   selectedFeatureId,
   refreshTrigger,
   is3DMode,
-}) => {
+}: AppHeaderProps) => {
   return (
     <>
       {/* Left side - Hamburger menu */}

@@ -7,7 +7,7 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
-import { useCallback, useEffect } from "react";
+import React, { useCallback, useEffect } from "react";
 import { BaseMapKey } from "./components/2d/BaseMapSelector";
 import { Map } from "./components/2d/Map";
 import { AppHeader } from "./components/common/AppHeader";
@@ -240,13 +240,13 @@ export function App() {
         >
           {is3DMode ? (
             CesiumMapComponent ? (
-              <CesiumMapComponent
-                features={mapFeatures}
-                selectedFeatureId={selectedFeatureId}
-                onMapClick={handleMapClick}
-                onFeatureClick={handleFeatureSelect}
-                articleLocatorsVisible={articleLocatorsVisible}
-              />
+              React.createElement(CesiumMapComponent, {
+                features: mapFeatures,
+                selectedFeatureId: selectedFeatureId,
+                onMapClick: handleMapClick,
+                onFeatureClick: handleFeatureSelect,
+                articleLocatorsVisible: articleLocatorsVisible,
+              })
             ) : (
               <div style={{ padding: "20px", textAlign: "center" }}>
                 Ladataan 3D-karttaa...
