@@ -1,24 +1,11 @@
-import { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Typography,
-  Button,
-  Switch,
-  FormControlLabel,
-  Box,
-  Divider,
-  IconButton,
-  Alert,
-} from "@mui/material";
 import { Close as CloseIcon } from "@mui/icons-material";
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogActions from "@mui/material/DialogActions";
-import Button from "@mui/material/Button";
+import {
+  Box,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+} from "@mui/material";
 
 interface SiteInfoProps {
   open: boolean;
@@ -58,7 +45,7 @@ export default function SiteInfo({ open, onClose }: SiteInfoProps) {
       </DialogTitle>
 
       <DialogContent sx={{ pt: 2 }}>
-        <Typography variant="body1" gutterBottom>
+        <Box sx={{ "& p": { marginBottom: 2 } }}>
           <p>
             Maapallo.info on karttaportaali, joka havainnollistaa
             maantieteellisiä ilmiöitä erityisesti globaalin kehityksen ja
@@ -89,7 +76,7 @@ export default function SiteInfo({ open, onClose }: SiteInfoProps) {
             </a>
             . Voit osallistua myös tekemällä oman pull requestin!
           </p>
-        </Typography>
+        </Box>
       </DialogContent>
     </Dialog>
   );

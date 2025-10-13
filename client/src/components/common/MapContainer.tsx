@@ -1,32 +1,37 @@
 import { Box } from "@mui/material";
-import React from "react";
-import { useAppSelector } from "../../store/hooks";
+import React, { useCallback } from "react";
+import { useAppDispatch, useAppSelector } from "../../store/hooks";
+import { selectCesiumComponent, selectIs3DMode } from "../../store/selectors";
 import {
-  selectCesiumComponent,
-  selectIs3DMode,
-  selectMapFeatures,
-  selectSelectedFeatureId,
-} from "../../store/selectors";
-import { BaseMapKey } from "../2d/BaseMapSelector";
+  clearSelectedFeature,
+  setLayerVisibility,
+  setSelectedFeatureId,
+} from "../../store/slices/mapSlice";
+import { analytics } from "../../utils/analytics";
 import { Map } from "../2d/Map";
 
-interface MapContainerProps {
-  onMapClick: () => void;
-  onFeatureClick: (id: number) => void;
-  onBaseMapChange: (baseMapKey: BaseMapKey) => void;
-}
-
-export function MapContainer({
-  onMapClick,
-  onFeatureClick,
-  onBaseMapChange,
-}: MapContainerProps) {
+export function MapContainer() {
+  const dispatch = useAppDispatch();
   const is3DMode = useAppSelector(selectIs3DMode);
   const CesiumMapComponent = useAppSelector(selectCesiumComponent);
-  const mapFeatures = useAppSelector(selectMapFeatures);
-  const selectedFeatureId = useAppSelector(selectSelectedFeatureId);
-  const articleLocatorsVisible = useAppSelector(
-    (state) => state.map.layerVisibility.articleLocators
+
+  const handleMapClick = useCallback(() => {
+    dispatch(clearSelectedFeature());
+  }, [dispatch]);
+
+  const handleFeatureClick = useCallback(
+    (id: number) => {
+      dispatch(setSelectedFeatureId(id));
+
+      // Ensure article locators layer is visible when a feature is selected from the menu
+      dispatch(
+        setLayerVisibility({ layerId: "articleLocators", visible: true })
+      );
+
+      // Track feature selection analytics
+      analytics.trackFeatureSelection(id, is3DMode ? "3d" : "2d", "map_click");
+    },
+    [dispatch, is3DMode]
   );
 
   return (
@@ -43,11 +48,8 @@ export function MapContainer({
       {is3DMode ? (
         CesiumMapComponent ? (
           React.createElement(CesiumMapComponent, {
-            features: mapFeatures,
-            selectedFeatureId: selectedFeatureId,
-            onMapClick: onMapClick,
-            onFeatureClick: onFeatureClick,
-            articleLocatorsVisible: articleLocatorsVisible,
+            onMapClick: handleMapClick,
+            onFeatureClick: handleFeatureClick,
           })
         ) : (
           <div style={{ padding: "20px", textAlign: "center" }}>
@@ -56,14 +58,11 @@ export function MapContainer({
         )
       ) : (
         <Map
-          features={mapFeatures}
-          onMapClick={onMapClick}
-          onFeatureClick={onFeatureClick}
+          onMapClick={handleMapClick}
+          onFeatureClick={handleFeatureClick}
           onFeatureHover={() => {
             /* No hover action needed */
           }}
-          selectedFeatureId={selectedFeatureId}
-          onBaseMapChange={onBaseMapChange}
         />
       )}
     </Box>

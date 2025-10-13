@@ -1,15 +1,15 @@
 import { GlobalStyles } from "@mui/material";
-import {
-  Feature as GeoJSONFeature,
-  GeoJsonProperties,
-  Geometry,
-} from "geojson";
-import React, { ReactNode, useEffect } from "react";
+import React, { ReactNode } from "react";
 import { useOpenLayersMap } from "../../hooks/useOpenLayersMap";
+import { useAppSelector } from "../../store/hooks";
+import {
+  selectMapFeatures,
+  selectSelectedFeatureId,
+} from "../../store/selectors";
 import { CoordinatesDisplay } from "../common/CoordinatesDisplay";
 import { LocationSearch } from "../common/LocationSearch";
 import { AdultLiteracyLegend } from "./AdultLiteracyLegend";
-import { BaseMapKey, BaseMapSelector } from "./BaseMapSelector";
+import { BaseMapSelector } from "./BaseMapSelector";
 import { LayerSwitcher } from "./LayerSwitcher";
 import { MapControls } from "./MapControls";
 import { MeasurementTool } from "./MeasurementTool";
@@ -17,12 +17,9 @@ import { PopulationDensityLegend } from "./PopulationDensityLegend";
 
 interface Props {
   children?: ReactNode;
-  features?: GeoJSONFeature<Geometry, GeoJsonProperties>[];
   onMapClick?: (coordinates: number[]) => void;
   onFeatureClick?: (featureId: number) => void;
   onFeatureHover?: (featureId: number | null) => void;
-  selectedFeatureId?: number | null;
-  onBaseMapChange?: (baseMapKey: BaseMapKey) => void;
 }
 
 export function Map({
@@ -30,10 +27,10 @@ export function Map({
   onMapClick,
   onFeatureClick,
   onFeatureHover,
-  features = [],
-  selectedFeatureId,
-  onBaseMapChange,
 }: Props) {
+  // Redux state
+  const features = useAppSelector(selectMapFeatures);
+  const selectedFeatureId = useAppSelector(selectSelectedFeatureId);
   const {
     mapRef,
     mouseCoordinates,
@@ -58,13 +55,6 @@ export function Map({
     onFeatureClick,
     onFeatureHover,
   });
-
-  // Call the onBaseMapChange callback when currentBaseMap changes
-  useEffect(() => {
-    if (onBaseMapChange) {
-      onBaseMapChange(currentBaseMap);
-    }
-  }, [currentBaseMap, onBaseMapChange]);
 
   return (
     <div style={{ width: "100%", height: "100%", position: "relative" }}>

@@ -1,48 +1,49 @@
-import { useState } from "react";
 import {
-  IconButton,
-  Drawer,
-  Box,
-  List,
-  ListItemButton,
-  ListItemText,
-  Collapse,
-  MenuItem,
-  Divider,
-} from "@mui/material";
-import MenuIcon from "@mui/icons-material/Menu";
-import FeatureList from "./FeatureList";
-import { CookiePreferences } from "./CookiePreferences";
-import InfoIcon from "@mui/icons-material/Info";
+  Login as LoginIcon,
+  Logout as LogoutIcon,
+  Settings as SettingsIcon,
+} from "@mui/icons-material";
 import ArticleIcon from "@mui/icons-material/Article";
 import ExpandLess from "@mui/icons-material/ExpandLess";
 import ExpandMore from "@mui/icons-material/ExpandMore";
+import InfoIcon from "@mui/icons-material/Info";
+import MenuIcon from "@mui/icons-material/Menu";
 import {
-  Settings as SettingsIcon,
-  Login as LoginIcon,
-  Logout as LogoutIcon,
-} from "@mui/icons-material";
-import SiteInfo from "./SiteInfo";
-import { LoginDialog } from "../auth/LoginDialog";
-import { AdminImportDialog } from "../admin/AdminImportDialog";
+  Box,
+  Collapse,
+  Divider,
+  Drawer,
+  IconButton,
+  List,
+  ListItemButton,
+  ListItemText,
+  MenuItem,
+} from "@mui/material";
+import { useCallback, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
+import {
+  selectIs3DMode,
+  selectRefreshTrigger,
+  selectSelectedFeatureId,
+} from "../../store/selectors";
 import { logout } from "../../store/slices/authSlice";
+import {
+  setLayerVisibility,
+  setSelectedFeatureId,
+} from "../../store/slices/mapSlice";
+import { analytics } from "../../utils/analytics";
+import { AdminImportDialog } from "../admin/AdminImportDialog";
+import { LoginDialog } from "../auth/LoginDialog";
+import { CookiePreferences } from "./CookiePreferences";
+import FeatureList from "./FeatureList";
+import SiteInfo from "./SiteInfo";
 
-interface Props {
-  onSelectFeature: (id: number) => void;
-  selectedFeatureId?: number | null;
-  refreshTrigger?: number;
-  is3DMode?: boolean;
-}
-
-export function HeaderMenu({
-  onSelectFeature,
-  selectedFeatureId,
-  refreshTrigger,
-  is3DMode,
-}: Props) {
+export function HeaderMenu() {
   const dispatch = useAppDispatch();
   const { isAuthenticated, user } = useAppSelector((state) => state.auth);
+  const is3DMode = useAppSelector(selectIs3DMode);
+  const selectedFeatureId = useAppSelector(selectSelectedFeatureId);
+  const refreshTrigger = useAppSelector(selectRefreshTrigger);
 
   const [isOpen, setIsOpen] = useState(false);
   const [preferencesOpen, setPreferencesOpen] = useState(false);
@@ -55,10 +56,26 @@ export function HeaderMenu({
     setIsOpen(!isOpen);
   };
 
-  const handleFeatureSelect = (id: number) => {
-    onSelectFeature(id);
-    setIsOpen(false); // Close menu after selection
-  };
+  const handleFeatureSelect = useCallback(
+    (id: number) => {
+      dispatch(setSelectedFeatureId(id));
+
+      // Ensure article locators layer is visible when a feature is selected from the menu
+      dispatch(
+        setLayerVisibility({ layerId: "articleLocators", visible: true })
+      );
+
+      // Track feature selection analytics
+      analytics.trackFeatureSelection(
+        id,
+        is3DMode ? "3d" : "2d",
+        "menu_select"
+      );
+
+      setIsOpen(false); // Close menu after selection
+    },
+    [dispatch, is3DMode]
+  );
 
   const handleLoginClick = () => {
     setLoginDialogOpen(true);
@@ -134,12 +151,7 @@ export function HeaderMenu({
             </ListItemButton>
             <Collapse in={articlesOpen} timeout="auto" unmountOnExit>
               <Box sx={{ bgcolor: "#d2eac7", py: 1, px: 2 }}>
-                <FeatureList
-                  onSelectFeature={handleFeatureSelect}
-                  selectedFeatureId={selectedFeatureId}
-                  refreshTrigger={refreshTrigger}
-                  is3DMode={is3DMode}
-                />
+                <FeatureList onSelectFeature={handleFeatureSelect} />
               </Box>
             </Collapse>
             {/* Preferences Menu Item - shown even when no features */}

@@ -1,4 +1,4 @@
-import { IconButton, Tooltip } from "@mui/material";
+import { Box, IconButton, Tooltip } from "@mui/material";
 import { useCallback } from "react";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import {
@@ -54,8 +54,11 @@ export function MapModeToggle({ isMobile }: MapModeToggleProps) {
             ? "Vaihda 3D-karttanäkymään"
             : "3D-kartta latautuu..."
       }
+      PopperProps={{
+        disablePortal: true,
+      }}
     >
-      <span>
+      <Box component="span" sx={{ display: "inline-block" }}>
         <IconButton
           onClick={toggleMapModeHandler}
           disabled={!cesiumPreloaded}
@@ -80,7 +83,7 @@ export function MapModeToggle({ isMobile }: MapModeToggleProps) {
         >
           {is3DMode ? "2D" : "3D"}
         </IconButton>
-      </span>
+      </Box>
     </Tooltip>
   );
 }

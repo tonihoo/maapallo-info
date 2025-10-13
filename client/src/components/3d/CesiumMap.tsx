@@ -1,32 +1,34 @@
-import { useEffect, useRef, useCallback } from "react";
-import * as Cesium from "cesium";
 import { GlobalStyles } from "@mui/material";
-import { Feature, Geometry, GeoJsonProperties } from "geojson";
+import * as Cesium from "cesium";
+import { useCallback, useEffect, useRef } from "react";
+import { useCameraOperations } from "../../hooks/useCameraOperations";
+import { useCesiumViewer } from "../../hooks/useCesiumViewer";
+import { useAppSelector } from "../../store/hooks";
+import {
+  selectMapFeatures,
+  selectSelectedFeatureId,
+} from "../../store/selectors";
+import { initializeCesiumConfig } from "../../utils/cesiumConfig";
 import { CoordinatesDisplay } from "../common/CoordinatesDisplay";
 import { LocationSearch } from "../common/LocationSearch";
 import { CameraControls } from "./CameraControls";
-import { useCesiumViewer } from "../../hooks/useCesiumViewer";
-import { useCameraOperations } from "../../hooks/useCameraOperations";
-import { initializeCesiumConfig } from "../../utils/cesiumConfig";
 
 // Initialize Cesium configuration
 initializeCesiumConfig();
 
 interface Props {
-  features: Feature<Geometry, GeoJsonProperties>[];
   onMapClick?: (coordinates: number[]) => void;
-  selectedFeatureId?: number | null;
   onFeatureClick?: (featureId: number) => void;
-  articleLocatorsVisible?: boolean;
 }
 
-export function CesiumMap({
-  features = [],
-  onMapClick,
-  selectedFeatureId,
-  onFeatureClick,
-  articleLocatorsVisible = false,
-}: Props) {
+export function CesiumMap({ onMapClick, onFeatureClick }: Props) {
+  // Redux state
+  const features = useAppSelector(selectMapFeatures);
+  const selectedFeatureId = useAppSelector(selectSelectedFeatureId);
+  const articleLocatorsVisible = useAppSelector(
+    (state) => state.map.layerVisibility.articleLocators
+  );
+
   const featuresRef = useRef(features);
 
   const {

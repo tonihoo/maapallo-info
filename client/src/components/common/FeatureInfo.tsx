@@ -1,9 +1,10 @@
-import { Paper, Typography, Link, IconButton } from "@mui/material";
 import { Close } from "@mui/icons-material";
-import { useState, useEffect } from "react";
+import { IconButton, Link, Paper, Typography } from "@mui/material";
+import { useEffect, useState } from "react";
+import { useAppSelector } from "../../store/hooks";
+import { selectSelectedFeatureId } from "../../store/selectors";
 
 interface Props {
-  featureId: number | null;
   onClose?: () => void;
 }
 
@@ -21,7 +22,8 @@ interface Feature {
   };
 }
 
-export function FeatureInfo({ featureId, onClose }: Props) {
+export function FeatureInfo({ onClose }: Props) {
+  const featureId = useAppSelector(selectSelectedFeatureId);
   const [feature, setFeature] = useState<Feature | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -69,8 +71,7 @@ export function FeatureInfo({ featureId, onClose }: Props) {
       const firstRing = Array.isArray(coordinates[0]) ? coordinates[0] : [];
       return (
         <Typography>
-          Sijainti: Alue (Polygon, {firstRing.length || 0}{" "}
-          pistettä)
+          Sijainti: Alue (Polygon, {firstRing.length || 0} pistettä)
         </Typography>
       );
     }

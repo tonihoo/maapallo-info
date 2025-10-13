@@ -1,5 +1,10 @@
-import { Box, Paper, Typography } from "@mui/material";
-import { BaseMapKey } from "../2d/BaseMapSelector";
+import { Box, Paper, Typography, useMediaQuery, useTheme } from "@mui/material";
+import { useAppDispatch, useAppSelector } from "../../store/hooks";
+import {
+  selectHeaderFooterColor,
+  selectSelectedFeatureId,
+} from "../../store/selectors";
+import { clearSelectedFeature } from "../../store/slices/mapSlice";
 import { AppHeader } from "./AppHeader";
 import { BaseMapAttribution } from "./BaseMapAttribution";
 import { CookieConsent } from "./CookieConsent";
@@ -7,31 +12,18 @@ import { FeatureInfo } from "./FeatureInfo";
 import { MapContainer } from "./MapContainer";
 import { MapModeToggle } from "./MapModeToggle";
 
-interface AppLayoutProps {
-  isMobile: boolean;
-  headerFooterColor: string;
-  currentBaseMap: BaseMapKey;
-  is3DMode: boolean;
-  selectedFeatureId: number | null;
-  refreshTrigger: number;
-  onMapClick: () => void;
-  onFeatureClick: (id: number) => void;
-  onFeatureInfoClose: () => void;
-  onBaseMapChange: (baseMapKey: BaseMapKey) => void;
-}
+export function AppLayout() {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const dispatch = useAppDispatch();
 
-export function AppLayout({
-  isMobile,
-  headerFooterColor,
-  currentBaseMap,
-  is3DMode,
-  selectedFeatureId,
-  refreshTrigger,
-  onMapClick,
-  onFeatureClick,
-  onFeatureInfoClose,
-  onBaseMapChange,
-}: AppLayoutProps) {
+  // Redux state
+  const headerFooterColor = useAppSelector(selectHeaderFooterColor);
+  const selectedFeatureId = useAppSelector(selectSelectedFeatureId);
+
+  const handleFeatureInfoClose = () => {
+    dispatch(clearSelectedFeature());
+  };
   const headerStyle = {
     backgroundColor: headerFooterColor,
     color: "black",
@@ -83,18 +75,9 @@ export function AppLayout({
       <MapModeToggle isMobile={isMobile} />
 
       <Box sx={{ position: "relative", height: "100vh", overflow: "hidden" }}>
-        <MapContainer
-          onMapClick={onMapClick}
-          onFeatureClick={onFeatureClick}
-          onBaseMapChange={onBaseMapChange}
-        />
+        <MapContainer />
 
-        <AppHeader
-          onSelectFeature={onFeatureClick}
-          selectedFeatureId={selectedFeatureId}
-          refreshTrigger={refreshTrigger}
-          is3DMode={is3DMode}
-        />
+        <AppHeader />
 
         {selectedFeatureId && (
           <Paper
@@ -109,19 +92,13 @@ export function AppLayout({
               ...panelStyle,
             }}
           >
-            <FeatureInfo
-              featureId={selectedFeatureId}
-              onClose={onFeatureInfoClose}
-            />
+            <FeatureInfo onClose={handleFeatureInfoClose} />
           </Paper>
         )}
       </Box>
 
       <Box sx={footerStyle}>
-        <BaseMapAttribution
-          currentBaseMap={currentBaseMap}
-          is3DMode={is3DMode}
-        />
+        <BaseMapAttribution />
       </Box>
 
       <CookieConsent />

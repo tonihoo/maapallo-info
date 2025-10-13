@@ -1,18 +1,20 @@
-import { Box, MenuItem, Paper, Typography, Divider } from "@mui/material";
-import { Settings as SettingsIcon } from "@mui/icons-material";
-import { FeatureTypes } from "./types/featureTypes";
+import { Box, MenuItem, Paper, Typography } from "@mui/material";
 import { useEffect, useState } from "react";
+import { useAppSelector } from "../../store/hooks";
+import {
+  selectRefreshTrigger,
+  selectSelectedFeatureId,
+} from "../../store/selectors";
+import { FeatureTypes } from "./types/featureTypes";
 
 export default function FeatureList({
   onSelectFeature,
-  selectedFeatureId = null,
-  refreshTrigger = 0,
 }: {
   onSelectFeature: (id: number) => void;
-  selectedFeatureId?: number | null;
-  refreshTrigger?: number;
 }) {
   const [features, setFeatures] = useState<FeatureTypes[]>([]);
+  const selectedFeatureId = useAppSelector(selectSelectedFeatureId);
+  const refreshTrigger = useAppSelector(selectRefreshTrigger);
 
   // Fetch all feature's during startup or when refreshTrigger changes
   useEffect(() => {

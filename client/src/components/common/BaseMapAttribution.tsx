@@ -1,10 +1,7 @@
 import { Typography } from "@mui/material";
+import { useAppSelector } from "../../store/hooks";
+import { selectCurrentBaseMap, selectIs3DMode } from "../../store/selectors";
 import { BaseMapKey } from "../2d/BaseMapSelector";
-
-interface BaseMapAttributionProps {
-  currentBaseMap: BaseMapKey;
-  is3DMode?: boolean;
-}
 
 const getAttributionText = (
   baseMapKey: BaseMapKey,
@@ -29,10 +26,9 @@ const getAttributionText = (
   }
 };
 
-export function BaseMapAttribution({
-  currentBaseMap,
-  is3DMode = false,
-}: BaseMapAttributionProps) {
+export function BaseMapAttribution() {
+  const currentBaseMap = useAppSelector(selectCurrentBaseMap);
+  const is3DMode = useAppSelector(selectIs3DMode);
   const attributionText = getAttributionText(currentBaseMap, is3DMode);
 
   if (!attributionText) {
