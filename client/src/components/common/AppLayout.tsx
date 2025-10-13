@@ -74,7 +74,15 @@ export function AppLayout() {
 
       <MapModeToggle isMobile={isMobile} />
 
-      <Box sx={{ position: "relative", height: "100vh", overflow: "hidden" }}>
+      <Box
+        sx={{
+          position: "relative",
+          height: "100vh",
+          overflow: "hidden",
+          marginTop: "-45px",
+          paddingTop: "45px",
+        }}
+      >
         <MapContainer />
 
         <AppHeader />
