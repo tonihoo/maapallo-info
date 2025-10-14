@@ -1,19 +1,25 @@
-import { useCallback, useRef, useEffect } from "react";
+import { FeatureLike } from "ol/Feature";
 import { GeoJSON } from "ol/format";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import Fill from "ol/style/Fill";
 import Stroke from "ol/style/Stroke";
 import Style from "ol/style/Style";
-import { FeatureLike } from "ol/Feature";
+import { useCallback, useEffect, useRef } from "react";
 import { useLayerCache } from "./map/useLayerCache";
 
 interface UsePopulationDensityLayerProps {
   visible: boolean;
 }
 
+interface LegendItem {
+  color: string;
+  label: string;
+  range: [number, number] | null;
+}
+
 // Color scale for population density (people per km²) - matches QGIS categorization
-const POPULATION_DENSITY_COLOR_SCALE = [
+const POPULATION_DENSITY_COLOR_SCALE: LegendItem[] = [
   { color: "#800000", label: "242 - 18681", range: [242, Infinity] },
   { color: "#ff0000", label: "103 - 242", range: [103, 242] },
   { color: "#ff6666", label: "52 - 103", range: [52, 103] },

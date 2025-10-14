@@ -1,11 +1,11 @@
-import { useCallback, useRef } from "react";
+import { FeatureLike } from "ol/Feature";
 import { GeoJSON } from "ol/format";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import Fill from "ol/style/Fill";
 import Stroke from "ol/style/Stroke";
 import Style from "ol/style/Style";
-import { FeatureLike } from "ol/Feature";
+import { useCallback, useRef } from "react";
 import { useLayerCache } from "./map/useLayerCache";
 
 interface LiteracyData {
@@ -20,7 +20,13 @@ interface UseAdultLiteracyLayerProps {
   visible: boolean;
 }
 
-const LITERACY_COLOR_SCALE = [
+interface LegendItem {
+  color: string;
+  label: string;
+  range: [number, number] | null;
+}
+
+const LITERACY_COLOR_SCALE: LegendItem[] = [
   { color: "#006837", label: "95-100%", range: [95, 100] },
   { color: "#31a354", label: "85-94%", range: [85, 94] },
   { color: "#78c679", label: "75-84%", range: [75, 84] },

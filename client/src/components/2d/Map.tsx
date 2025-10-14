@@ -1,5 +1,5 @@
 import { GlobalStyles } from "@mui/material";
-import React, { ReactNode } from "react";
+import { ReactNode } from "react";
 import { useOpenLayersMap } from "../../hooks/useOpenLayersMap";
 import { useAppSelector } from "../../store/hooks";
 import {
@@ -162,15 +162,15 @@ export function Map({
 
       <CoordinatesDisplay coordinates={mouseCoordinates} />
 
-      {React.createElement(AdultLiteracyLegend, {
-        visible: layerVisibility.adultLiteracy,
-        legendData: adultLiteracyLegendData as any,
-      })}
+      <AdultLiteracyLegend
+        visible={layerVisibility.adultLiteracy}
+        legendData={adultLiteracyLegendData}
+      />
 
-      {React.createElement(PopulationDensityLegend, {
-        visible: layerVisibility.populationDensity,
-        legendData: populationDensityLegendData as any,
-      })}
+      <PopulationDensityLegend
+        visible={layerVisibility.populationDensity}
+        legendData={populationDensityLegendData}
+      />
     </div>
   );
 }

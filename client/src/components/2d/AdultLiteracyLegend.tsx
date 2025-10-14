@@ -1,5 +1,3 @@
-import React from "react";
-
 interface LegendItem {
   color: string;
   label: string;
@@ -11,10 +9,10 @@ interface AdultLiteracyLegendProps {
   legendData: LegendItem[];
 }
 
-export const AdultLiteracyLegend: React.FC<AdultLiteracyLegendProps> = ({
+export function AdultLiteracyLegend({
   visible,
   legendData,
-}) => {
+}: AdultLiteracyLegendProps) {
   if (!visible) {
     return null;
   }
@@ -90,4 +88,4 @@ export const AdultLiteracyLegend: React.FC<AdultLiteracyLegendProps> = ({
       </div>
     </div>
   );
-};
+}

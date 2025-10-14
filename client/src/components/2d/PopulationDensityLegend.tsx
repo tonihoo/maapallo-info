@@ -1,5 +1,3 @@
-import React from "react";
-
 interface LegendItem {
   color: string;
   label: string;
@@ -11,9 +9,10 @@ interface PopulationDensityLegendProps {
   legendData: LegendItem[];
 }
 
-export const PopulationDensityLegend: React.FC<
-  PopulationDensityLegendProps
-> = ({ visible, legendData }) => {
+export function PopulationDensityLegend({
+  visible,
+  legendData,
+}: PopulationDensityLegendProps) {
   if (!visible) {
     return null;
   }
@@ -89,4 +88,4 @@ export const PopulationDensityLegend: React.FC<
       </div>
     </div>
   );
-};
+}
