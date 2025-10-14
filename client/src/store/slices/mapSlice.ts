@@ -1,5 +1,4 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { Feature, GeoJsonProperties, Geometry } from "geojson";
 import { BaseMapKey } from "../../components/2d/BaseMapSelector";
 import { INITIAL_VIEW } from "../../constants/mapConstants";
 
@@ -12,12 +11,11 @@ interface LayerVisibility {
   intactForests: boolean;
 }
 
+// Props for the lazily loaded Cesium component stored in Redux
+// The component reads data from Redux itself; only callbacks are passed in
 interface CesiumMapProps {
-  features: Feature<Geometry, GeoJsonProperties>[];
-  selectedFeatureId?: number | null;
   onMapClick?: (coordinates: number[]) => void;
   onFeatureClick?: (featureId: number) => void;
-  articleLocatorsVisible?: boolean;
 }
 
 interface MapState {
