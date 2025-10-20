@@ -182,11 +182,11 @@ jobs:
               --location ${{ env.LOCATION }} \
               --admin-user "${{ secrets.DB_ADMIN_USER }}" \
               --admin-password "${{ secrets.DB_ADMIN_PASSWORD }}" \
-              --sku-name standard_d2s_v3 \
-              --tier GeneralPurpose \
-              --storage-size 256 \
+              --sku-name Standard_B2s \
+              --tier Burstable \
+              --storage-size 32 \
               --storage-auto-grow Enabled \
-              --backup-retention 14 \
+              --backup-retention 7 \
               --version 15 \
               --high-availability Disabled \
               --public-access 0.0.0.0-255.255.255.255 || {
@@ -434,7 +434,7 @@ jobs:
                 --cpu 1.0 \
                 --memory 2.0Gi \
                 --min-replicas 1 \
-                --max-replicas 5 \
+                --max-replicas 2 \
                 --user-assigned $IDENTITY_ID \
                 --registry-identity $IDENTITY_ID \
                 --registry-server ${{ env.ACR_REGISTRY }} \
@@ -494,8 +494,8 @@ jobs:
               --ingress external \
               --cpu 1.0 \
               --memory 2.0Gi \
-              --min-replicas 1 \
-              --max-replicas 5 \
+                --min-replicas 1 \
+                --max-replicas 2 \
               --user-assigned $IDENTITY_ID \
               --registry-identity $IDENTITY_ID \
               --registry-server ${{ env.ACR_REGISTRY }} \
@@ -555,7 +555,7 @@ jobs:
                 --cpu 0.5 \
                 --memory 1.0Gi \
                 --min-replicas 1 \
-                --max-replicas 3 \
+                --max-replicas 2 \
                 --user-assigned $IDENTITY_ID \
                 --registry-identity $IDENTITY_ID \
                 --registry-server ${{ env.ACR_REGISTRY }} \
@@ -614,7 +614,7 @@ jobs:
               --cpu 0.5 \
               --memory 1.0Gi \
               --min-replicas 1 \
-              --max-replicas 3 \
+              --max-replicas 2 \
               --user-assigned $IDENTITY_ID \
               --registry-identity $IDENTITY_ID \
               --registry-server ${{ env.ACR_REGISTRY }} \
