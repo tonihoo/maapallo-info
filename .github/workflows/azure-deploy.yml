@@ -28,10 +28,6 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-        with:
-          driver-opts: |
-            image=ghcr.io/moby/buildkit:buildx-stable-1
-          buildkitd-flags: --allow-insecure-entitlement security.insecure --allow-insecure-entitlement network.host
 
       - name: Login to Azure
         uses: azure/login@v2
@@ -45,47 +41,23 @@ jobs:
       # Build and push all container images
       - name: Build and push Client image
         run: |
-          # Retry logic for Docker Hub registry issues
-          for i in {1..3}; do
-            if docker build -f client/Dockerfile.production \
-              --build-arg CESIUM_ION_TOKEN="${{ secrets.CESIUM_ION_TOKEN }}" \
-              -t ${{ env.ACR_REGISTRY }}/maapallo-client:${{ github.sha }} ./client; then
-              break
-            else
-              echo "Build attempt $i failed, retrying in 30 seconds..."
-              sleep 30
-            fi
-          done
+          docker build -f client/Dockerfile.production \
+            --build-arg CESIUM_ION_TOKEN="${{ secrets.CESIUM_ION_TOKEN }}" \
+            -t ${{ env.ACR_REGISTRY }}/maapallo-client:${{ github.sha }} ./client
           docker push ${{ env.ACR_REGISTRY }}/maapallo-client:${{ github.sha }}
           docker tag ${{ env.ACR_REGISTRY }}/maapallo-client:${{ github.sha }} ${{ env.ACR_REGISTRY }}/maapallo-client:latest
           docker push ${{ env.ACR_REGISTRY }}/maapallo-client:latest
 
       - name: Build and push Server image
         run: |
-          # Retry logic for Docker Hub registry issues
-          for i in {1..3}; do
-            if docker build -f server/Dockerfile -t ${{ env.ACR_REGISTRY }}/maapallo-server:${{ github.sha }} ./server; then
-              break
-            else
-              echo "Build attempt $i failed, retrying in 30 seconds..."
-              sleep 30
-            fi
-          done
+          docker build -f server/Dockerfile -t ${{ env.ACR_REGISTRY }}/maapallo-server:${{ github.sha }} ./server
           docker push ${{ env.ACR_REGISTRY }}/maapallo-server:${{ github.sha }}
           docker tag ${{ env.ACR_REGISTRY }}/maapallo-server:${{ github.sha }} ${{ env.ACR_REGISTRY }}/maapallo-server:latest
           docker push ${{ env.ACR_REGISTRY }}/maapallo-server:latest
 
       - name: Build and push GeoServer image
         run: |
-          # Retry logic for Docker Hub registry issues
-          for i in {1..3}; do
-            if docker build -f geoserver/Dockerfile -t ${{ env.ACR_REGISTRY }}/maapallo-geoserver:${{ github.sha }} ./geoserver; then
-              break
-            else
-              echo "Build attempt $i failed, retrying in 30 seconds..."
-              sleep 30
-            fi
-          done
+          docker build -f geoserver/Dockerfile -t ${{ env.ACR_REGISTRY }}/maapallo-geoserver:${{ github.sha }} ./geoserver
           docker push ${{ env.ACR_REGISTRY }}/maapallo-geoserver:${{ github.sha }}
           docker tag ${{ env.ACR_REGISTRY }}/maapallo-geoserver:${{ github.sha }} ${{ env.ACR_REGISTRY }}/maapallo-geoserver:latest
           docker push ${{ env.ACR_REGISTRY }}/maapallo-geoserver:latest
