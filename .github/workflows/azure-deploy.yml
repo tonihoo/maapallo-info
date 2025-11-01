@@ -13,7 +13,7 @@ env:
   LOCATION: northeurope
 
   # Database configuration
-  DB_SERVER_NAME: maapallo-db-server
+  DB_SERVER_NAME: maapallo-db-server-v2
 
   # Container Apps environment
   CONTAINER_ENV_NAME: maapallo-env
@@ -344,7 +344,7 @@ jobs:
               PERSIST_RESTORE_LOG="1" \
               DEBUG_RESTORE="0" \
             --min-replicas 1 \
-            --max-replicas 3
+            --max-replicas 2
 
           echo "Waiting for GeoServer update to complete..."
           # Optimized polling with shorter intervals
@@ -468,6 +468,8 @@ jobs:
                 --name maapallo-server \
                 --resource-group ${{ env.RESOURCE_GROUP }} \
                 --image ${{ env.ACR_REGISTRY }}/maapallo-server:${{ github.sha }} \
+                --min-replicas 1 \
+                --max-replicas 2 \
                 --set-env-vars \
                   "ENVIRONMENT=production" \
                   "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" \
@@ -588,6 +590,8 @@ jobs:
                 --name maapallo-client \
                 --resource-group ${{ env.RESOURCE_GROUP }} \
                 --image ${{ env.ACR_REGISTRY }}/maapallo-client:${{ github.sha }} \
+                --min-replicas 1 \
+                --max-replicas 2 \
                 --set-env-vars \
                   "API_SERVER_URL=https://maapallo-server.${ENV_DEFAULT_DOMAIN}" \
                   "GEOSERVER_URL=https://maapallo-geoserver.${ENV_DEFAULT_DOMAIN}/geoserver" \
