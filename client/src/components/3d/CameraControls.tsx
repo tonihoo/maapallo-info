@@ -43,7 +43,7 @@ export function CameraControls({
     <div
       style={{
         position: "absolute",
-        bottom: isMobile ? "85px" : "35px",
+        bottom: isMobile ? "95px" : "45px",
         right: "20px",
         display: "flex",
         flexDirection: "column",

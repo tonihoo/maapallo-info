@@ -12,7 +12,7 @@ export function CoordinatesDisplay({ coordinates }: CoordinatesDisplayProps) {
     <div
       style={{
         position: "absolute",
-        bottom: isMobile ? "85px" : "35px",
+        bottom: isMobile ? "95px" : "45px",
         width: "auto",
         left: "50%",
         transform: "translateX(-50%)",
