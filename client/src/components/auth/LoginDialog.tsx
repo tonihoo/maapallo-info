@@ -1,17 +1,17 @@
-import React, { useState } from "react";
 import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Button,
   Alert,
   Box,
+  Button,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  TextField,
 } from "@mui/material";
+import React, { useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
-import { login, clearError } from "../../store/slices/authSlice";
+import { clearError, login } from "../../store/slices/authSlice";
 
 interface LoginDialogProps {
   open: boolean;
@@ -61,7 +61,7 @@ export const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
 
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Admin Login</DialogTitle>
+      <DialogTitle>Kirjaudu sisään</DialogTitle>
 
       <form onSubmit={handleSubmit}>
         <DialogContent>
@@ -74,7 +74,7 @@ export const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
           <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
             <TextField
               name="username"
-              label="Username"
+              label="Käyttäjätunnus"
               type="text"
               value={formData.username}
               onChange={handleInputChange}
@@ -86,7 +86,7 @@ export const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
 
             <TextField
               name="password"
-              label="Password"
+              label="Salasana"
               type="password"
               value={formData.password}
               onChange={handleInputChange}
@@ -99,7 +99,7 @@ export const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
 
         <DialogActions sx={{ p: 2 }}>
           <Button onClick={handleClose} disabled={isLoading}>
-            Cancel
+            Peruuta
           </Button>
           <Button
             type="submit"
@@ -107,7 +107,7 @@ export const LoginDialog: React.FC<LoginDialogProps> = ({ open, onClose }) => {
             disabled={isLoading || !formData.username || !formData.password}
             startIcon={isLoading && <CircularProgress size={20} />}
           >
-            {isLoading ? "Logging in..." : "Login"}
+            {isLoading ? "Kirjaudutaan sisään..." : "Kirjaudu"}
           </Button>
         </DialogActions>
       </form>
