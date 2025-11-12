@@ -5,6 +5,7 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  Typography,
 } from "@mui/material";
 
 interface SiteInfoProps {
@@ -45,26 +46,26 @@ export default function SiteInfo({ open, onClose }: SiteInfoProps) {
       </DialogTitle>
 
       <DialogContent sx={{ pt: 2 }}>
-        <Box sx={{ "& p": { marginBottom: 2 } }}>
-          <p>
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <Typography variant="body1">
             Maapallo.info on karttaportaali, joka havainnollistaa
             maantieteellisiä ilmiöitä erityisesti globaalin kehityksen ja
             ympäristön näkökulmista. Portaalin suunnittelusta ja ylläpidosta
             vastaa <a href="https://kehmy.fi">Kehitysmaantieteen yhdistys</a>.
-          </p>
-          <p>
+          </Typography>
+          <Typography variant="body1">
             Pohjakartat ja karttakerrosten aineistot ovat peräisin avoimista
             lähteistä.
-          </p>
-          <p>
+          </Typography>
+          <Typography variant="body1">
             Portaalia kehitetään aktiivisesti ja siihen pyritään lisäämään
             useita uusia toiminnallisuuksia ja aineistoja lähitulevaisuudessa.
-          </p>
-          <p>
+          </Typography>
+          <Typography variant="body1">
             Palautetta ja parannusehdotuksia voi lähettää osoitteeseen{" "}
             <a href="mailto:kehmy.ry@gmail.com">kehmy.ry@gmail.com</a>.
-          </p>
-          <p>
+          </Typography>
+          <Typography variant="body1">
             Maapallo.info on rakennettu avoimen lähdekoodin työkaluilla ja sen
             koodi on{" "}
             <a
@@ -75,7 +76,7 @@ export default function SiteInfo({ open, onClose }: SiteInfoProps) {
               GitHubissa
             </a>
             . Voit osallistua myös tekemällä oman pull requestin!
-          </p>
+          </Typography>
         </Box>
       </DialogContent>
     </Dialog>
