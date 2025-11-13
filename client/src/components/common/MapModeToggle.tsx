@@ -22,6 +22,7 @@ export function MapModeToggle({ isMobile }: MapModeToggleProps) {
   const is3DMode = useAppSelector(selectIs3DMode);
   const cesiumPreloaded = useAppSelector(selectCesiumPreloaded);
   const CesiumMapComponent = useAppSelector(selectCesiumComponent);
+  const tooltip = is3DMode ? "Vaihda 2D-näkymään" : "Vaihda 3D-näkymään";
 
   const toggleMapModeHandler = useCallback(async () => {
     const previousMode = is3DMode ? "3d" : "2d";
@@ -63,6 +64,7 @@ export function MapModeToggle({ isMobile }: MapModeToggleProps) {
           onClick={toggleMapModeHandler}
           disabled={!cesiumPreloaded}
           size="small"
+          title={tooltip}
           sx={{
             position: "absolute",
             top: isMobile ? "2px" : "70px",
