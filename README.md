@@ -96,7 +96,7 @@ docker compose logs -f geoserver
 
 ## Dependency Management
 
-The running application is the Oskari image in `oskari`. Rebuild it after changing the frontend bundle, `geoportal.jsp`, or server configuration:
+The running application is the Oskari image in `oskari`. Local Compose watches `oskari/custom/WEB-INF/jsp/geoportal.jsp` and Tomcat recompiles it on the next request, so layout changes do not need an image rebuild. Restart the Oskari container after changing server configuration. Rebuild the image after changing the frontend bundle, the favicon, or the Dockerfile:
 
 ```bash
 docker compose build oskari

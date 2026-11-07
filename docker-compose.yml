@@ -15,6 +15,10 @@ services:
       POSTGRES_SUPERPASSWORD: DevPassword
       OSKARI_DOMAIN: http://localhost:8080
       OSKARI_SECURE: "false"
+    volumes:
+      - ./oskari/custom:/opt/maapallo-custom:ro
+      - ./oskari/dev-entrypoint.sh:/dev-entrypoint.sh:ro
+    entrypoint: ["/bin/bash", "/dev-entrypoint.sh"]
     depends_on:
       db:
         condition: service_healthy

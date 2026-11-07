@@ -310,26 +310,38 @@
             height: 100% !important;
         }
 
-        .mp-header {
-            background-color: var(--mp-orange);
-            color: black;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+        #mp-about-btn {
+            appearance: none !important;
+            -webkit-appearance: none !important;
+            background-color: var(--mp-orange) !important;
+            background-image: none !important;
+            color: black !important;
+            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35) !important;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
             position: fixed;
             top: var(--mp-header);
             left: 50%;
             transform: translateX(-50%);
             z-index: 1000;
-            width: max-content;
+            width: max-content !important;
+            min-width: 0 !important;
             max-width: calc(100vw - 180px);
-            height: auto;
+            height: auto !important;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 8px 16px;
+            padding: 8px 16px !important;
             border-radius: 999px;
-            pointer-events: none;
+            border: 0 !important;
+            font: inherit;
+            cursor: pointer;
         }
-        .mp-header h1 {
+        #mp-about-btn:hover { filter: brightness(1.06); }
+        #mp-about-btn:focus-visible {
+            outline: 2px solid #1a1a1a;
+            outline-offset: 2px;
+        }
+        #mp-about-btn h1 {
             margin: 0;
             padding: 0 !important;
             font-family: Roboto, Helvetica, Arial, sans-serif;
@@ -376,21 +388,21 @@
             appearance: none;
             position: fixed;
             top: var(--mp-header);
-            right: 10px;
+            right: 12px;
             z-index: 1001;
             box-sizing: border-box;
-            width: 64px;
-            height: 64px;
-            min-width: 64px;
-            min-height: 64px;
-            max-width: 64px;
-            max-height: 64px;
+            width: 40px;
+            height: 40px;
+            min-width: 40px;
+            min-height: 40px;
+            max-width: 40px;
+            max-height: 40px;
             padding: 0;
             border: 0;
             border-radius: 50%;
             background: rgba(255, 255, 255, 0.9);
             color: #4caf50;
-            font-size: 24px;
+            font-size: 13px;
             font-weight: 700;
             font-family: Roboto, Helvetica, Arial, sans-serif;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
@@ -399,6 +411,11 @@
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+        body.mp-3d .mapplugins.right.top {
+            top: 40px !important;
+            bottom: auto !important;
+            height: auto !important;
         }
         body.mp-3d .mp-mode { color: #ffb34c; }
         .mp-mode:hover { background: #fff; }
@@ -437,37 +454,53 @@
         }
         .mp-basemap-menu {
             display: none;
-            position: absolute;
-            top: 0;
-            left: 48px;
-            background: rgba(42, 42, 42, 0.95);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 4px;
-            padding: 4px;
-            min-width: 180px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+            position: fixed;
+            top: calc(var(--mp-header) + 96px);
+            left: var(--mp-rail);
+            z-index: 1300;
+            width: min(420px, calc(100vw - var(--mp-rail) - 24px));
+            background: #f6f5f3;
+            border: 0;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
+            padding: 0;
         }
         .mp-basemap.open .mp-basemap-menu { display: block; }
-        .mp-basemap-menu button {
-            appearance: none;
-            width: 100%;
-            min-width: 0;
-            padding: 8px 12px;
-            background: transparent;
-            color: white;
-            border: 0;
-            border-radius: 2px;
-            cursor: pointer;
-            font-size: 14px;
-            font-family: Roboto, Helvetica, Arial, sans-serif;
-            text-align: left;
+        .mp-basemap-title {
             display: flex;
             align-items: center;
-            gap: 8px;
-            line-height: 1.2;
+            justify-content: space-between;
+            box-sizing: border-box;
+            height: 52px;
+            margin: 0;
+            padding: 0 8px 0 18px;
+            background: #3c3c3c;
+            color: #fff;
+            font-family: Roboto, Helvetica, Arial, sans-serif;
+            font-size: 16px;
+            font-weight: 500;
+            letter-spacing: 0.01em;
+            line-height: 20px;
         }
-        .mp-basemap-menu button[aria-current="true"] { background: rgba(255, 255, 255, 0.2); }
-        .mp-basemap-menu button:hover { background: rgba(255, 255, 255, 0.1); }
+        .mp-basemap-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 8px 14px 16px;
+        }
+        .mp-basemap-swatch {
+            width: 28px;
+            height: 28px;
+            flex: 0 0 28px;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+        }
+        .mp-basemap-swatch.satellite { background: linear-gradient(135deg, #1a5276, #1e8449 55%, #b9770e); }
+        .mp-basemap-swatch.topo { background: linear-gradient(160deg, #d5d8dc, #7dcea0 42%, #1e8449); }
+        .mp-basemap-swatch.cartoLight { background: #f7f7f5; }
+        .mp-basemap-swatch.cartoDark { background: #2c2c2c; }
+        .mp-basemap-swatch.osm { background: linear-gradient(160deg, #aed6f1, #f9e79f 55%, #abebc6); }
 
         .mp-controls {
             position: fixed;
@@ -561,8 +594,95 @@
         .mapplugin.featuredataplugin,
         .zoombar,
         .plugins-bottom,
-        .ol-attribution,
-        .t_GuidedTour { display: none !important; }
+        .ol-attribution { display: none !important; }
+
+        .t_GuidedTour:not(.mp-welcome-ready) { visibility: hidden !important; }
+        .t_GuidedTour {
+            position: fixed !important;
+            top: calc(var(--mp-header) + 48px) !important;
+            left: var(--mp-rail) !important;
+            right: auto !important;
+            bottom: auto !important;
+            transform: none !important;
+            width: min(420px, calc(100vw - var(--mp-rail) - 24px)) !important;
+            max-width: calc(100vw - var(--mp-rail) - 24px) !important;
+            max-height: calc(100vh - var(--mp-header) - 80px) !important;
+            margin: 0 !important;
+            border: 0 !important;
+            border-radius: 16px !important;
+            overflow: hidden !important;
+            background: #f6f5f3 !important;
+            box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22) !important;
+            z-index: 1300 !important;
+            font-family: Roboto, Helvetica, Arial, sans-serif;
+        }
+        .t_GuidedTour [class*="Header__Container"] {
+            display: flex !important;
+            align-items: center !important;
+            box-sizing: border-box;
+            height: 52px !important;
+            margin: 0 !important;
+            padding: 0 8px 0 18px !important;
+            background: #3c3c3c !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+        }
+        .t_GuidedTour [class*="Header__TitleContainer"] { flex: 1 1 auto; min-width: 0; }
+        .t_GuidedTour [class*="Header__Container"] h3 {
+            margin: 0 !important;
+            color: #fff !important;
+            font-family: Roboto, Helvetica, Arial, sans-serif !important;
+            font-size: 16px !important;
+            font-weight: 500 !important;
+            letter-spacing: 0.01em;
+            line-height: 20px !important;
+        }
+        .t_GuidedTour [class*="Header__Container"] .ant-btn {
+            background: transparent !important;
+            border: 0 !important;
+            box-shadow: none !important;
+            color: #fff !important;
+        }
+        .t_GuidedTour [class*="Header__Container"] .anticon { color: #fff !important; }
+        .t_GuidedTour .t_body {
+            background: #f6f5f3 !important;
+            max-height: calc(100vh - var(--mp-header) - 132px);
+            overflow: auto;
+        }
+        .t_GuidedTour .mp-welcome p {
+            margin: 0 0 14px;
+            font-size: 15px;
+            line-height: 1.5;
+            color: #1a1a1a;
+        }
+        .t_GuidedTour .mp-welcome a { color: #1565c0; }
+        .t_GuidedTour .ant-btn-primary {
+            background: #ffb34c !important;
+            border-color: #ffb34c !important;
+            color: #1a1a1a !important;
+            box-shadow: none !important;
+            border-radius: 8px !important;
+            font-weight: 500;
+        }
+        body.mp-3d .t_GuidedTour .ant-btn-primary {
+            background: #7ec781 !important;
+            border-color: #7ec781 !important;
+        }
+        .t_GuidedTour .ant-btn-default {
+            background: #fff !important;
+            border-color: #e4e0da !important;
+            color: #1a1a1a !important;
+            box-shadow: none !important;
+            border-radius: 8px !important;
+        }
+        .t_GuidedTour .ant-checkbox-checked .ant-checkbox-inner {
+            background: #ffb34c !important;
+            border-color: #ffb34c !important;
+        }
+        body.mp-3d .t_GuidedTour .ant-checkbox-checked .ant-checkbox-inner {
+            background: #7ec781 !important;
+            border-color: #7ec781 !important;
+        }
 
         .mp-backdrop {
             display: none;
@@ -614,30 +734,78 @@
             min-width: 0 !important;
             padding: 0 !important;
         }
-        .mp-basemap-menu button {
+        .mp-basemap-list button {
             width: 100% !important;
             height: auto !important;
             min-width: 0 !important;
-            background-color: rgba(42, 42, 42, 0.98) !important;
+            box-sizing: border-box !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 12px !important;
+            margin: 0 !important;
+            padding: 12px 14px !important;
+            background-color: #fff !important;
+            background-image: none !important;
+            color: #1a1a1a !important;
+            text-shadow: none !important;
+            border: 1px solid #ece8e2 !important;
+            border-radius: 12px !important;
+            box-shadow: none !important;
+            font-family: Roboto, Helvetica, Arial, sans-serif !important;
+            font-size: 15px !important;
+            font-weight: 600 !important;
+            line-height: 1.2 !important;
+            text-align: left !important;
+            cursor: pointer;
+        }
+        .mp-basemap-list button:hover {
+            background-color: rgba(255, 179, 76, 0.14) !important;
+        }
+        .mp-basemap-list button[aria-current="true"] {
+            background-color: rgba(255, 179, 76, 0.22) !important;
+            border-color: #ffb34c !important;
+        }
+        body.mp-3d .mp-basemap-list button:hover {
+            background-color: rgba(126, 199, 129, 0.16) !important;
+        }
+        body.mp-3d .mp-basemap-list button[aria-current="true"] {
+            background-color: rgba(126, 199, 129, 0.24) !important;
+            border-color: #7ec781 !important;
+        }
+        .mp-basemap-close {
+            appearance: none !important;
+            width: 32px !important;
+            height: 32px !important;
+            min-width: 0 !important;
+            padding: 0 !important;
+            border: 0 !important;
+            border-radius: 8px !important;
+            background: transparent !important;
+            background-image: none !important;
             color: #fff !important;
+            text-shadow: none !important;
+            box-shadow: none !important;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        .mp-basemap-menu button[aria-current="true"] {
-            background-color: rgba(255, 255, 255, 0.2) !important;
-        }
+        .mp-basemap-close:hover { background: rgba(255, 255, 255, 0.12) !important; }
         .mp-menu-btn {
             background-image: none !important;
             color: #fff !important;
         }
         .mp-mode {
             box-sizing: border-box !important;
-            width: 64px !important;
-            height: 64px !important;
-            min-width: 64px !important;
-            min-height: 64px !important;
-            max-width: 64px !important;
-            max-height: 64px !important;
+            width: 40px !important;
+            height: 40px !important;
+            min-width: 40px !important;
+            min-height: 40px !important;
+            max-width: 40px !important;
+            max-height: 40px !important;
             padding: 0 !important;
             border-radius: 50% !important;
+            font-size: 13px !important;
             line-height: 1 !important;
         }
 
@@ -678,9 +846,9 @@
     </style>
 </head>
 <body>
-<header class="mp-header">
+<button class="mp-header" id="mp-about-btn" type="button" title="Tietoa portaalista" aria-haspopup="dialog" aria-expanded="false">
     <h1>Maapallo.info</h1>
-</header>
+</button>
 <div class="mp-backdrop" id="mp-backdrop"></div>
 <div id="oskari">
     <nav id="maptools">
@@ -740,7 +908,17 @@
                 <path fill="currentColor" d="M15 5.5 9 3 3 5.2v13.6L9 16.5 15 19l6-2.2V3.2L15 5.5zm0 1.7 3.2-1.2v10.7L15 18V7.2zM9 4.8l4.2 1.6V18l-4.2-1.8V4.8zM5 6.4l2.5-.9v11.2L5 17.6V6.4z"/>
             </svg>
         </button>
-        <div class="mp-basemap-menu" id="mp-basemap-menu"></div>
+        <div class="mp-basemap-menu" id="mp-basemap-menu">
+            <div class="mp-basemap-title">
+                <span>Pohjakartta</span>
+                <button class="mp-basemap-close" id="mp-basemap-close" type="button" title="Sulje" aria-label="Sulje">
+                    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                        <path fill="currentColor" d="M6.4 5 12 10.6 17.6 5 19 6.4 13.4 12 19 17.6 17.6 19 12 13.4 6.4 19 5 17.6 10.6 12 5 6.4z"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="mp-basemap-list" id="mp-basemap-list"></div>
+        </div>
     </div>
 </div>
 
@@ -817,8 +995,9 @@
         src.changed();
         currentBase = key;
         document.getElementById('mp-attribution').textContent = item.attribution;
-        document.querySelectorAll('#mp-basemap-menu button').forEach(function (btn) {
-            btn.setAttribute('aria-current', btn.getAttribute('data-key') === key ? 'true' : 'false');
+        document.querySelectorAll('#mp-basemap-list button').forEach(function (btn) {
+            if (btn.getAttribute('data-key') === key) btn.setAttribute('aria-current', 'true');
+            else btn.removeAttribute('aria-current');
         });
     }
 
@@ -851,6 +1030,70 @@
         toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
         toggle.title = open ? 'Sulje valikko' : 'Valikko';
     }
+    var WELCOME_MARK = 'MP_WELCOME';
+    var WELCOME_HTML = ''
+        + '<p>Maapallo.info on karttaportaali, joka havainnollistaa maantieteellisiä ilmiöitä erityisesti globaalin kehityksen ja ympäristön näkökulmista. Portaalin suunnittelusta ja ylläpidosta vastaa <a href="https://kehmy.fi" target="_blank" rel="noopener noreferrer">Kehitysmaantieteen yhdistys</a>.</p>'
+        + '<p>Pohjakartat ja karttakerrosten aineistot ovat peräisin avoimista lähteistä.</p>'
+        + '<p>Portaalia kehitetään aktiivisesti ja siihen pyritään lisäämään useita uusia toiminnallisuuksia ja aineistoja lähitulevaisuudessa.</p>'
+        + '<p>Palautetta ja parannusehdotuksia voi lähettää osoitteeseen <a href="mailto:kehmy.ry@gmail.com">kehmy.ry@gmail.com</a>.</p>'
+        + '<p>Maapallo.info on rakennettu avoimen lähdekoodin työkaluilla erityisesti <a href="https://oskari.org" target="_blank" rel="noopener noreferrer">Oskari-alustaa</a> hyödyntäen. Sivuston koodi on <a href="https://github.com/tonihoo/maapallo-info" target="_blank" rel="noopener noreferrer">GitHubissa</a>. Voit osallistua Maapallo.infon kehittämiseen myös tekemällä oman pull requestin!</p>';
+    ['fi', 'en', 'sv'].forEach(function (lang) {
+        Oskari.registerLocalization({
+            lang: lang,
+            key: 'GuidedTour',
+            value: { title: 'Tervetuloa', page1: { title: 'Tervetuloa', message: WELCOME_MARK } }
+        }, true);
+    });
+    function paintWelcome() {
+        var popup = document.querySelector('.t_GuidedTour');
+        if (!popup) return;
+        var box = popup.querySelector('.t_body > div');
+        var text = box && box.firstChild && box.firstChild.nodeType === 3 ? box.firstChild.nodeValue : '';
+        if (box && text.indexOf(WELCOME_MARK) === 0) {
+            var holder = document.createElement('div');
+            holder.className = 'mp-welcome';
+            holder.innerHTML = WELCOME_HTML;
+            box.replaceChild(holder, box.firstChild);
+        }
+        popup.classList.add('mp-welcome-ready');
+    }
+    new MutationObserver(paintWelcome).observe(document.body, { childList: true, subtree: true });
+    function guidedTour() {
+        if (!window.Oskari || !Oskari.getSandbox) return null;
+        return Oskari.getSandbox().findRegisteredModuleInstance('GuidedTour');
+    }
+    function ensureTour() {
+        var gt = guidedTour();
+        if (gt && gt._handler) return gt;
+        if (window.jQuery && jQuery.cookie) {
+            jQuery.cookie('pti_tour_seen', '', { expires: -1, path: '/' });
+        }
+        var created = Oskari.clazz.create('Oskari.framework.bundle.guidedtour.GuidedTourBundleInstance');
+        if (created && created.start) created.start();
+        return guidedTour();
+    }
+    var aboutBtn = document.getElementById('mp-about-btn');
+    function toggleWelcome() {
+        var gt = guidedTour();
+        if (!gt || !gt._handler) {
+            gt = ensureTour();
+            if (!gt || !gt._handler) return;
+            gt._handler._showGuideContentForStep(0);
+            paintWelcome();
+            aboutBtn.setAttribute('aria-expanded', 'true');
+            return;
+        }
+        var handler = gt._handler;
+        if (handler.popupControls && handler.state.step === 0) {
+            handler.popupCleanup(false);
+            aboutBtn.setAttribute('aria-expanded', 'false');
+            return;
+        }
+        handler._showGuideContentForStep(0);
+        paintWelcome();
+        aboutBtn.setAttribute('aria-expanded', 'true');
+    }
+    aboutBtn.addEventListener('click', toggleWelcome);
     document.getElementById('mp-menu-btn').addEventListener('click', function (event) {
         event.stopPropagation();
         setMenu(!document.body.classList.contains('mp-menu-open'));
@@ -883,6 +1126,10 @@
         box.classList.toggle('open', open);
         document.getElementById('mp-basemap-btn').setAttribute('aria-expanded', open ? 'true' : 'false');
     });
+    document.getElementById('mp-basemap-close').addEventListener('click', function (event) {
+        event.stopPropagation();
+        closeBasemap();
+    });
     document.getElementById('mp-home').addEventListener('click', function () {
         moveMap(HOME.x, HOME.y, HOME.zoom);
     });
@@ -897,12 +1144,12 @@
         moveMap(c.lon, c.lat, Math.max(0, map.getMapZoom() - 1));
     });
 
-    var menu = document.getElementById('mp-basemap-menu');
+    var menu = document.getElementById('mp-basemap-list');
     BASEMAPS.forEach(function (item) {
         var btn = document.createElement('button');
         btn.type = 'button';
         btn.setAttribute('data-key', item.key);
-        btn.innerHTML = '<span>' + item.icon + '</span><span>' + item.name + '</span>';
+        btn.innerHTML = '<span class="mp-basemap-swatch ' + item.key + '"></span><span>' + item.name + '</span>';
         btn.addEventListener('click', function () {
             setBaseMap(item.key);
             closeBasemap();
