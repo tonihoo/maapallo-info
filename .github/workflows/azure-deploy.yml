@@ -164,9 +164,11 @@ jobs:
         run: |
           # Check if PostgreSQL server exists
           echo "Checking if PostgreSQL server exists..."
+          SERVER_CREATED=0
           if az postgres flexible-server show --name ${{ env.DB_SERVER_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} >/dev/null 2>&1; then
             echo "PostgreSQL server ${{ env.DB_SERVER_NAME }} already exists, skipping creation."
           else
+            SERVER_CREATED=1
             echo "Creating PostgreSQL server with admin user: ${{ secrets.DB_ADMIN_USER }}"
             az postgres flexible-server create \
               --name ${{ env.DB_SERVER_NAME }} \
@@ -188,56 +190,56 @@ jobs:
               }
           fi
 
-          # Create database if it doesn't exist
+          # Create database if it doesn't exist.
+          # Current Azure CLI takes the database as --name, not --database-name.
           echo "Checking if database exists..."
-          if az postgres flexible-server db show --database-name ${{ secrets.DB_NAME }} --server-name ${{ env.DB_SERVER_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} >/dev/null 2>&1; then
+          if az postgres flexible-server db show --name "${{ secrets.DB_NAME }}" --server-name ${{ env.DB_SERVER_NAME }} --resource-group ${{ env.RESOURCE_GROUP }} >/dev/null 2>&1; then
             echo "Database ${{ secrets.DB_NAME }} already exists, skipping creation."
           else
             echo "Creating database ${{ secrets.DB_NAME }}..."
             az postgres flexible-server db create \
-              --database-name ${{ secrets.DB_NAME }} \
+              --name "${{ secrets.DB_NAME }}" \
               --server-name ${{ env.DB_SERVER_NAME }} \
               --resource-group ${{ env.RESOURCE_GROUP }}
           fi
 
-          # Configure PostGIS extension
-          echo "Configuring PostGIS extension..."
+          # Server parameters require a restart. Do that only when this run created the server.
+          if [ "$SERVER_CREATED" = "1" ]; then
+            echo "Configuring PostGIS-related server parameters..."
+            az postgres flexible-server parameter set \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --server-name ${{ env.DB_SERVER_NAME }} \
+              --name shared_preload_libraries \
+              --value "pg_stat_statements"
 
-          # Enable pg_stat_statements in server parameters (PostGIS doesn't need preloading)
-          az postgres flexible-server parameter set \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --server-name ${{ env.DB_SERVER_NAME }} \
-            --name shared_preload_libraries \
-            --value "pg_stat_statements"
+            echo "Restarting server to apply parameter changes..."
+            az postgres flexible-server restart \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --name ${{ env.DB_SERVER_NAME }}
 
-          # Restart server to apply parameter changes
-          echo "Restarting server to apply parameter changes..."
-          az postgres flexible-server restart \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --name ${{ env.DB_SERVER_NAME }}
+            az postgres flexible-server parameter set \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --server-name ${{ env.DB_SERVER_NAME }} \
+              --name max_connections \
+              --value "200"
 
-          # Optimize for GIS workload
-          az postgres flexible-server parameter set \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --server-name ${{ env.DB_SERVER_NAME }} \
-            --name max_connections \
-            --value "200"
+            az postgres flexible-server parameter set \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --server-name ${{ env.DB_SERVER_NAME }} \
+              --name shared_buffers \
+              --value "262144"
 
-          az postgres flexible-server parameter set \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --server-name ${{ env.DB_SERVER_NAME }} \
-            --name shared_buffers \
-            --value "262144"
+            az postgres flexible-server parameter set \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --server-name ${{ env.DB_SERVER_NAME }} \
+              --name effective_cache_size \
+              --value "1572864"
 
-          az postgres flexible-server parameter set \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --server-name ${{ env.DB_SERVER_NAME }} \
-            --name effective_cache_size \
-            --value "1572864"
-
-          # Wait for server to be ready after parameter changes
-          echo "Waiting for server restart..."
-          sleep 60
+            echo "Waiting for server restart..."
+            sleep 60
+          else
+            echo "Leaving the existing PostgreSQL server running."
+          fi
 
           # Install PostGIS extensions in the database
           PGPASSWORD="${{ secrets.DB_ADMIN_PASSWORD }}" psql \
