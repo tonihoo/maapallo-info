@@ -939,8 +939,6 @@
 <script type="text/javascript" src="${clientDomain}/Oskari${path}/index.js"></script>
 <script type="text/javascript">
 (function () {
-    var WORLD = '5933e4ce-ce16-4f12-b897-a966dbb37b7b';
-    var WORLD_3D = '5a988cfa-7321-4505-8524-1078ad7c9257';
     var HOME = { x: 3339585, y: 2273030, zoom: 1 };
     var BASEMAPS = [
         { key: 'satellite', name: 'Satelliitti', icon: '🌍', maxZoom: 8, template: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg', attribution: 'Imagery courtesy NASA Worldview, part of NASA EOSDIS (GIBS)' },
@@ -963,7 +961,18 @@
     }
     function is3dView() {
         if (document.body.classList.contains('mp-3d')) return true;
-        return !!(window.Oskari && Oskari.app && Oskari.app.getUuid && Oskari.app.getUuid() === WORLD_3D);
+        try {
+            var map = sandbox().getMap();
+            return !!(map && map.getSupports3D && map.getSupports3D());
+        } catch (e) {
+            return false;
+        }
+    }
+    // The sample migration stores the other view's id on this view. It is
+    // generated per database, so a uuid copied from a local install 404s in production.
+    function otherViewUuid() {
+        var dim = sandbox().findRegisteredModuleInstance('DimensionChangeBundleInstance');
+        return dim && dim.conf && dim.conf.uuid || null;
     }
     function cesiumScene() {
         var map = mapModule();
@@ -1311,14 +1320,14 @@
     });
 
     Oskari.on('app.start', function () {
-        var uuid = Oskari.app.getUuid();
-        var is3d = uuid === WORLD_3D;
+        var is3d = is3dView();
         document.body.classList.toggle('mp-3d', is3d);
         var mode = document.getElementById('mp-mode');
         mode.textContent = is3d ? '2D' : '3D';
         mode.title = is3d ? 'Vaihda 2D-näkymään' : 'Vaihda 3D-näkymään';
         mode.addEventListener('click', function () {
-            window.location = '/?uuid=' + (is3d ? WORLD : WORLD_3D);
+            var target = otherViewUuid();
+            if (target) window.location = '/?uuid=' + target;
         });
 
         var input = document.querySelector('.mapplugin.search input');
