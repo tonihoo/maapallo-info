@@ -943,26 +943,45 @@
     var WORLD_3D = '5a988cfa-7321-4505-8524-1078ad7c9257';
     var HOME = { x: 3339585, y: 2273030, zoom: 1 };
     var BASEMAPS = [
-        { key: 'satellite', name: 'Satelliitti', icon: '🌍', attribution: 'Imagery courtesy NASA Worldview, part of NASA EOSDIS (GIBS)' },
-        { key: 'topo', name: 'Topografinen', icon: '🏔️', template: 'https://tile.opentopomap.org/{z}/{x}/{y}.png', attribution: 'Map data: © OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap' },
-        { key: 'cartoLight', name: 'Vaalea', icon: '🌕', template: 'https://basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png', attribution: '© OpenStreetMap contributors © CARTO' },
-        { key: 'cartoDark', name: 'Tumma', icon: '🌑', template: 'https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png', attribution: '© OpenStreetMap contributors © CARTO' },
-        { key: 'osm', name: 'OpenStreetMap', icon: '🗺️', template: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: '© OpenStreetMap contributors' }
+        { key: 'satellite', name: 'Satelliitti', icon: '🌍', maxZoom: 8, template: 'https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_ShadedRelief_Bathymetry/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg', attribution: 'Imagery courtesy NASA Worldview, part of NASA EOSDIS (GIBS)' },
+        { key: 'topo', name: 'Topografinen', icon: '🏔️', maxZoom: 17, template: 'https://tile.opentopomap.org/{z}/{x}/{y}.png', attribution: 'Map data: © OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap' },
+        { key: 'cartoLight', name: 'Vaalea', icon: '🌕', maxZoom: 16, template: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', attribution: '© Esri, HERE, Garmin, © OpenStreetMap contributors' },
+        { key: 'cartoDark', name: 'Tumma', icon: '🌑', maxZoom: 16, template: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', attribution: '© Esri, HERE, Garmin, © OpenStreetMap contributors' },
+        { key: 'osm', name: 'OpenStreetMap', icon: '🗺️', maxZoom: 19, template: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attribution: '© OpenStreetMap contributors' }
     ];
     var currentBase = 'satellite';
-    var originalTileUrl = null;
+    var baseSources = null;
+    var baseLayerType = null;
+    var activeBaseLayer = null;
 
     function sandbox() { return Oskari.getSandbox(); }
     function mapModule() { return sandbox().findRegisteredModuleInstance('MainMapModule'); }
-    function tileSource() {
-        var olMap = mapModule() && mapModule().getMap && mapModule().getMap();
-        if (!olMap) return null;
-        var layers = olMap.getLayers().getArray();
-        for (var i = 0; i < layers.length; i++) {
-            var src = layers[i].getSource && layers[i].getSource();
-            if (src && src.setTileUrlFunction && src.getUrls) return src;
-        }
-        return null;
+    function olMap() {
+        var map = mapModule();
+        return map && map.getMap && map.getMap();
+    }
+    function isStreetLayer(layer) {
+        if (!layer || (layer.get && layer.get('mpBasemap'))) return false;
+        var src = layer.getSource && layer.getSource();
+        if (!src || !src.getUrls || !src.getTileUrlFunction) return false;
+        var urls = [];
+        try { urls = src.getUrls() || []; } catch (e) { return false; }
+        var joined = urls.join(' ');
+        return joined.indexOf('.pbf') !== -1 || joined.indexOf('maptiler.com/tiles') !== -1 || joined.indexOf('gibs.earthdata.nasa.gov') !== -1;
+    }
+    function hideStreetBase() {
+        var map = olMap();
+        if (!map || document.body.classList.contains('mp-3d')) return;
+        map.getLayers().getArray().forEach(function (layer) {
+            if (!isStreetLayer(layer)) return;
+            if (!layer._mpPinned) {
+                layer._mpPinned = true;
+                layer.on('change:visible', function () {
+                    if (layer.getVisible()) layer.setVisible(false);
+                });
+            }
+            if (layer.getVisible()) layer.setVisible(false);
+        });
     }
     function moveMap(x, y, zoom) {
         var map = mapModule();
@@ -978,25 +997,97 @@
         var ew = lon >= 0 ? 'E' : 'W';
         return ns + ' ' + Math.abs(lat).toFixed(3) + '°, ' + ew + ' ' + Math.abs(lon).toFixed(3) + '°';
     }
-    function setBaseMap(key) {
-        var src = tileSource();
-        var item = BASEMAPS.filter(function (b) { return b.key === key; })[0];
-        if (!src || !item) return;
-        if (!originalTileUrl) originalTileUrl = src.getTileUrlFunction();
-        if (item.template) {
-            src.setTileUrlFunction(function (coord) {
-                if (!coord) return undefined;
-                return item.template.replace('{z}', coord[0]).replace('{x}', coord[1]).replace('{y}', coord[2]);
-            });
-        } else if (originalTileUrl) {
-            src.setTileUrlFunction(originalTileUrl);
+    function basemapItem(key) {
+        for (var i = 0; i < BASEMAPS.length; i++) if (BASEMAPS[i].key === key) return BASEMAPS[i];
+        return BASEMAPS[0];
+    }
+    function tileConstructors() {
+        var mm = mapModule();
+        var map = olMap();
+        var plugin = mm && mm._layerPlugins && mm._layerPlugins.wmslayer;
+        if (!map || !plugin || !mm._mapLayerService) return null;
+        var wms = null;
+        mm._mapLayerService.getAllLayers().forEach(function (layer) {
+            if (!wms && layer.getLayerType && layer.getLayerType() === 'wms' && plugin.isLayerSupported(layer)) wms = layer;
+        });
+        if (!wms) return null;
+        plugin.addMapLayerToMap(wms, true, false);
+        var created = plugin.getOLMapLayers(wms);
+        var olLayer = created && (Array.isArray(created) ? created[0] : created);
+        if (!olLayer || !olLayer.getSource()) {
+            try { plugin.removeMapLayerFromMap(wms); } catch (e) {}
+            return null;
         }
-        if (src.refresh) src.refresh();
-        src.changed();
-        currentBase = key;
+        var types = { Layer: olLayer.constructor, Source: olLayer.getSource().constructor };
+        try { plugin.removeMapLayerFromMap(wms); } catch (e) { map.removeLayer(olLayer); }
+        return types;
+    }
+    function ensureBaseSources() {
+        if (baseSources) return baseSources;
+        var map = olMap();
+        var types = tileConstructors();
+        if (!map || !types) return null;
+        var projection = map.getView().getProjection();
+        var probe = new types.Source({ url: 'about:blank', params: {}, projection: projection });
+        var fullGrid = probe.getTileGridForProjection(projection);
+        var Grid = fullGrid.constructor;
+        baseLayerType = types.Layer;
+        baseSources = {};
+        BASEMAPS.forEach(function (item) {
+            var grid = new Grid({
+                extent: fullGrid.getExtent(),
+                origin: fullGrid.getOrigin(0),
+                resolutions: fullGrid.getResolutions().slice(0, item.maxZoom + 1),
+                tileSize: fullGrid.getTileSize(0)
+            });
+            var template = item.template;
+            var source = new types.Source({
+                url: template,
+                params: {},
+                projection: projection,
+                wrapX: true,
+                tileGrid: grid,
+                transition: 0
+            });
+            source.setTileUrlFunction(function (coord) {
+                if (!coord) return undefined;
+                var z = coord[0];
+                var n = Math.pow(2, z);
+                var x = coord[1];
+                var y = coord[2];
+                if (y < 0 || y >= n) return undefined;
+                x = ((x % n) + n) % n;
+                return template.replace('{z}', z).replace('{x}', x).replace('{y}', y);
+            });
+            source.setTileLoadFunction(function (tile, url) {
+                var image = tile.getImage();
+                image.referrerPolicy = 'strict-origin-when-cross-origin';
+                image.src = url;
+            });
+            baseSources[item.key] = source;
+        });
+        map.getLayers().on('add', hideStreetBase);
+        hideStreetBase();
+        return baseSources;
+    }
+    function setBaseMap(key) {
+        var item = basemapItem(key);
+        var map = olMap();
+        if (!map || document.body.classList.contains('mp-3d')) return;
+        var sources = ensureBaseSources();
+        if (!sources || !sources[item.key] || !baseLayerType) return;
+        if (activeBaseLayer) map.removeLayer(activeBaseLayer);
+        var layer = new baseLayerType({ source: sources[item.key], visible: true });
+        layer.set('mpBasemap', item.key);
+        layer.setZIndex(-1);
+        map.getLayers().insertAt(0, layer);
+        activeBaseLayer = layer;
+        currentBase = item.key;
+        hideStreetBase();
+        if (map.renderSync) map.renderSync();
         document.getElementById('mp-attribution').textContent = item.attribution;
         document.querySelectorAll('#mp-basemap-list button').forEach(function (btn) {
-            if (btn.getAttribute('data-key') === key) btn.setAttribute('aria-current', 'true');
+            if (btn.getAttribute('data-key') === item.key) btn.setAttribute('aria-current', 'true');
             else btn.removeAttribute('aria-current');
         });
     }
@@ -1170,7 +1261,12 @@
 
         var input = document.querySelector('.mapplugin.search input');
         if (input) input.placeholder = 'Hae sijaintia...';
-        setBaseMap('satellite');
+        if (!is3d) {
+            setBaseMap('satellite');
+            [400, 1200].forEach(function (delay) {
+                setTimeout(function () { setBaseMap(currentBase); }, delay);
+            });
+        }
         var layersTile = layerTile();
         if (layersTile && window.MutationObserver) {
             new MutationObserver(syncLayersButton).observe(layersTile, { attributes: true, attributeFilter: ['class'] });
