@@ -1,0 +1,9 @@
+apache-tomcat-10.1.60
+oskari-map.war
+oskari-server/logs
+oskari-server/temp
+oskari-server/work
+oskari-server/webapps
+sample-application/node_modules
+**/.DS_Store
+**/*.log

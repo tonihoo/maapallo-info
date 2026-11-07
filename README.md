@@ -2,7 +2,7 @@
 
 Maapallo.info is a map based portal of global geospatial data related to human development, environment and other geographical phenomena.
 
-![Maapallo.info screenshot](client/public/images/maapallo-info-screenshot.png)
+![Maapallo.info screenshot](docs/maapallo-info-screenshot.png)
 
 The portal is currently in its early development phase. You can access a live preview at https://maapallo.info using the following credentials:
 
@@ -11,22 +11,14 @@ Password: `isnotflat`
 
 ## Technical Implementation
 
-The application consists of five components:
+The map portal runs on [Oskari](https://www.oskari.org/).
 
-- **Server**: FastAPI/Python backend (port 3003)
-- **Client**: React/TypeScript/OpenLayers frontend (port 8080)
-- **Database**: PostgreSQL + PostGIS database (port 5432)
-- **GeoServer**: OGC-compliant geospatial server (port 8081)
-- **PgAdmin**: Database administration interface (port 5050, available in local setup only)
+- **Oskari**: Java backend on Tomcat and the Oskari frontend (port 8080). The bundle lives in `oskari`, with the Maapallo layout in `custom/WEB-INF/jsp/geoportal.jsp`.
+- **Database**: PostgreSQL + PostGIS. Inside Compose it is `db:5432`. On the host it is published at port 5433, because 5432 is the usual local Postgres port. Oskari keeps its configuration in `oskaridb`. GeoServer continues to use `db_dev`.
+- **GeoServer**: OGC services for geospatial data (port 8081)
+- **PgAdmin**: Database administration interface (port 5050, local setup only)
 
-### Geospatial Architecture
-
-The application uses a hybrid architecture for geospatial data management:
-
-- **Static Layers**: Served directly from PostGIS through the FastAPI backend
-- **Dynamic Layers**: Managed through GeoServer with automatic import capabilities
-- **Data Import**: Admin interface allows uploading GeoJSON files that are automatically processed by GeoServer and stored in PostGIS
-- **Layer Management**: GeoServer provides OGC-compliant WMS/WFS services for complex geospatial operations
+Map layers, users, and views are managed with Oskari's own admin tools after signing in. The sample content creates an `admin` / `oskari` user on first start.
 
 ## Security & Environment Variables
 
@@ -58,19 +50,14 @@ docker compose up -d
 docker compose ps
 ```
 
-### 3. Run database migrations
+Oskari creates its database tables on first startup. The first launch can take a couple of minutes.
 
-```bash
-# Run migrations with Python script
-docker compose exec server python run_migrations.py
-```
+### 3. Open application
 
-### 4. Open application
-
-- **Frontend**: [http://localhost:8080](http://localhost:8080)
-- **API documentation**: [http://localhost:3003/docs](http://localhost:3003/docs)
+- **Map**: [http://localhost:8080](http://localhost:8080)
+- **Oskari admin login**: `admin` / `oskari` (created by the sample application content)
 - **GeoServer**: [http://localhost:8081/geoserver](http://localhost:8081/geoserver) (admin/geoserver)
-- **PgAdmin**: [http://localhost:5050](http://localhost:5050)
+- **PgAdmin**: [http://localhost:5050](http://localhost:5050) (`oskaridb` is the Oskari database, `db_dev` is the GeoServer database)
 
 ## Development
 
@@ -80,9 +67,8 @@ docker compose exec server python run_migrations.py
 # Start all containers
 docker compose up -d
 
-# Or start individual container
-docker compose up -d server
-docker compose up -d client
+# Or start individual containers
+docker compose up -d oskari
 docker compose up -d db
 docker compose up -d geoserver
 ```
@@ -94,7 +80,7 @@ docker compose up -d geoserver
 docker compose down
 
 # Stop individual container
-docker compose stop server
+docker compose stop oskari
 ```
 
 ### Following logs
@@ -104,62 +90,20 @@ docker compose stop server
 docker compose logs -f
 
 # Follow logs of one container
-docker compose logs -f server
-docker compose logs -f client
+docker compose logs -f oskari
 docker compose logs -f geoserver
 ```
 
 ## Dependency Management
 
-### Adding frontend dependencies (React/TypeScript)
+The running application is the Oskari image in `oskari`. Rebuild it after changing the frontend bundle, `geoportal.jsp`, or server configuration:
 
 ```bash
-# Navigate to client folder
-cd client
-
-# Install new dependency
-npm install <package-name>
-
-# Rebuild client container
-docker compose build client
-
-# Restart client
-docker compose up -d client
+docker compose build oskari
+docker compose up -d oskari
 ```
 
-### Adding backend dependencies (Python)
-
-```bash
-# Navigate to server folder
-cd server
-
-# Add dependency to requirements.txt file
-echo "<package-name>==<version>" >> requirements.txt
-
-# OR install and save version automatically
-pip install <package-name>
-pip freeze | grep <package-name> >> requirements.txt
-
-# Rebuild server container
-docker compose build server
-
-# Restart server
-docker compose up -d server
-```
-
-### Removing dependencies
-
-```bash
-# Frontend
-cd client
-npm uninstall <package-name>
-docker compose build client
-
-# Backend
-cd server
-# Remove line from requirements.txt file manually
-docker compose build server
-```
+The frontend source is `oskari/sample-application`. A production build writes `sample-application/dist/2.4.0`, which the Tomcat image copies in. Building that bundle needs the matching `oskari-frontend` checkout; the copy in this repository is already built.
 
 ## Container Rebuilding and Reset
 
@@ -170,8 +114,7 @@ docker compose build server
 docker compose build --no-cache
 
 # Rebuild individual container
-docker compose build --no-cache server
-docker compose build --no-cache client
+docker compose build --no-cache oskari
 ```
 
 ### Reset all containers and volumes
@@ -187,22 +130,9 @@ docker compose down --rmi all --volumes --remove-orphans
 docker compose build
 docker compose up -d
 
-# Run migrations again
-docker compose exec server python run_migrations.py
 ```
 
-### Fixing node_modules issues (client)
-
-```bash
-# Remove client container and volumes
-docker compose stop client
-docker compose rm client
-docker volume rm $(docker volume ls -q | grep client)
-
-# Build and start again
-docker compose build client
-docker compose up -d client
-```
+Oskari applies its own database migrations the next time the `oskari` container starts.
 
 ### Database reset
 
@@ -215,89 +145,38 @@ docker volume rm $(docker volume ls -q | grep db)
 # Start database again
 docker compose up -d db
 
-# Wait for database to be ready and run migrations
+# Wait for the database to be ready, then start Oskari so it can migrate oskaridb
 sleep 10
-docker compose exec server python run_migrations.py
+docker compose up -d oskari
 ```
 
 ## Testing
 
-### Frontend tests (Cypress E2E)
-
-To-Do
-
-### Backend tests
-
-To-Do
-
-### API testing
-
 ```bash
-# Test API endpoints with curl
-curl http://localhost:3003/api/v1/health/
-curl http://localhost:3003/api/v1/feature/
-
-# Or open interactive API documentation
-open http://localhost:3003/docs
+curl -fsS http://localhost:8080/healthz
+curl -fsS -o /dev/null -w "%{http_code}\n" http://localhost:8080/
 ```
 
-## Database Migrations
+The map page is served by Oskari. GeoServer stays on port 8081.
 
-Migrations are located in `/server/migrations/` folder and contain SQL scripts for database structure management.
+## Database
 
-### Running migrations
+Oskari migrates `oskaridb` when the container starts (`db.additional.modules` in `oskari/oskari-server/lib/oskari-ext.properties`). Connection settings inside the container come from `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD`.
 
-```bash
-# Run all migrations
-docker compose exec server python run_migrations.py
-
-# Check migration status
-docker compose exec server python -c "from migrate import check_migration_status; check_migration_status()"
-```
-
-### Creating a new migration
-
-1. Create new SQL file: `/server/migrations/XXXX_description.sql`
-2. Number the file next in sequence (e.g. `0003_add_new_table.sql`)
-3. Write SQL commands to the file
-4. Run migrations: `docker compose exec server python run_migrations.py`
+`db_dev` remains the database GeoServer uses for imported geospatial tables.
 
 ## Technical Documentation
 
-### FastAPI Backend
+### Oskari
 
 **Technical stack:**
 
-- **FastAPI**: Modern, async Python web framework
-- **SQLAlchemy**: Async ORM with PostgreSQL
-- **Pydantic**: Data validation and type safety
-- **PostGIS**: Spatial database extensions
-- **Uvicorn**: ASGI server for production
-- **GDAL/OGR**: Geospatial data processing
+- **Oskari server**: Java application, `oskari-map.war`, running on Tomcat 10
+- **Oskari frontend**: prebuilt bundle in `oskari/sample-application/dist/2.4.0`
+- **Layout**: Maapallo header, side menu, basemap switcher, and 2D/3D toggle in `geoportal.jsp`
+- **Redis**: started inside the Oskari container for Oskari's cache
 
-**API Endpoints:**
-
-- `GET /api/v1/health/` - Health check
-- `GET /api/v1/feature/` - List all features
-- `POST /api/v1/feature/` - Create new feature
-- `GET /api/v1/feature/{id}` - Get feature by ID
-- `PUT /api/v1/feature/{id}` - Update feature
-- `DELETE /api/v1/feature/{id}` - Delete feature
-- `POST /api/v1/admin/geoserver-upload` - Upload geospatial files
-- `POST /api/v1/admin/geoserver-import` - Import data to GeoServer
-
-**API Documentation:** [http://localhost:3003/docs](http://localhost:3003/docs)
-
-### React Frontend
-
-**Technical stack:**
-
-- **React 18**: Modern React with hooks
-- **TypeScript**: Type safety
-- **Material-UI**: UI component library
-- **OpenLayers**: 2D mapping with static geospatial data
-- **Cesium**: 3D globe visualization
-- **Webpack**: Module bundler for JavaScript
+The image publishes port 8080 through nginx. Tomcat listens on port 8081 inside the container. Set `BASIC_AUTH_USERNAME` and `BASIC_AUTH_PASSWORD` to require HTTP basic auth in front of the map. Leave them empty for local use.
 
 ### PostgreSQL + PostGIS Database
 
@@ -326,9 +205,9 @@ docker compose restart <container-name>
 **Port already in use error:**
 ```bash
 # Check what's using the port
-lsof -i :8080  # client
-lsof -i :3003  # server
-lsof -i :5432  # database
+lsof -i :8080  # Oskari
+lsof -i :8081  # GeoServer
+lsof -i :5433  # database
 
 # Kill process or change port in docker-compose.yml
 ```
@@ -339,7 +218,7 @@ lsof -i :5432  # database
 docker compose ps db
 
 # Test connection
-docker compose exec db psql -U postgres -d maapallo_info -c "SELECT version();"
+docker compose exec db psql -U db_dev_user -d oskaridb -c "SELECT version();"
 ```
 
 **GeoServer issues:**
@@ -357,32 +236,25 @@ curl http://localhost:8081/geoserver/web/
 curl -u admin:geoserver http://localhost:8081/geoserver/rest/workspaces/maapallo
 ```
 
-**Data import issues:**
+**Database contents:**
 ```bash
-# Check if GDAL is available in server container
-docker compose exec server ogr2ogr --version
-
-# Test PostGIS connection from server
-docker compose exec server psql -h db -U db_dev_user -d db_dev -c "SELECT PostGIS_Version();"
-
-# Check uploaded files
-docker compose exec server ls -la /app/uploads/
+docker compose exec db psql -U db_dev_user -d oskaridb -c "\dt"
+docker compose exec db psql -U db_dev_user -d db_dev -c "SELECT PostGIS_Version();"
 ```
 
-**Frontend doesn't show changes:**
+**Map doesn't show changes:**
 ```bash
-# Clear browser cache or use incognito mode
-# Or restart client container
-docker compose restart client
+# Clear the browser cache or use a private window, then restart Oskari
+docker compose restart oskari
 ```
 
 ## Azure Deployment
 
 ### Production URL ✅
 
-- **Frontend**: https://maapallo.info/
-- **API Health**: https://maapallo.info/api/v1/health/
-- **API Features**: https://maapallo.info/api/v1/feature/
+- **Map**: https://maapallo.info/
+
+The site is the Oskari container app `maapallo-client`. GeoServer remains a separate container app. The deployment workflow builds `maapallo-oskari` and rolls that image onto `maapallo-client`, and it creates the `oskaridb` database on the existing PostgreSQL server.
 
 For detailed deployment instructions, see [AZURE_DEPLOYMENT_SETUP.md](./AZURE_DEPLOYMENT_SETUP.md).
 

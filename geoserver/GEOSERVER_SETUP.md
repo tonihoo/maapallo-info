@@ -23,9 +23,8 @@ Never use these default passwords in production environments.
    ```
 
 3. **Access the applications:**
-   - **Frontend**: http://localhost:8080
+   - **Map**: http://localhost:8080
    - **GeoServer**: http://localhost:8081/geoserver (admin/geoserver)
-   - **FastAPI**: http://localhost:3003
    - **PgAdmin**: http://localhost:5050 (admin@example.com/admin)
 
 ## 📁 Data Import Workflow
@@ -122,30 +121,11 @@ http://localhost:8081/geoserver/maapallo/wms?
   format=application/x-protobuf;type=mapbox-vector
 ```
 
-## 🔧 Frontend Integration
-
-To use GeoServer layers in your React frontend, update your layer hooks:
-
-```typescript
-// Example for useAdultLiteracyLayer.ts
-const geoserverUrl = 'http://localhost:8081/geoserver/maapallo/wms';
-
-const source = new TileWMS({
-  url: geoserverUrl,
-  params: {
-    'LAYERS': 'adult_literacy',
-    'TILED': true,
-  },
-  serverType: 'geoserver',
-});
-```
-
 ## 🛠️ Development Commands
 
 ```bash
 # View logs
 docker-compose logs -f geoserver
-docker-compose logs -f server
 
 # Restart a service
 docker-compose restart geoserver
@@ -196,11 +176,9 @@ docker-compose up -d
 
 ## 🎯 Next Steps
 
-1. **Import your existing data** using the upload methods above
-2. **Update frontend layers** to use GeoServer WMS/WFS endpoints
+1. **Import data** using the upload methods above
+2. **Publish the layer in Oskari** after signing in to the map
 3. **Configure styling** in GeoServer for better visualization
-4. **Set up tile caching** for better performance
-5. **Test AI integration** with spatial data queries
 
 ## 🆘 Troubleshooting
 
@@ -214,7 +192,7 @@ docker-compose up -d
 - Verify database connection
 - Check logs: `docker-compose exec geoserver tail -f /opt/geoserver/logs/geoserver.log`
 
-### Frontend can't access GeoServer
+### The map can't reach GeoServer
 - Verify CORS settings in docker-compose.yml
 - Check that GeoServer is running on port 8081
 - Test direct access: http://localhost:8081/geoserver

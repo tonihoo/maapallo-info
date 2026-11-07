@@ -1,0 +1,1 @@
+import{Frozen_default}from"./chunk-Z2DW5NM2.js";function GeometryAttributes(t){t=t??Frozen_default.EMPTY_OBJECT,this.position=t.position,this.normal=t.normal,this.st=t.st,this.bitangent=t.bitangent,this.tangent=t.tangent,this.color=t.color}var GeometryAttributes_default=GeometryAttributes;export{GeometryAttributes_default};

@@ -1,33 +1,6 @@
 {
-  // Python interpreter and environment
-  "python.defaultInterpreterPath": "./server/venv/bin/python",
-  "python.terminal.activateEnvironment": false,
-
-  // Auto-format on save
   "editor.formatOnSave": true,
   "editor.codeActionsOnSave": {
     "source.organizeImports": "explicit"
-  },
-
-  // Python-specific settings
-  "[python]": {
-    "editor.defaultFormatter": "ms-python.black-formatter",
-    "editor.tabSize": 4,
-    "editor.insertSpaces": true,
-    "editor.rulers": [88]
-  },
-
-  // Python analysis settings
-  "python.analysis.diagnosticMode": "workspace",
-  "python.analysis.typeCheckingMode": "basic",
-  "python.analysis.extraPaths": ["./server"],
-
-  // Hide __pycache__ folders
-  "files.exclude": {
-    "**/__pycache__": true,
-    "**/*.pyc": true
-  },
-  "cursorpyright.analysis.diagnosticMode": "workspace",
-  "cursorpyright.analysis.extraPaths": ["./server"],
-  "cursorpyright.analysis.typeCheckingMode": "basic"
+  }
 }

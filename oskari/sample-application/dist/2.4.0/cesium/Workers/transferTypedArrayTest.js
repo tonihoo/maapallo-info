@@ -1,0 +1,1 @@
+self.onmessage=function(s){const e=s.data.array,a=self.webkitPostMessage||self.postMessage;try{a({array:e},[e.buffer])}catch(s){a({})}};

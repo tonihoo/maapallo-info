@@ -1,0 +1,36 @@
+{
+  "name": "sample-application",
+  "version": "2.4.0",
+  "description": "Sample frontend for Oskari map application. Site visible in dev.oskari.org.",
+  "keywords": [
+    "Oskari"
+  ],
+  "dependencies": {
+    "oskari-frontend": "file:../oskari-frontend"
+  },
+  "devDependencies": {
+    "eslint": "9.39.5"
+  },
+  "scripts": {
+    "dev-mode": "node ./node_modules/oskari-frontend/scripts/oskari-dev-mode",
+    "dev-mode:off": "npm run dev-mode -- disabled",
+    "dev-mode:on": "npm run dev-mode -- enabled",
+    "dev-mode:disable": "npm run dev-mode:on && npm run dev-mode:clean && npm i git+https://git@github.com/oskariorg/oskari-frontend.git#develop",
+    "dev-mode:enable": "npm run dev-mode:off && npm run dev-mode:available && npm run dev-mode:clean && npm i ../oskari-frontend",
+    "dev-mode:available": "node ./node_modules/oskari-frontend/scripts/oskari-dev-mode-requirements",
+    "dev-mode:clean": "(rm -r node_modules || true) && (rm package-lock.json || true)",
+    "build": "npm run dev-mode:off && webpack --config ./node_modules/oskari-frontend/webpack.config.js --mode production --progress --env appdef=applications",
+    "start": "npm run dev-mode:off && webpack-dev-server --config ./node_modules/oskari-frontend/webpack.config.js --mode development --hot --env appdef=devapp:applications",
+    "start:dev": "npm run dev-mode:on && node ./node_modules/oskari-frontend/node_modules/webpack-dev-server/bin/webpack-dev-server.js --config ./node_modules/oskari-frontend/webpack.config.js --mode development --hot --env appdef=devapp:applications",
+    "build:dev": "npm run dev-mode:on && node ./node_modules/oskari-frontend/node_modules/webpack/bin/webpack.js --config ./node_modules/oskari-frontend/webpack.config.js --mode production --progress --env appdef=applications",
+    "sprite": "node ./node_modules/oskari-frontend/webpack/sprite.js",
+    "test": "eslint --config ./node_modules/oskari-frontend/eslint.config.js bundles",
+    "generate-bom": "npx --yes @cyclonedx/cyclonedx-npm@4.2.1 --output-file frontend-bom.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oskariorg/sample-application.git"
+  },
+  "license": "(MIT OR EUPL-1.1)",
+  "private": true
+}

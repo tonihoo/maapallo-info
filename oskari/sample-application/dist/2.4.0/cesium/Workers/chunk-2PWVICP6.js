@@ -1,0 +1,1 @@
+var ArcType={NONE:0,GEODESIC:1,RHUMB:2};Object.freeze(ArcType);var ArcType_default=ArcType;export{ArcType_default};

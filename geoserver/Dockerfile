@@ -26,7 +26,6 @@ RUN mkdir -p /opt/geoserver/uploads
 COPY scripts/import-data.sh /usr/local/bin/import-data.sh
 COPY scripts/00-proxy-base.sh /docker-entrypoint-geoserver.d/00-proxy-base.sh
 COPY scripts/init-geoserver.sh /docker-entrypoint-geoserver.d/init-geoserver.sh
-COPY scripts/restore-config.sh /docker-entrypoint-geoserver.d/10-restore-config.sh
 
 # Permissions + data dir (guard chown if user exists)
 RUN chmod +x /usr/local/bin/import-data.sh && \

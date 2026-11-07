@@ -1,53 +1,30 @@
 services:
-  client:
+  oskari:
     build:
-      context: ./client
-      dockerfile: Dockerfile.dev
-    volumes:
-      - ./client:/app/client:delegated
-      - /app/client/node_modules
+      context: ./oskari
+      dockerfile: Dockerfile
     ports:
       - "127.0.0.1:8080:8080"
     environment:
-      - CESIUM_ION_TOKEN=${CESIUM_ION_TOKEN}
-    env_file:
-      - .env
-    healthcheck:
-      test: curl --fail http://localhost:8080 || exit 1
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-  server:
-    build:
-      context: ./server
-      dockerfile: Dockerfile
-    volumes:
-      - ./server:/app:delegated
-      - ./client:/app/client:delegated  # Mount client directory for data access
-      - ./geoserver/uploads:/app/uploads  # Shared uploads directory with GeoServer
-    ports:
-      - "127.0.0.1:3003:3003"
-    environment:
-      - ENVIRONMENT=development
-      - PG_HOST=db
-      - PG_PORT=5432
-      - PG_USER=db_dev_user
-      - PG_PASSWORD=DevPassword
-      - PG_DB=db_dev
-      - SERVER_PORT=3003
-      # Authentication (optional for development)
-      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
-      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-changeme}
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-}
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: oskaridb
+      DB_USER: oskari
+      DB_PASSWORD: oskari
+      POSTGRES_SUPERUSER: db_dev_user
+      POSTGRES_SUPERPASSWORD: DevPassword
+      OSKARI_DOMAIN: http://localhost:8080
+      OSKARI_SECURE: "false"
     depends_on:
       db:
         condition: service_healthy
     healthcheck:
-      test: curl --fail http://localhost:3003/api/v1/health || exit 1
-      interval: 5s
-      timeout: 5s
-      retries: 10
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/healthz"]
+      interval: 15s
+      timeout: 10s
+      retries: 12
+      start_period: 180s
+    restart: unless-stopped
 
   geoserver:
     build:
@@ -64,14 +41,12 @@ services:
       - POSTGRES_USER=db_dev_user
       - POSTGRES_PASSWORD=DevPassword
       - GEOSERVER_CSRF_DISABLED=true
-      # Enable CORS for frontend integration
       - GEOSERVER_CORS_ENABLED=true
       - GEOSERVER_CORS_ALLOWED_ORIGINS=http://localhost:8080
     volumes:
       - geoserver-data:/opt/geoserver/data_dir
-      # Mount upload directory for easy file imports
       - ./geoserver/uploads:/opt/geoserver/uploads
-      - ./client/public/data:/opt/geoserver/source_data:ro
+      - ./geoserver/source_data:/opt/geoserver/source_data:ro
     depends_on:
       db:
         condition: service_healthy
@@ -92,8 +67,9 @@ services:
       POSTGRES_DB: db_dev
     volumes:
       - db-volume:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:5433:5432"
     healthcheck:
       test: psql -U db_dev_user -d db_dev -c "SELECT 1"
       interval: 5s
