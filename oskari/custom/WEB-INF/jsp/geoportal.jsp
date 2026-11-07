@@ -1319,6 +1319,20 @@
         menu.appendChild(btn);
     });
 
+    // Ol-Cesium stays visibility:hidden until setCamera enables it. That call
+    // can run before the 3D map exists and is swallowed, which leaves a blank canvas.
+    function showGlobe() {
+        var mm = mapModule();
+        if (!mm || !mm._map3D || !mm._map3D.getEnabled || mm._map3D.getEnabled()) return;
+        mm.set3dEnabled(true);
+        var cam = null;
+        try {
+            cam = Oskari.app.getApplicationSetup().configuration.mapfull.state.camera;
+        } catch (e) {}
+        if (cam && mm.setCamera) {
+            try { mm.setCamera(cam); } catch (e) {}
+        }
+    }
     Oskari.on('app.start', function () {
         var is3d = is3dView();
         document.body.classList.toggle('mp-3d', is3d);
@@ -1332,9 +1346,13 @@
 
         var input = document.querySelector('.mapplugin.search input');
         if (input) input.placeholder = 'Hae sijaintia...';
+        if (is3d) showGlobe();
         setBaseMap('satellite');
         [400, 1200, 2500].forEach(function (delay) {
-            setTimeout(function () { setBaseMap(currentBase); }, delay);
+            setTimeout(function () {
+                if (is3d) showGlobe();
+                setBaseMap(currentBase);
+            }, delay);
         });
         var layersTile = layerTile();
         if (layersTile && window.MutationObserver) {
