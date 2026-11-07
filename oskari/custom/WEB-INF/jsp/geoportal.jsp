@@ -1171,6 +1171,18 @@
         toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
         toggle.title = open ? 'Sulje valikko' : 'Valikko';
     }
+    var loginForm = document.querySelector('#login form:not(#logoutform)');
+    if (loginForm) {
+        loginForm.addEventListener('submit', function () {
+            try { sessionStorage.setItem('mp-menu-after-login', '1'); } catch (e) {}
+        });
+    }
+    try {
+        if (sessionStorage.getItem('mp-menu-after-login') === '1') {
+            sessionStorage.removeItem('mp-menu-after-login');
+            setMenu(true);
+        }
+    } catch (e) {}
     var WELCOME_MARK = 'MP_WELCOME';
     var WELCOME_HTML = ''
         + '<p>Maapallo.info on karttaportaali, joka havainnollistaa maantieteellisiä ilmiöitä erityisesti globaalin kehityksen ja ympäristön näkökulmista. Portaalin suunnittelusta ja ylläpidosta vastaa <a href="https://kehmy.fi" target="_blank" rel="noopener noreferrer">Kehitysmaantieteen yhdistys</a>.</p>'
