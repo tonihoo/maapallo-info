@@ -434,6 +434,7 @@ jobs:
                 "DB_NAME=oskaridb" \
                 "DB_USER=${{ secrets.DB_ADMIN_USER }}" \
                 "DB_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}" \
+                "DB_SSLMODE=require" \
                 "OSKARI_DOMAIN=https://maapallo.info" \
                 "OSKARI_SECURE=true" \
                 "BASIC_AUTH_USERNAME=${{ secrets.BASIC_AUTH_USERNAME }}" \
@@ -460,6 +461,7 @@ jobs:
                 "DB_NAME=oskaridb" \
                 "DB_USER=${{ secrets.DB_ADMIN_USER }}" \
                 "DB_PASSWORD=${{ secrets.DB_ADMIN_PASSWORD }}" \
+                "DB_SSLMODE=require" \
                 "OSKARI_DOMAIN=https://maapallo.info" \
                 "OSKARI_SECURE=true" \
                 "BASIC_AUTH_USERNAME=${{ secrets.BASIC_AUTH_USERNAME }}" \

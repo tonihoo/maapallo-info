@@ -34,8 +34,26 @@ sed_escape() {
   printf '%s' "$1" | sed -e 's/[\\|&]/\\&/g'
 }
 
+# Azure Database for PostgreSQL rejects non-SSL clients. The JDBC driver
+# defaults to sslmode=disable, unlike psql which prefers SSL.
+DB_SSLMODE="${DB_SSLMODE:-}"
+if [ -z "$DB_SSLMODE" ] && [[ "$DB_HOST" == *.postgres.database.azure.com ]]; then
+  DB_SSLMODE=require
+fi
+case "$DB_SSLMODE" in
+  ""|disable|allow|prefer|require|verify-ca|verify-full) ;;
+  *)
+    echo "Invalid DB_SSLMODE" >&2
+    exit 1
+    ;;
+esac
+JDBC_URL="jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}"
+if [ -n "$DB_SSLMODE" ]; then
+  JDBC_URL="${JDBC_URL}?sslmode=${DB_SSLMODE}"
+fi
+
 PROPS=/usr/local/tomcat/lib/oskari-ext.properties
-sed -i "s|^db.url=.*|db.url=jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_NAME}|" "$PROPS"
+sed -i "s|^db.url=.*|db.url=$(sed_escape "$JDBC_URL")|" "$PROPS"
 sed -i "s|^db.username=.*|db.username=${DB_USER}|" "$PROPS"
 sed -i "s|^db.password=.*|db.password=$(sed_escape "$DB_PASSWORD")|" "$PROPS"
 sed -i "s|^oskari.domain=.*|oskari.domain=$(sed_escape "$OSKARI_DOMAIN")|" "$PROPS"
