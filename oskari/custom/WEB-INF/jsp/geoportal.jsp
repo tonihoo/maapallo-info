@@ -953,12 +953,21 @@
     var baseSources = null;
     var baseLayerType = null;
     var activeBaseLayer = null;
+    var cesiumBase = null;
 
     function sandbox() { return Oskari.getSandbox(); }
     function mapModule() { return sandbox().findRegisteredModuleInstance('MainMapModule'); }
     function olMap() {
         var map = mapModule();
         return map && map.getMap && map.getMap();
+    }
+    function is3dView() {
+        if (document.body.classList.contains('mp-3d')) return true;
+        return !!(window.Oskari && Oskari.app && Oskari.app.getUuid && Oskari.app.getUuid() === WORLD_3D);
+    }
+    function cesiumScene() {
+        var map = mapModule();
+        return map && map.getCesiumScene && map.getCesiumScene();
     }
     function isStreetLayer(layer) {
         if (!layer || (layer.get && layer.get('mpBasemap'))) return false;
@@ -1070,10 +1079,56 @@
         hideStreetBase();
         return baseSources;
     }
+    function hideCesiumImagery() {
+        var scene = cesiumScene();
+        if (!scene || !scene.imageryLayers) return;
+        var layers = scene.imageryLayers;
+        for (var i = 0; i < layers.length; i++) {
+            var layer = layers.get(i);
+            if (!layer || layer === cesiumBase || layer._mpBasemap) continue;
+            var provider = layer.imageryProvider;
+            if (provider && provider.maximumLevel > 0) layer.show = false;
+        }
+    }
+    function setCesiumBase(item) {
+        var scene = cesiumScene();
+        if (!scene || !window.Cesium || !Cesium.UrlTemplateImageryProvider || !scene.imageryLayers) return false;
+        var layers = scene.imageryLayers;
+        hideCesiumImagery();
+        if (cesiumBase && cesiumBase._mpBasemap === item.key) return true;
+        if (cesiumBase) {
+            layers.remove(cesiumBase, true);
+            cesiumBase = null;
+        }
+        var imagery = new Cesium.UrlTemplateImageryProvider({
+            url: item.template,
+            tilingScheme: new Cesium.WebMercatorTilingScheme(),
+            maximumLevel: item.maxZoom,
+            tileWidth: 256,
+            tileHeight: 256
+        });
+        cesiumBase = layers.addImageryProvider(imagery);
+        cesiumBase._mpBasemap = item.key;
+        return true;
+    }
+    function showBasemapChoice(item) {
+        currentBase = item.key;
+        document.getElementById('mp-attribution').textContent = item.attribution;
+        document.querySelectorAll('#mp-basemap-list button').forEach(function (btn) {
+            if (btn.getAttribute('data-key') === item.key) btn.setAttribute('aria-current', 'true');
+            else btn.removeAttribute('aria-current');
+        });
+    }
     function setBaseMap(key) {
         var item = basemapItem(key);
+        currentBase = item.key;
+        if (is3dView()) {
+            if (!setCesiumBase(item)) return;
+            showBasemapChoice(item);
+            return;
+        }
         var map = olMap();
-        if (!map || document.body.classList.contains('mp-3d')) return;
+        if (!map) return;
         var sources = ensureBaseSources();
         if (!sources || !sources[item.key] || !baseLayerType) return;
         if (activeBaseLayer) map.removeLayer(activeBaseLayer);
@@ -1082,14 +1137,9 @@
         layer.setZIndex(-1);
         map.getLayers().insertAt(0, layer);
         activeBaseLayer = layer;
-        currentBase = item.key;
         hideStreetBase();
         if (map.renderSync) map.renderSync();
-        document.getElementById('mp-attribution').textContent = item.attribution;
-        document.querySelectorAll('#mp-basemap-list button').forEach(function (btn) {
-            if (btn.getAttribute('data-key') === item.key) btn.setAttribute('aria-current', 'true');
-            else btn.removeAttribute('aria-current');
-        });
+        showBasemapChoice(item);
     }
 
     function closeBasemap() {
@@ -1261,12 +1311,10 @@
 
         var input = document.querySelector('.mapplugin.search input');
         if (input) input.placeholder = 'Hae sijaintia...';
-        if (!is3d) {
-            setBaseMap('satellite');
-            [400, 1200].forEach(function (delay) {
-                setTimeout(function () { setBaseMap(currentBase); }, delay);
-            });
-        }
+        setBaseMap('satellite');
+        [400, 1200, 2500].forEach(function (delay) {
+            setTimeout(function () { setBaseMap(currentBase); }, delay);
+        });
         var layersTile = layerTile();
         if (layersTile && window.MutationObserver) {
             new MutationObserver(syncLayersButton).observe(layersTile, { attributes: true, attributeFilter: ['class'] });
