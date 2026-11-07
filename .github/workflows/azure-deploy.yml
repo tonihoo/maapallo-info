@@ -549,6 +549,13 @@ jobs:
             exit 1
           fi
 
+          echo "--- Oskari container log ---"
+          az containerapp logs show \
+            --name maapallo-client \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --tail 80 \
+            --type console || true
+
           echo "--- Deployment Summary ---"
           echo "✅ Application deployed successfully!"
           echo "🌐 Map URL: https://$FRONTEND_URL"
