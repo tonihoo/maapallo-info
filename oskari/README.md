@@ -1,4 +1,4 @@
-# Readme
+# README
 
 `oskari-server/conf/Catalina/localhost` folder refers to this folder and expects to find:
 - `sample-application` folder with prebuilt frontend app (`dist/[frontend version folder]` to be present)
