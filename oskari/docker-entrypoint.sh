@@ -128,6 +128,21 @@ if [[ "$VIEW_ID" =~ ^[0-9]+$ ]]; then
   echo "Default map view is the 3D view ${VIEW_ID}"
 fi
 
+if ! grep -q '^statistics.unsd.read.timeout=' "$PROPS"; then
+  printf '\nstatistics.unsd.read.timeout=60000\n' >> "$PROPS"
+fi
+
+# Oskari's UN client asks for 2500-row pages and gives up after its read
+# timeout, which leaves the theme-map indicator list empty. The proxy
+# answers that listing from a small sample and fetches a chosen year in
+# smaller pages. The datasource rows are created by the sample migration,
+# so point them at the proxy on each start once the table exists.
+python3 /opt/unsd-proxy.py >>/tmp/unsd-proxy.log 2>&1 &
+echo "UN SDG proxy listening on 127.0.0.1:8092"
+PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -v ON_ERROR_STOP=1 -c \
+  "UPDATE oskari_statistical_datasource SET config = ((COALESCE(NULLIF(config, ''), '{}')::jsonb) || '{\"url\":\"http://127.0.0.1:8092/sdg\"}'::jsonb)::text WHERE plugin = 'UNSD';" \
+  >/dev/null 2>&1 || true
+
 redis-server --daemonize yes --bind 127.0.0.1 --port 6379 --protected-mode yes --save "" --appendonly no --dir /tmp --logfile /tmp/redis.log
 nginx
 

@@ -53,6 +53,7 @@ RUN mkdir -p /tmp/fav/images \
         images/favicon.ico images/favicon-light.ico images/favicon-dark.ico \
     && rm -rf /tmp/fav /tmp/favicon.ico
 COPY nginx.conf.template /opt/nginx.conf.template
+COPY unsd-proxy.py /opt/unsd-proxy.py
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
