@@ -114,6 +114,20 @@ SQL
   unset PGPASSWORD
 fi
 
+# Open the globe when the visitor does not ask for a specific view.
+# The view id differs between databases, and the view does not exist until
+# the first migration has run.
+if [ -n "${DB_SSLMODE:-}" ]; then
+  export PGSSLMODE="$DB_SSLMODE"
+fi
+VIEW_ID=$(PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -tAc \
+  "SELECT id FROM oskari_appsetup WHERE application = 'geoportal-3d' AND type = 'DEFAULT' ORDER BY id DESC LIMIT 1" 2>/dev/null || true)
+VIEW_ID=$(printf '%s' "$VIEW_ID" | tr -d '[:space:]')
+if [[ "$VIEW_ID" =~ ^[0-9]+$ ]]; then
+  sed -i "s|^view.default=.*|view.default=${VIEW_ID}|" "$PROPS"
+  echo "Default map view is the 3D view ${VIEW_ID}"
+fi
+
 redis-server --daemonize yes --bind 127.0.0.1 --port 6379 --protected-mode yes --save "" --appendonly no --dir /tmp --logfile /tmp/redis.log
 nginx
 
