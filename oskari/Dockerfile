@@ -6,6 +6,7 @@ RUN apt-get update \
         nginx \
         openssl \
         postgresql-client \
+        python3 \
         redis-server \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /usr/local/tomcat/webapps/* \
@@ -33,6 +34,13 @@ RUN curl -fsSL -o /tmp/oskari-3.4.0.zip https://download.osgeo.org/oskari/oskari
     && cd /usr/local/tomcat/webapps/ROOT \
     && jar xf /tmp/oskari-pkg/oskari-map.war \
     && rm -rf /tmp/oskari-3.4.0.zip /tmp/oskari-pkg
+
+# Sample layers shipped with Oskari have an English name only. The default
+# language here is Finnish, and the first-run migration refuses a layer
+# without one, which leaves the site as a Tomcat 404.
+COPY patch-sample-locales.py /tmp/patch-sample-locales.py
+RUN python3 /tmp/patch-sample-locales.py \
+    && rm /tmp/patch-sample-locales.py
 
 COPY custom/WEB-INF/jsp/geoportal.jsp /usr/local/tomcat/webapps/ROOT/WEB-INF/jsp/geoportal.jsp
 COPY custom/favicon.ico /tmp/favicon.ico

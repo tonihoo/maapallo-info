@@ -176,7 +176,7 @@ jobs:
               --location ${{ env.LOCATION }} \
               --admin-user "${{ secrets.DB_ADMIN_USER }}" \
               --admin-password "${{ secrets.DB_ADMIN_PASSWORD }}" \
-              --sku-name Standard_B2s \
+              --sku-name Standard_B1ms \
               --tier Burstable \
               --storage-size 32 \
               --storage-auto-grow Enabled \
@@ -221,24 +221,56 @@ jobs:
               --resource-group ${{ env.RESOURCE_GROUP }} \
               --server-name ${{ env.DB_SERVER_NAME }} \
               --name max_connections \
-              --value "200"
+              --value "100"
 
+            # 8 kB pages. 65536 = 512 MB and 196608 = 1.5 GB, sized for B1ms (2 GB RAM).
             az postgres flexible-server parameter set \
               --resource-group ${{ env.RESOURCE_GROUP }} \
               --server-name ${{ env.DB_SERVER_NAME }} \
               --name shared_buffers \
-              --value "262144"
+              --value "65536"
 
             az postgres flexible-server parameter set \
               --resource-group ${{ env.RESOURCE_GROUP }} \
               --server-name ${{ env.DB_SERVER_NAME }} \
               --name effective_cache_size \
-              --value "1572864"
+              --value "196608"
 
             echo "Waiting for server restart..."
             sleep 60
           else
-            echo "Leaving the existing PostgreSQL server running."
+            CURRENT_SKU=$(az postgres flexible-server show \
+              --name ${{ env.DB_SERVER_NAME }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --query sku.name -o tsv)
+            if [ "$CURRENT_SKU" = "Standard_B1ms" ]; then
+              echo "PostgreSQL is already Standard_B1ms."
+            else
+              echo "Scaling PostgreSQL from $CURRENT_SKU to Standard_B1ms."
+              # Lower memory settings before the smaller size restarts the server.
+              az postgres flexible-server parameter set \
+                --resource-group ${{ env.RESOURCE_GROUP }} \
+                --server-name ${{ env.DB_SERVER_NAME }} \
+                --name shared_buffers \
+                --value "65536"
+              az postgres flexible-server parameter set \
+                --resource-group ${{ env.RESOURCE_GROUP }} \
+                --server-name ${{ env.DB_SERVER_NAME }} \
+                --name effective_cache_size \
+                --value "196608"
+              az postgres flexible-server parameter set \
+                --resource-group ${{ env.RESOURCE_GROUP }} \
+                --server-name ${{ env.DB_SERVER_NAME }} \
+                --name max_connections \
+                --value "100"
+              az postgres flexible-server update \
+                --resource-group ${{ env.RESOURCE_GROUP }} \
+                --name ${{ env.DB_SERVER_NAME }} \
+                --sku-name Standard_B1ms \
+                --tier Burstable
+              echo "Waiting for the smaller database server..."
+              sleep 45
+            fi
           fi
 
           # Install PostGIS extensions in the database
@@ -328,10 +360,10 @@ jobs:
               --image "$IMAGE" \
               --target-port 8080 \
               --ingress external \
-              --cpu 2.0 \
-              --memory 4.0Gi \
+              --cpu 0.5 \
+              --memory 1.0Gi \
               --min-replicas 1 \
-              --max-replicas 3 \
+              --max-replicas 1 \
               --user-assigned "$IDENTITY_ID" \
               --registry-identity "$IDENTITY_ID" \
               --registry-server ${{ env.ACR_REGISTRY }}
@@ -355,8 +387,12 @@ jobs:
               GEOSERVER_CSRF_DISABLED="true" \
               PERSIST_RESTORE_LOG="1" \
               DEBUG_RESTORE="0" \
+              INITIAL_MEMORY="256M" \
+              MAXIMUM_MEMORY="512M" \
+            --cpu 0.5 \
+            --memory 1.0Gi \
             --min-replicas 1 \
-            --max-replicas 2
+            --max-replicas 1
 
           echo "Waiting for GeoServer update to complete..."
           # Optimized polling with shorter intervals

@@ -5,7 +5,9 @@ FROM kartoza/geoserver:2.24.0
 ENV GEOSERVER_DATA_DIR=/opt/geoserver/data_dir \
     GEOSERVER_CSRF_DISABLED=true \
     GEOSERVER_CSRF_WHITELIST=localhost:8080,127.0.0.1:8080 \
-    JAVA_OPTS="-Xms512m -Xmx1024m -DGEOSERVER_CSRF_DISABLED=true -Dorg.geotools.referencing.forceXY=true"
+    INITIAL_MEMORY=256M \
+    MAXIMUM_MEMORY=512M \
+    JAVA_OPTS="-Xms256m -Xmx512m -DGEOSERVER_CSRF_DISABLED=true -Dorg.geotools.referencing.forceXY=true"
 
 USER root
 
