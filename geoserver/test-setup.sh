@@ -25,16 +25,10 @@ else
     echo "   ❌ GeoServer is not accessible"
 fi
 
-if curl -s http://localhost:3003/api/v1/health > /dev/null; then
-    echo "   ✅ FastAPI backend is running"
+if curl -s http://localhost:8080/healthz > /dev/null; then
+    echo "   ✅ Oskari is running"
 else
-    echo "   ❌ FastAPI backend is not accessible"
-fi
-
-if curl -s http://localhost:8080 > /dev/null; then
-    echo "   ✅ Frontend is running"
-else
-    echo "   ❌ Frontend is not accessible"
+    echo "   ❌ Oskari is not accessible"
 fi
 
 # Test 2: Check database connection
@@ -60,11 +54,10 @@ fi
 # Test 4: List available services
 echo ""
 echo "📋 Service URLs:"
-echo "   • Frontend:     http://localhost:8080"
-echo "   • FastAPI:      http://localhost:3003"
+echo "   • Map:          http://localhost:8080"
 echo "   • GeoServer:    http://localhost:8081/geoserver"
 echo "   • PgAdmin:      http://localhost:5050"
-echo "   • Database:     localhost:5432"
+echo "   • Database:     localhost:5433"
 echo ""
 echo "🔐 Default Credentials:"
 echo "   • GeoServer:    admin / geoserver"

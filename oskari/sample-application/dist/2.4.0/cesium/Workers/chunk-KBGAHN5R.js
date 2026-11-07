@@ -1,0 +1,1 @@
+var GeometryOffsetAttribute={NONE:0,TOP:1,ALL:2};Object.freeze(GeometryOffsetAttribute);var GeometryOffsetAttribute_default=GeometryOffsetAttribute;export{GeometryOffsetAttribute_default};

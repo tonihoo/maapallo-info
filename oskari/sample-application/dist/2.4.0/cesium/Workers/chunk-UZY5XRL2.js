@@ -1,0 +1,1 @@
+var Intersect={OUTSIDE:-1,INTERSECTING:0,INSIDE:1};Object.freeze(Intersect);var Intersect_default=Intersect;export{Intersect_default};
