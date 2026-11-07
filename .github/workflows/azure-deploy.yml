@@ -267,7 +267,8 @@ jobs:
                 --resource-group ${{ env.RESOURCE_GROUP }} \
                 --name ${{ env.DB_SERVER_NAME }} \
                 --sku-name Standard_B1ms \
-                --tier Burstable
+                --tier Burstable \
+                --yes
               echo "Waiting for the smaller database server..."
               sleep 45
             fi
